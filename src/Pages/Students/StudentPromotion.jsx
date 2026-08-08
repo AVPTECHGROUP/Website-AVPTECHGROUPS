@@ -97,15 +97,20 @@ const StudentPromotion = () => {
     const [executeResult, setExecuteResult] = useState(null);
     const [actionError, setActionError] = useState('');
 
-    // ── Load academic years, default "To Academic Year" to the year right after current ──
+    // ── Load academic years, default "To Academic Year" to active year right after current ──
     useEffect(() => {
         (async () => {
             try {
                 setLoadingYears(true);
-                const years = await getAcademicYears();
-                setAcademicYears(years);
+                const res = await getAcademicYears();
+                const rawYears = Array.isArray(res) ? res : (res?.data || []);
+
+                // Exclude closed academic years
+                const activeYears = rawYears.filter((y) => y.status !== 'CLOSED');
+                setAcademicYears(activeYears);
+
                 if (currentAcademicYear?.id) {
-                    const sorted = [...years].sort((a, b) => a.id - b.id);
+                    const sorted = [...activeYears].sort((a, b) => a.id - b.id);
                     const idx = sorted.findIndex((y) => y.id === currentAcademicYear.id);
                     const next = idx !== -1 ? sorted[idx + 1] : null;
                     if (next) setToAcademicYearId(next.id);
@@ -347,9 +352,8 @@ const StudentPromotion = () => {
     }
 
     return (
-        // Grid cols 1 is vital here to prevent wide child tables from stretching the viewport
         <div className="w-full min-w-0 grid grid-cols-1 max-w-7xl mx-auto px-4 sm:px-6 py-6">
-            
+
             {/* Header */}
             <div className="mb-6 w-full">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Student Promotion</h1>
@@ -382,7 +386,7 @@ const StudentPromotion = () => {
 
                         {setupError && (
                             <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3.5 py-3 mb-5 w-full">
-                                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> 
+                                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                                 <span className="break-words">{setupError}</span>
                             </div>
                         )}
@@ -403,7 +407,7 @@ const StudentPromotion = () => {
                                 >
                                     <option value="">{loadingYears ? 'Loading…' : '— Select Year —'}</option>
                                     {academicYears
-                                        .filter((y) => y.id !== currentAcademicYear?.id)
+                                        .filter((y) => y.id !== currentAcademicYear?.id && y.status !== 'CLOSED')
                                         .map((y) => (
                                             <option key={y.id} value={y.id}>{yearLabel(y)}</option>
                                         ))}
@@ -576,13 +580,12 @@ const StudentPromotion = () => {
                             </div>
                         </div>
 
-                        {/* Force min-width on table to prevent squishing, overflow on wrapper enables scrolling */}
                         <div className="w-full overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
                             <table className="w-full text-xs min-w-[950px]">
                                 <thead>
                                     <tr className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold tracking-wide">
                                         <th className="px-3 py-3 text-left w-10">
-                                            <input type="checkbox" checked={allFilteredSelected} onChange={(e) => toggleSelectAll(e.target.checked)} className="accent-blue-600"/>
+                                            <input type="checkbox" checked={allFilteredSelected} onChange={(e) => toggleSelectAll(e.target.checked)} className="accent-blue-600" />
                                         </th>
                                         <th className="px-3 py-3 text-left whitespace-nowrap w-12">#</th>
                                         <th className="px-3 py-3 text-left whitespace-nowrap min-w-[160px]">Student</th>
@@ -751,7 +754,6 @@ const StudentPromotion = () => {
                             ))}
                         </div>
 
-                        {/* Force min-width on table to prevent squishing, overflow on wrapper enables scrolling */}
                         <div className="w-full overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
                             <table className="w-full text-xs min-w-[750px]">
                                 <thead>
