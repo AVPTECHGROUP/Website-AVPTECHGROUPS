@@ -27,8 +27,9 @@ export const COUNTRY_CODES = [
   { value: "+44", label: "🇬🇧 +44" },
 ];
 
-// Single source of truth for the default dial code — used by every form
-// (Contact.jsx, Demorequest.jsx) instead of retyping the literal "+91".
+// Single source of truth for the default dial code — used both for the
+// initial form state below and anywhere else (e.g. Contact.jsx) that needs
+// a sensible default instead of a hardcoded "+91".
 export const DEFAULT_COUNTRY_CODE = COUNTRY_CODES[0].value;
 
 export const initialForm = {

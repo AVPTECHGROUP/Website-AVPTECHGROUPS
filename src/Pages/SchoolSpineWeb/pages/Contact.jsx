@@ -23,7 +23,10 @@ import ContactImg from "../../../assets/Images/Contact/Contact.png";
 // ⚠️ ADJUST THESE TWO PATHS to match where your Api/demorequestApi.js and
 // Constants/Demorequestconstant.js actually live relative to this Contact.jsx file.
 import { submitDemoRequest } from "../../../Api/demorequestApi";
-import { STUDENT_STRENGTH_OPTIONS } from "../../../Constants/Demorequestconstant";
+import {
+    STUDENT_STRENGTH_OPTIONS,
+    DEFAULT_COUNTRY_CODE,
+} from "../../../Constants/Demorequestconstant";
 
 const inquiryTypes = ["Technical Support", "Book a Free Demo", "Feedback", "Product Training & Support", "Other Inquiries"];
 
@@ -89,20 +92,26 @@ const staggerContainer = {
 // dark-theme text (white-on-white) becomes invisible inside the open list.
 const OPTION_CLASSES = "bg-white text-slate-900";
 
+// Single source of truth for a brand-new form's shape. Keeping this as a
+// factory function (rather than a shared mutable object) means every call
+// gets its own fresh object, and the default dial code always comes from
+// the constants file instead of being retyped as a literal "+91".
+const buildInitialForm = () => ({
+    name: "",
+    email: "",
+    countryCode: DEFAULT_COUNTRY_CODE,
+    phone: "",
+    inquiry: "",
+    message: "",
+    schoolName: "",
+    studentStrength: "",
+});
+
 const Contact = () => {
     const { theme } = useContext(UserContext);
     const isDark = theme === "dark";
 
-    const [form, setForm] = useState({
-        name: "",
-        email: "",
-        countryCode: "+91",
-        phone: "",
-        inquiry: "",
-        message: "",
-        schoolName: "",
-        studentStrength: "",
-    });
+    const [form, setForm] = useState(buildInitialForm);
     const [submitted, setSubmitted] = useState(false);
     const [successMsg, setSuccessMsg] = useState("");
     const [loading, setLoading] = useState(false);
@@ -116,16 +125,7 @@ const Contact = () => {
     };
 
     const resetForm = () => {
-        setForm({
-            name: "",
-            email: "",
-            countryCode: "+91",
-            phone: "",
-            inquiry: "",
-            message: "",
-            schoolName: "",
-            studentStrength: "",
-        });
+        setForm(buildInitialForm());
     };
 
     const handleSubmit = async (e) => {
@@ -194,7 +194,7 @@ const Contact = () => {
     const labelClasses = `text-xs font-semibold uppercase tracking-wide mb-2 block ${isDark ? "text-slate-400" : "text-slate-500"
         }`;
 
-    return (
+    return (    
         <div
             className={`relative min-h-screen overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030712] text-slate-100" : "bg-slate-50 text-slate-900"
                 }`}

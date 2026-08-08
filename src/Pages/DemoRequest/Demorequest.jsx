@@ -1,17 +1,41 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import {
   STUDENT_STRENGTH_OPTIONS,
   COUNTRY_CODES,
   initialForm,
-} from "./constants";
+} from "../../Constants/Demorequestconstant";
 import { submitDemoRequest } from "../../Api/DemorequestApi";
+import { UserContext } from "../../ContextAPI/UserContext";
+
+// Field wrapper classes are shared across every input in the form, so the
+// error-state / dark-mode variants are composed once instead of repeated
+// per field.
+function fieldInputClasses({ hasError, isDark }) {
+  const base =
+    "w-full font-sans text-[0.98rem] px-3.5 py-3 rounded-[9px] border-[1.5px] outline-none transition-colors duration-150 focus:shadow-[0_0_0_4px_rgba(214,163,76,0.16)]";
+
+  const surface = isDark
+    ? "bg-white/[0.04] text-[#F1EFE6] placeholder:text-slate-500"
+    : "bg-[#FCFBF7] text-[#12261F] placeholder:text-slate-400";
+
+  const border = hasError
+    ? "border-[#B3452C] focus:border-[#B3452C]"
+    : isDark
+    ? "border-white/10 focus:border-[#D6A34C]/70"
+    : "border-[#D8D3C2] focus:border-[#B8842F]";
+
+  return `${base} ${surface} ${border}`;
+}
 
 export default function DemoRequestForm() {
+  const { theme } = useContext(UserContext);
+  const isDark = theme === "dark";
+
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [banner, setBanner] = useState(null); // { kind: "success" | "fail", message }
-  
+
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
@@ -36,7 +60,6 @@ export default function DemoRequestForm() {
   }
 
   async function handleSubmit(e) {
-    console.log("handleSubmit called =================>");
     e.preventDefault();
     setBanner(null);
 
@@ -52,12 +75,9 @@ export default function DemoRequestForm() {
       studentStrength: form.studentStrength,
     };
 
-      console.log("handleSubmit called payload =================>", payload);
-
     setLoading(true);
     try {
       const json = await submitDemoRequest(payload);
-      console.log("handleSubmit api called json =================>", json);
       setBanner({
         kind: "success",
         message:
@@ -75,58 +95,98 @@ export default function DemoRequestForm() {
     }
   }
 
-  return (
-    <div className="ss-page">
-      <style>{css}</style>
+  const labelClasses = `text-[0.82rem] font-bold ${isDark ? "text-[#F1EFE6]" : "text-[#12261F]"}`;
+  const mutedText = isDark ? "text-slate-400" : "text-[#3C5248]";
 
-      <nav className="ss-nav">
-        <div className="ss-brand">
-          <span className="ss-dot" /> SchoolSpine
+  return (
+    <div
+      className={`min-h-screen font-sans antialiased transition-colors duration-300 ${
+        isDark ? "bg-[#0B1410] text-[#F1EFE6]" : "bg-[#F6F4EC] text-[#12261F]"
+      }`}
+    >
+      {/*
+        Fraunces / Manrope / IBM Plex Mono are referenced below via Tailwind's
+        font-['...'] arbitrary syntax. Load them once, globally, e.g. in
+        public/index.html <head> or your global src/index.css:
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+        Keeping the <link> in the document head (not a <style> block in this
+        component) is what lets every page share one font download instead
+        of re-declaring @import per component.
+      */}
+
+      <nav
+        className={`flex items-center justify-between px-[6vw] py-6 border-b transition-colors duration-300 ${
+          isDark ? "border-white/10" : "border-[#D8D3C2]"
+        }`}
+      >
+        <div className="flex items-center gap-2.5 font-['Fraunces',serif] font-semibold text-xl">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#D6A34C] shadow-[0_0_0_3px_rgba(214,163,76,0.25)]" />
+          SchoolSpine
         </div>
-        <a className="ss-cta-link" href="#demo-form">
+        <a
+          href="#demo-form"
+          className="text-[0.85rem] font-bold text-inherit no-underline border-b-2 border-[#D6A34C] pb-0.5"
+        >
           Book a demo →
         </a>
       </nav>
 
-      <section className="ss-hero">
+      <section className="grid grid-cols-1 md:grid-cols-[1.1fr_0.9fr] gap-[5vw] px-[6vw] pt-[12vw] pb-[6vw] md:pt-[7vw] md:pb-[5vw] items-start">
         <div>
-          <span className="ss-eyebrow">● Now onboarding schools for the 2026–27 session</span>
-          <h1>
+          <span
+            className={`inline-flex items-center gap-2 font-['IBM_Plex_Mono',monospace] text-[0.72rem] uppercase tracking-[0.12em] text-[#D6A34C] px-3 py-1.5 rounded-full mb-[22px] ${
+              isDark ? "bg-[#D6A34C]/[0.12]" : "bg-[#D6A34C]/[0.14] text-[#B8842F]"
+            }`}
+          >
+            ● Now onboarding schools for the 2026–27 session
+          </span>
+          <h1 className="font-['Fraunces',serif] font-semibold text-[clamp(2.3rem,4.4vw,3.6rem)] leading-[1.06] m-0">
             Run your school
             <br />
-            on <em>one</em> screen.
+            on <em className="italic text-[#D6A34C]">one</em> screen.
           </h1>
-          <p className="ss-lede">
+          <p className={`mt-[22px] text-[1.08rem] leading-[1.65] max-w-[46ch] ${mutedText}`}>
             Admissions, attendance, fees, and staff — one platform your front
             office will actually enjoy using. Tell us a bit about your school
             and we'll set up a walkthrough built around your workflow.
           </p>
-          <div className="ss-roll-stats">
-            <div>
-              <span className="num">1,200+</span>
-              <span className="lbl">schools onboarded</span>
-            </div>
-            <div>
-              <span className="num">24 hrs</span>
-              <span className="lbl">avg. response time</span>
-            </div>
-            <div>
-              <span className="num">4.8/5</span>
-              <span className="lbl">admin satisfaction</span>
-            </div>
+          <div className="flex gap-[24px] md:gap-[34px] mt-10 flex-wrap">
+            {[
+              { num: "1,200+", lbl: "schools onboarded" },
+              { num: "24 hrs", lbl: "avg. response time" },
+              { num: "4.8/5", lbl: "admin satisfaction" },
+            ].map(({ num, lbl }) => (
+              <div
+                key={num}
+                className={`border-l-2 pl-3.5 ${isDark ? "border-white/15" : "border-[#D8D3C2]"}`}
+              >
+                <span className="font-['Fraunces',serif] text-[1.7rem] font-semibold block">{num}</span>
+                <span className={`text-[0.78rem] ${mutedText}`}>{lbl}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="ss-card" id="demo-form">
-          <h2>Book your free demo</h2>
-          <p className="ss-sub">
+        <div
+          id="demo-form"
+          className={`relative overflow-hidden rounded-[14px] p-9 border transition-colors duration-300 before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-[5px] before:bg-gradient-to-r before:from-[#D6A34C] before:to-[#1F3D31] ${
+            isDark
+              ? "bg-white/[0.03] border-white/10 shadow-[0_24px_48px_-28px_rgba(0,0,0,0.6)]"
+              : "bg-white border-[#D8D3C2] shadow-[0_24px_48px_-28px_rgba(18,38,31,0.28)]"
+          }`}
+        >
+          <h2 className="font-['Fraunces',serif] font-semibold text-2xl mb-1.5">Book your free demo</h2>
+          <p className={`text-sm mb-[26px] ${mutedText}`}>
             Fill this in — someone from our team will call you within 24 hours.
           </p>
 
           <form onSubmit={handleSubmit} noValidate>
-            <div className={`ss-field ${errors.fullName ? "error" : ""}`}>
-              <label htmlFor="fullName">
-                Your full name <span className="req">*</span>
+            <div className="mb-[18px] flex flex-col gap-[7px]">
+              <label htmlFor="fullName" className={labelClasses}>
+                Your full name <span className="text-[#D6A34C]">*</span>
               </label>
               <input
                 type="text"
@@ -135,13 +195,16 @@ export default function DemoRequestForm() {
                 placeholder="e.g. Anjali Sharma"
                 value={form.fullName}
                 onChange={(e) => updateField("fullName", e.target.value)}
+                className={fieldInputClasses({ hasError: Boolean(errors.fullName), isDark })}
               />
-              {errors.fullName && <span className="err-msg">{errors.fullName}</span>}
+              {errors.fullName && (
+                <span className="text-[0.78rem] text-[#B3452C]">{errors.fullName}</span>
+              )}
             </div>
 
-            <div className={`ss-field ${errors.schoolName ? "error" : ""}`}>
-              <label htmlFor="schoolName">
-                School name <span className="req">*</span>
+            <div className="mb-[18px] flex flex-col gap-[7px]">
+              <label htmlFor="schoolName" className={labelClasses}>
+                School name <span className="text-[#D6A34C]">*</span>
               </label>
               <input
                 type="text"
@@ -150,22 +213,28 @@ export default function DemoRequestForm() {
                 placeholder="e.g. Sunrise Public School"
                 value={form.schoolName}
                 onChange={(e) => updateField("schoolName", e.target.value)}
+                className={fieldInputClasses({ hasError: Boolean(errors.schoolName), isDark })}
               />
-              {errors.schoolName && <span className="err-msg">{errors.schoolName}</span>}
+              {errors.schoolName && (
+                <span className="text-[0.78rem] text-[#B3452C]">{errors.schoolName}</span>
+              )}
             </div>
 
-            <div className={`ss-field ${errors.phoneNumber ? "error" : ""}`}>
-              <label htmlFor="phoneNumber">
-                Phone number <span className="req">*</span>
+            <div className="mb-[18px] flex flex-col gap-[7px]">
+              <label htmlFor="phoneNumber" className={labelClasses}>
+                Phone number <span className="text-[#D6A34C]">*</span>
               </label>
-              <div className="ss-phone-row">
+              <div className="flex gap-2">
                 <select
                   value={form.countryCode}
                   onChange={(e) => updateField("countryCode", e.target.value)}
                   aria-label="Country code"
+                  className={`${fieldInputClasses({ hasError: false, isDark })} flex-none w-24 cursor-pointer ${
+                    isDark ? "" : "bg-[#FCFBF7]"
+                  }`}
                 >
                   {COUNTRY_CODES.map((c) => (
-                    <option key={c.value} value={c.value}>
+                    <option key={c.value} value={c.value} className="bg-white text-slate-900">
                       {c.label}
                     </option>
                   ))}
@@ -177,278 +246,83 @@ export default function DemoRequestForm() {
                   placeholder="98765 43210"
                   value={form.phoneNumber}
                   onChange={(e) => updateField("phoneNumber", e.target.value)}
+                  className={`${fieldInputClasses({ hasError: Boolean(errors.phoneNumber), isDark })} flex-1`}
                 />
               </div>
-              {errors.phoneNumber && <span className="err-msg">{errors.phoneNumber}</span>}
+              {errors.phoneNumber && (
+                <span className="text-[0.78rem] text-[#B3452C]">{errors.phoneNumber}</span>
+              )}
             </div>
 
-            <div className={`ss-field ${errors.studentStrength ? "error" : ""}`}>
-              <label htmlFor="studentStrength">
-                Number of students <span className="req">*</span>
+            <div className="mb-[18px] flex flex-col gap-[7px]">
+              <label htmlFor="studentStrength" className={labelClasses}>
+                Number of students <span className="text-[#D6A34C]">*</span>
               </label>
               <select
                 id="studentStrength"
                 value={form.studentStrength}
                 onChange={(e) => updateField("studentStrength", e.target.value)}
+                className={`${fieldInputClasses({
+                  hasError: Boolean(errors.studentStrength),
+                  isDark,
+                })} cursor-pointer`}
               >
-                <option value="" disabled>
+                <option value="" disabled className="bg-white text-slate-900">
                   Select a range
                 </option>
                 {STUDENT_STRENGTH_OPTIONS.map((s) => (
-                  <option key={s.value} value={s.value}>
+                  <option key={s.value} value={s.value} className="bg-white text-slate-900">
                     {s.label}
                   </option>
                 ))}
               </select>
               {errors.studentStrength && (
-                <span className="err-msg">{errors.studentStrength}</span>
+                <span className="text-[0.78rem] text-[#B3452C]">{errors.studentStrength}</span>
               )}
             </div>
 
-            <button type="submit" className={`ss-submit ${loading ? "loading" : ""}`} disabled={loading}>
-              <span className="btn-label">Request my demo</span>
-              <span className="spinner" />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-1.5 px-5 py-3.5 bg-[#0E1F19] text-[#F6F4EC] border-none rounded-[9px] font-sans font-bold text-base cursor-pointer transition-colors duration-150 flex items-center justify-center gap-2.5 hover:bg-[#1F3D31] active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <span className="w-4 h-4 border-2 border-[rgba(246,244,236,0.4)] border-t-[#F6F4EC] rounded-full animate-spin" />
+              ) : (
+                <span>Request my demo</span>
+              )}
             </button>
 
             {banner && (
-              <div className={`ss-status-banner show ${banner.kind}`}>{banner.message}</div>
+              <div
+                className={`mt-4 px-4 py-3.5 rounded-[9px] text-[0.88rem] leading-relaxed border ${
+                  banner.kind === "success"
+                    ? isDark
+                      ? "bg-[#1F3D31]/30 border-[#1F3D31]/60 text-[#8FD6B4]"
+                      : "bg-[#1F3D31]/[0.08] border-[#1F3D31]/[0.25] text-[#0E1F19]"
+                    : isDark
+                    ? "bg-[#B3452C]/20 border-[#B3452C]/50 text-[#F3A98F]"
+                    : "bg-[#B3452C]/[0.08] border-[#B3452C]/[0.3] text-[#B3452C]"
+                }`}
+              >
+                {banner.message}
+              </div>
             )}
 
-            <p className="ss-privacy-note">
+            <p className={`mt-4 text-[0.74rem] text-center ${isDark ? "text-slate-500" : "text-[#8C8778]"}`}>
               We'll only use these details to set up your demo call. No spam.
             </p>
           </form>
         </div>
       </section>
 
-      <footer>© 2026 SchoolSpine. Built for schools that would rather teach than do paperwork.</footer>
+      <footer
+        className={`px-[6vw] pt-[26px] pb-10 text-[0.78rem] text-center border-t transition-colors duration-300 ${
+          isDark ? "border-white/10 text-slate-400" : "border-[#D8D3C2] text-[#3C5248]"
+        }`}
+      >
+        © 2026 SchoolSpine. Built for schools that would rather teach than do paperwork.
+      </footer>
     </div>
   );
 }
-
-const css = `
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
-
-:root{
-  --ink:#12261F;
-  --ink-soft:#3C5248;
-  --paper:#F6F4EC;
-  --paper-raised:#FFFFFF;
-  --line:#D8D3C2;
-  --gold:#D6A34C;
-  --gold-deep:#B8842F;
-  --green-deep:#0E1F19;
-  --green-mid:#1F3D31;
-  --error:#B3452C;
-  --radius:14px;
-}
-
-.ss-page{
-  background:var(--paper);
-  color:var(--ink);
-  font-family:'Manrope', sans-serif;
-  -webkit-font-smoothing:antialiased;
-  min-height:100vh;
-}
-
-.ss-page h1, .ss-page h2{
-  font-family:'Fraunces', serif;
-  font-weight:600;
-  margin:0;
-  letter-spacing:-0.01em;
-}
-
-.ss-nav{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:24px 6vw;
-  border-bottom:1px solid var(--line);
-}
-.ss-brand{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  font-family:'Fraunces', serif;
-  font-weight:600;
-  font-size:1.25rem;
-}
-.ss-dot{
-  width:10px;height:10px;border-radius:50%;
-  background:var(--gold);
-  box-shadow:0 0 0 3px rgba(214,163,76,0.25);
-}
-.ss-cta-link{
-  font-size:0.85rem;
-  font-weight:700;
-  text-decoration:none;
-  color:inherit;
-  border-bottom:2px solid var(--gold);
-  padding-bottom:2px;
-}
-
-.ss-hero{
-  display:grid;
-  grid-template-columns:1.1fr 0.9fr;
-  gap:5vw;
-  padding:7vw 6vw 5vw;
-  align-items:start;
-}
-.ss-eyebrow{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  font-family:'IBM Plex Mono', monospace;
-  font-size:0.72rem;
-  text-transform:uppercase;
-  letter-spacing:0.12em;
-  color:var(--gold-deep);
-  background:rgba(214,163,76,0.14);
-  padding:6px 12px;
-  border-radius:999px;
-  margin-bottom:22px;
-}
-.ss-hero h1{
-  font-size:clamp(2.3rem, 4.4vw, 3.6rem);
-  line-height:1.06;
-}
-.ss-hero h1 em{ font-style:italic; color:var(--gold-deep); }
-.ss-lede{
-  margin-top:22px;
-  font-size:1.08rem;
-  line-height:1.65;
-  color:var(--ink-soft);
-  max-width:46ch;
-}
-.ss-roll-stats{
-  display:flex;
-  gap:34px;
-  margin-top:40px;
-  flex-wrap:wrap;
-}
-.ss-roll-stats div{ border-left:2px solid var(--line); padding-left:14px; }
-.ss-roll-stats .num{
-  font-family:'Fraunces', serif;
-  font-size:1.7rem;
-  font-weight:600;
-  display:block;
-}
-.ss-roll-stats .lbl{ font-size:0.78rem; color:var(--ink-soft); }
-
-.ss-card{
-  background:var(--paper-raised);
-  border:1px solid var(--line);
-  border-radius:var(--radius);
-  padding:36px;
-  box-shadow:0 24px 48px -28px rgba(18,38,31,0.28);
-  position:relative;
-  overflow:hidden;
-}
-.ss-card::before{
-  content:"";
-  position:absolute;
-  top:0;left:0;right:0;
-  height:5px;
-  background:linear-gradient(90deg, var(--gold), var(--green-mid));
-}
-.ss-card h2{ font-size:1.5rem; margin-bottom:6px; }
-.ss-sub{ font-size:0.9rem; color:var(--ink-soft); margin-bottom:26px; }
-
-.ss-field{ margin-bottom:18px; display:flex; flex-direction:column; gap:7px; }
-.ss-field label{ font-size:0.82rem; font-weight:700; color:var(--ink); }
-.ss-field .req{ color:var(--gold-deep); }
-.ss-field input, .ss-field select{
-  font-family:'Manrope', sans-serif;
-  font-size:0.98rem;
-  padding:12px 14px;
-  border:1.5px solid var(--line);
-  border-radius:9px;
-  background:#FCFBF7;
-  color:var(--ink);
-  outline:none;
-  transition:border-color .15s ease, box-shadow .15s ease;
-  width:100%;
-}
-.ss-field input:focus, .ss-field select:focus{
-  border-color:var(--gold-deep);
-  box-shadow:0 0 0 4px rgba(214,163,76,0.16);
-}
-.ss-field.error input, .ss-field.error select{ border-color:var(--error); }
-.ss-field .err-msg{ font-size:0.78rem; color:var(--error); }
-
-.ss-phone-row{ display:flex; gap:8px; }
-.ss-phone-row select{ flex:0 0 96px; }
-.ss-phone-row input{ flex:1; }
-
-.ss-submit{
-  width:100%;
-  margin-top:6px;
-  padding:14px 20px;
-  background:var(--green-deep);
-  color:var(--paper);
-  border:none;
-  border-radius:9px;
-  font-family:'Manrope', sans-serif;
-  font-weight:700;
-  font-size:1rem;
-  cursor:pointer;
-  transition:background .15s ease, transform .1s ease;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:10px;
-}
-.ss-submit:hover{ background:var(--green-mid); }
-.ss-submit:active{ transform:scale(0.99); }
-.ss-submit:disabled{ opacity:0.6; cursor:not-allowed; }
-
-.spinner{
-  width:16px;height:16px;
-  border:2px solid rgba(246,244,236,0.4);
-  border-top-color:var(--paper);
-  border-radius:50%;
-  display:none;
-  animation:ss-spin .7s linear infinite;
-}
-.ss-submit.loading .spinner{ display:inline-block; }
-.ss-submit.loading .btn-label{ display:none; }
-@keyframes ss-spin{ to{ transform:rotate(360deg); } }
-
-.ss-status-banner{
-  margin-top:16px;
-  padding:14px 16px;
-  border-radius:9px;
-  font-size:0.88rem;
-  line-height:1.5;
-}
-.ss-status-banner.success{
-  background:rgba(31,61,49,0.08);
-  border:1px solid rgba(31,61,49,0.25);
-  color:var(--green-deep);
-}
-.ss-status-banner.fail{
-  background:rgba(179,69,44,0.08);
-  border:1px solid rgba(179,69,44,0.3);
-  color:var(--error);
-}
-
-.ss-privacy-note{
-  margin-top:16px;
-  font-size:0.74rem;
-  color:#8C8778;
-  text-align:center;
-}
-
-.ss-page footer{
-  padding:26px 6vw 40px;
-  font-size:0.78rem;
-  color:var(--ink-soft);
-  border-top:1px solid var(--line);
-  text-align:center;
-}
-
-@media (max-width: 880px){
-  .ss-hero{ grid-template-columns:1fr; padding:12vw 6vw 6vw; }
-  .ss-roll-stats{ gap:24px; }
-}
-`;
