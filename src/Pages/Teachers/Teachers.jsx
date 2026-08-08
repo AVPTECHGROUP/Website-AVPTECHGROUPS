@@ -68,10 +68,10 @@ const Teachers = () => {
   // CHECK IF FILTERS ARE ACTIVE
   const hasActiveFilters = useMemo(() => {
     return (
-      debouncedSearch.trim() !== '' ||
-      statusFilter !== 'All Status' ||
-      classFilter !== 'All Classes' ||
-      salaryFilter !== 'All Salary Types'
+        debouncedSearch.trim() !== '' ||
+        statusFilter !== 'All Status' ||
+        classFilter !== 'All Classes' ||
+        salaryFilter !== 'All Salary Types'
     );
   }, [debouncedSearch, statusFilter, classFilter, salaryFilter]);
 
@@ -122,21 +122,25 @@ const Teachers = () => {
         name: teacher.fullName || 'Unknown',
         avatar: (teacher.fullName || 'U')[0].toUpperCase(),
         image:
-          teacher.profileImageUrl ||
-          teacher.imageUrl ||
-          teacher.profileImage ||
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(
-            teacher.fullName || 'User'
-          )}&background=random`,
+            teacher.profileImageUrl ||
+            teacher.imageUrl ||
+            teacher.profileImage ||
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                teacher.fullName || 'User'
+            )}&background=random`,
         role: teacher.designation || 'Teacher',
         mobile: teacher.mobile || 'N/A',
         classes: teacher.assignedClasses
-          ? teacher.assignedClasses.split(',').map((c) => c.trim())
-          : [],
+            ? teacher.assignedClasses.split(',').map((c) => c.trim())
+            : [],
         subjects: teacher.assignedSubjects
-          ? teacher.assignedSubjects.split(',').map((s) => s.trim())
-          : [],
-        salaryType: teacher.salaryType || 'MONTHLY',
+            ? teacher.assignedSubjects.split(',').map((s) => s.trim())
+            : [],
+        designation: teacher.designation || 'Teacher',
+        // NOTE: assumed API field is `teacher.salaryType`. If your backend
+        // returns this under a different key (e.g. teacher.salary?.type or
+        // teacher.payType), update the line below to match.
+        salaryType: teacher.salaryType || 'N/A',
         status: teacher.status || 'ACTIVE',
         attendance: teacher.attendanceAccessStatus || 'ALLOWED',
         payroll: teacher.payrollStatus || 'INCLUDED',
@@ -219,19 +223,23 @@ const Teachers = () => {
     const HEADERS = strings.TEACHERS_LIST.TABLE_HEADERS;
 
     // Mapping over current paginated mapped teachers array
+    // Column order matches TEACHERS_LIST.TABLE_HEADERS exactly:
+    // Full Name, Employee Code, Designation/Role, Mobile Number,
+    // Assigned Classes, Salary Type, Status, Attendance Access,
+    // Payroll Status, Joining Date
     const dataRows = teachers.map((t) =>
-      [
-        csvCell(t.name),
-        csvCell(t.employeeCode),
-        csvCell(t.role),
-        csvCell(t.mobile),
-        csvCell(t.classes.join(' | ')), // Multiple classes separated by pipe operator
-        csvCell(t.salaryType),
-        csvCell(t.status),
-        csvCell(t.attendance),
-        csvCell(t.payroll),
-        csvCell(t.joiningDate),
-      ].join(',')
+        [
+          csvCell(t.name),
+          csvCell(t.employeeCode),
+          csvCell(t.designation),
+          csvCell(t.mobile),
+          csvCell(t.classes.join(' | ')), // Multiple classes separated by pipe operator
+          csvCell(t.salaryType),
+          csvCell(t.status),
+          csvCell(t.attendance),
+          csvCell(t.payroll),
+          csvCell(t.joiningDate),
+        ].join(',')
     );
 
     const csvString = [HEADERS.join(','), ...dataRows].join('\n');
@@ -277,63 +285,63 @@ const Teachers = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
-      <div ref={scrollContainerRef} className="flex-1 overflow-auto w-0">
+      <div className="flex h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
+        <div ref={scrollContainerRef} className="flex-1 overflow-auto w-0">
 
-        <TeachersHeader stats={stats} loading={statsLoading} />
+          <TeachersHeader stats={stats} loading={statsLoading} />
 
-        <div className="flex-1 overflow-auto p-4 pt-0 sm:p-5 sm:pt-0 lg:p-4 lg:pt-0">
-          <div className="flex items-center gap-2">
-            {/* Passed handleExportTeachersCSV handler into QuickActions component */}
-            <QuickActions
-              teacherId={selectedTeacher?.id ?? null}
-              onResetPassword={() => setIsResetOpen(true)}
-              onExportCSV={handleExportTeachersCSV}
+          <div className="flex-1 overflow-auto p-4 pt-0 sm:p-5 sm:pt-0 lg:p-4 lg:pt-0">
+            <div className="flex items-center gap-2">
+              {/* Passed handleExportTeachersCSV handler into QuickActions component */}
+              <QuickActions
+                  teacherId={selectedTeacher?.id ?? null}
+                  onResetPassword={() => setIsResetOpen(true)}
+                  onExportCSV={handleExportTeachersCSV}
+              />
+            </div>
+
+            <TeachersFilters
+                search={search}
+                setSearch={setSearch}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                classFilter={classFilter}
+                setClassFilter={setClassFilter}
+                salaryFilter={salaryFilter}
+                setSalaryFilter={setSalaryFilter}
+                setPage={setPage}
+                classes={classes}
+            />
+
+            <TeachersTable
+                selectedTeacherId={selectedTeacher?.id ?? null}
+                onRowSelect={handleRowSelect}
+                assignTeacherId={() => { }}
+                teachers={teachers}
+                setTeachers={setTeachers}
+                loading={loading}
+                error={error}
+                page={page}
+                setPage={setPage}
+                rowsPerPage={rowsPerPage}
+                setRowsPerPage={setRowsPerPage}
+                totalElements={totalElements}
+                totalPages={totalPages}
+                fetchTeachers={fetchTeachers}
+                onStatusToggle={updateStatisticsOptimistically}
             />
           </div>
 
-          <TeachersFilters
-            search={search}
-            setSearch={setSearch}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            classFilter={classFilter}
-            setClassFilter={setClassFilter}
-            salaryFilter={salaryFilter}
-            setSalaryFilter={setSalaryFilter}
-            setPage={setPage}
-            classes={classes}
+          <PasswordResetModal
+              isOpen={isResetOpen}
+              onClose={() => setIsResetOpen(false)}
+              userName={selectedTeacher?.name}
+              onReset={() => resetPassword(selectedTeacher?.userId)}
+              currUserId={selectedTeacher?.userId}
           />
 
-          <TeachersTable
-            selectedTeacherId={selectedTeacher?.id ?? null}
-            onRowSelect={handleRowSelect}
-            assignTeacherId={() => { }}
-            teachers={teachers}
-            setTeachers={setTeachers}
-            loading={loading}
-            error={error}
-            page={page}
-            setPage={setPage}
-            rowsPerPage={rowsPerPage}
-            setRowsPerPage={setRowsPerPage}
-            totalElements={totalElements}
-            totalPages={totalPages}
-            fetchTeachers={fetchTeachers}
-            onStatusToggle={updateStatisticsOptimistically}
-          />
         </div>
-
-        <PasswordResetModal
-          isOpen={isResetOpen}
-          onClose={() => setIsResetOpen(false)}
-          userName={selectedTeacher?.name}
-          onReset={() => resetPassword(selectedTeacher?.userId)}
-          currUserId={selectedTeacher?.userId}
-        />
-
       </div>
-    </div>
   );
 };
 
