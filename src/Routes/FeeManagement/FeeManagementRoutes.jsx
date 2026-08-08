@@ -2,6 +2,7 @@ import { lazy } from 'react';
 import { Route } from 'react-router-dom';
 import RoleProtectedRoute from '../../utils/RoleProtectedRoute';
 import { ROLE_GROUPS, ROUTE_PATHS } from '../../Constants/RoutesConstants/RoutesConst';
+import OverdueFeeNotifications from "../../Pages/FeeManagement/Overduefeenotification.jsx";
 
 const OverviewPage = lazy(() =>
   import('../../Pages/FeeManagement/FeeManagement').then((m) => ({ default: m.OverviewPage }))
@@ -23,6 +24,7 @@ export default function FeeManagementRoutes() {
       <Route path={ROUTE_PATHS.FEE_MANAGEMENT_PERIOD} element={<FeePeriods />} />
       <Route path={ROUTE_PATHS.FEE_MANAGEMENT_STRUCTURES} element={<FeeStructures />} />
       <Route path={ROUTE_PATHS.FEE_MANAGEMENT_COLLECTIONS} element={<CollectionsPage />} />
+      <Route path='overduefeenotifications' element={<OverdueFeeNotifications />} />
     </Route>
   );
 }
