@@ -49,7 +49,7 @@ export default function DemoRequestForm() {
       nextErrors.schoolName = "Please enter your school's name.";
     }
     const digitsOnly = form.phoneNumber.replace(/\D/g, "");
-    if (digitsOnly.length < 6) {
+    if (digitsOnly.length < 10 ) {
       nextErrors.phoneNumber = "Please enter a valid phone number.";
     }
     if (!form.studentStrength) {

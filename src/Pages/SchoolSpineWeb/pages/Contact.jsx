@@ -20,9 +20,7 @@ import { UserContext } from "../../../ContextAPI/UserContext";
 
 import ContactImg from "../../../assets/Images/Contact/Contact.png";
 
-// ⚠️ ADJUST THESE TWO PATHS to match where your Api/demorequestApi.js and
-// Constants/Demorequestconstant.js actually live relative to this Contact.jsx file.
-import { submitDemoRequest } from "../../../Api/demorequestApi";
+import { submitDemoRequest } from "../../../Api/DemorequestApi";
 import {
     STUDENT_STRENGTH_OPTIONS,
     DEFAULT_COUNTRY_CODE,
