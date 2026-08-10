@@ -31,6 +31,11 @@ export const COUNTRY_CODES = [
 // (Contact.jsx, Demorequest.jsx) instead of retyping the literal "+91".
 export const DEFAULT_COUNTRY_CODE = COUNTRY_CODES[0].value;
 
+// Minimum number of digits (after stripping non-digit characters) a phone
+// number must have to be considered valid. Was previously hardcoded as a
+// magic number (10) inline in Demorequest.jsx's validate() function.
+export const MIN_PHONE_DIGITS = 10;
+
 export const initialForm = {
   fullName: "",
   schoolName: "",

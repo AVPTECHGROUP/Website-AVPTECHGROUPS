@@ -3,6 +3,7 @@ import {
   STUDENT_STRENGTH_OPTIONS,
   COUNTRY_CODES,
   initialForm,
+  MIN_PHONE_DIGITS,
 } from "../../Constants/Demorequestconstant";
 import { submitDemoRequest } from "../../Api/DemorequestApi";
 import { UserContext } from "../../ContextAPI/UserContext";
@@ -49,7 +50,7 @@ export default function DemoRequestForm() {
       nextErrors.schoolName = "Please enter your school's name.";
     }
     const digitsOnly = form.phoneNumber.replace(/\D/g, "");
-    if (digitsOnly.length < 10 ) {
+    if (digitsOnly.length < MIN_PHONE_DIGITS) {
       nextErrors.phoneNumber = "Please enter a valid phone number.";
     }
     if (!form.studentStrength) {
@@ -104,18 +105,7 @@ export default function DemoRequestForm() {
         isDark ? "bg-[#0B1410] text-[#F1EFE6]" : "bg-[#F6F4EC] text-[#12261F]"
       }`}
     >
-      {/*
-        Fraunces / Manrope / IBM Plex Mono are referenced below via Tailwind's
-        font-['...'] arbitrary syntax. Load them once, globally, e.g. in
-        public/index.html <head> or your global src/index.css:
-
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-
-        Keeping the <link> in the document head (not a <style> block in this
-        component) is what lets every page share one font download instead
-        of re-declaring @import per component.
-      */}
+  
 
       <nav
         className={`flex items-center justify-between px-[6vw] py-6 border-b transition-colors duration-300 ${
@@ -192,7 +182,7 @@ export default function DemoRequestForm() {
                 type="text"
                 id="fullName"
                 autoComplete="name"
-                placeholder="e.g. Anjali Sharma"
+                placeholder="e.g. Enter you full name"
                 value={form.fullName}
                 onChange={(e) => updateField("fullName", e.target.value)}
                 className={fieldInputClasses({ hasError: Boolean(errors.fullName), isDark })}
@@ -243,7 +233,7 @@ export default function DemoRequestForm() {
                   type="tel"
                   id="phoneNumber"
                   autoComplete="tel-national"
-                  placeholder="98765 43210"
+                  placeholder="Enter your phone number"
                   value={form.phoneNumber}
                   onChange={(e) => updateField("phoneNumber", e.target.value)}
                   className={`${fieldInputClasses({ hasError: Boolean(errors.phoneNumber), isDark })} flex-1`}
