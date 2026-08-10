@@ -1,4 +1,3 @@
-
 // ─── Global Configurations ──────────────────────────────────────────
 export const PAGINATION = {
   ITEMS_PER_PAGE: 10,
@@ -53,6 +52,35 @@ export const ACTION_TYPES = {
   DELETE: "delete",
 };
 
+// ─── Transport Fee Months Configuration (Jan to Dec) ───────────────
+export const TRANSPORT_FEE_MONTHS = [
+  { value: "JANUARY", label: "January", shortLabel: "Jan" },
+  { value: "FEBRUARY", label: "February", shortLabel: "Feb" },
+  { value: "MARCH", label: "March", shortLabel: "Mar" },
+  { value: "APRIL", label: "April", shortLabel: "Apr" },
+  { value: "MAY", label: "May", shortLabel: "May" },
+  { value: "JUNE", label: "June", shortLabel: "Jun" },
+  { value: "JULY", label: "July", shortLabel: "Jul" },
+  { value: "AUGUST", label: "August", shortLabel: "Aug" },
+  { value: "SEPTEMBER", label: "September", shortLabel: "Sep" },
+  { value: "OCTOBER", label: "October", shortLabel: "Oct" },
+  { value: "NOVEMBER", label: "November", shortLabel: "Nov" },
+  { value: "DECEMBER", label: "December", shortLabel: "Dec" },
+];
+
+export const ALL_TRANSPORT_FEE_MONTH_VALUES = TRANSPORT_FEE_MONTHS.map((m) => m.value);
+
+// Resolves a "YYYY-MM-DD" string to its TRANSPORT_FEE_MONTHS value (e.g. "JUNE"),
+// parsed from the string directly (not `new Date(str)`) to avoid UTC/local
+// timezone shifting the day across a month boundary near midnight.
+export const getMonthValueFromDateString = (dateStr) => {
+  if (!dateStr) return null;
+  const parts = String(dateStr).split("-");
+  const monthNum = Number(parts[1]);
+  if (!monthNum || monthNum < 1 || monthNum > 12) return null;
+  return TRANSPORT_FEE_MONTHS[monthNum - 1]?.value ?? null;
+};
+
 // ─── Dropdown Options ───────────────────────────────────────────────
 export const STATUS_OPTIONS = [
   { value: "", label: "All Status" },
@@ -99,6 +127,7 @@ export const EMPTY_ALLOCATION = {
   effectiveTo: "",
   feePlanId: "",
   remarks: "",
+  applicableFeeMonths: ALL_TRANSPORT_FEE_MONTH_VALUES,
 };
 
 export const EMPTY_FEE_PLAN = {
@@ -233,6 +262,14 @@ export const CSV_HEADERS = {
 
 // ─── Form Validation Messages ───────────────────────────────────────
 export const VALIDATION_MESSAGES = {
+  REQ_STUDENT: "Student is required",
+  REQ_ROUTE: "Route is required",
+  REQ_STOP: "Stop is required",
+  REQ_PICKUP_DROP: "Pickup/Drop type is required",
+  REQ_EFFECTIVE_FROM: "Effective from date is required",
+  REQ_FEE_MONTHS: "At least one applicable fee month must be selected.",
+  ERR_EFFECTIVE_TO_DATE: "Effective To date cannot be earlier than Effective From date",
+  ERR_GENERIC: "Something went wrong. Please try again.",
   PLAN_NAME_REQ: "Plan name is required",
   FEE_AMOUNT_REQ: "Fee amount is required",
   FEE_AMOUNT_INVALID: "Enter a valid positive amount",
@@ -242,39 +279,28 @@ export const VALIDATION_MESSAGES = {
 
 // ─── Toast / Notification Messages ──────────────────────────────────
 export const TOAST_MESSAGES = {
-  // Staff Messages
   STAFF_LOAD_FAIL: "Failed to load staff.",
   STAFF_ADD_SUCCESS: "Staff added successfully.",
   STAFF_UPDATE_SUCCESS: "Staff updated successfully.",
   STAFF_REPORT_LOAD_FAIL: "Failed to load staff assignment report.",
-
-  // Route Messages
   ROUTES_LOAD_FAIL: "Failed to load routes. Please try again.",
   ROUTE_CREATE_SUCCESS: "Route created successfully.",
   ROUTE_UPDATE_SUCCESS: "Route updated successfully.",
   ROUTE_REPORT_LOAD_FAIL: "Failed to load route report.",
-
-  // Stop Messages
   STOPS_LOAD_FAIL: "Failed to load stops.",
   STOP_ADD_SUCCESS: "Stop added successfully.",
   STOP_UPDATE_SUCCESS: "Stop updated successfully.",
   STOP_DELETE_SUCCESS: "Stop deleted successfully.",
   STOP_DELETE_FAIL: "Failed to delete stop.",
-
-  // Vehicle Messages
   VEHICLES_LOAD_FAIL: "Failed to load vehicles.",
   VEHICLE_ADD_SUCCESS: "Vehicle added successfully.",
   VEHICLE_UPDATE_SUCCESS: "Vehicle updated successfully.",
   VEHICLE_REPORT_LOAD_FAIL: "Failed to load vehicle capacity report.",
-
-  // Allocation Messages
   ALLOCATION_LOAD_FAIL: "Failed to load allocations. Please try again.",
   ALLOCATION_UPDATE_FAIL: "Failed to update allocation status.",
   ALLOCATION_DEACTIVATE_SUCCESS: "Student transport deactivated successfully.",
   ALLOCATION_CREATE_SUCCESS: "Student allocated successfully.",
   ALLOCATION_UPDATE_SUCCESS: "Allocation updated successfully.",
-
-  // Fee Plan Messages
   FEE_PLAN_LOAD_FAIL: "Failed to load fee plans. Please try again.",
   FEE_PLAN_CREATE_SUCCESS: "Fee plan created successfully!",
   FEE_PLAN_CREATE_FAIL: "Failed to create fee plan. Please try again.",
@@ -283,21 +309,14 @@ export const TOAST_MESSAGES = {
   FEE_PLAN_STATUS_UPDATE_FAIL: "Failed to update fee plan status. Please try again.",
   FEE_PLAN_ACTIVATE_SUCCESS: "Fee plan activated successfully.",
   FEE_PLAN_DEACTIVATE_SUCCESS: "Fee plan deactivated successfully.",
-
-  // Fee Report Messages
   FEE_REPORT_LOAD_FAIL: "Failed to load fee report.",
-
-  // Export Messages
   EXPORT_NO_DATA: "No data to export.",
   EXPORT_SUCCESS: "CSV exported successfully!",
-
-  // Miscellaneous
   API_NOT_IMPLEMENTED: "Activation API not implemented yet.",
 };
 
 // ─── Fee Plan UI Text & Placeholders ─────────────────────────────────
 export const FEE_PLAN_UI_TEXT = {
-  // Page Level
   PAGE_TITLE: "Fees Management",
   PAGE_SUBTITLE: "Manage transport fee collection, payments, concessions, and adjustments.",
   SECTION_TITLE: "Transport Fee Plans",
@@ -305,8 +324,6 @@ export const FEE_PLAN_UI_TEXT = {
   SEARCH_PLACEHOLDER: "Search plan name or route...",
   EMPTY_STATE_TITLE: "No fee plans found",
   EMPTY_STATE_SUBTITLE: "Try adjusting your search or filters",
-
-  // Data Presentation
   GENERIC_ROUTE: "Generic",
   GENERIC_DISTANCE_PLAN: "Generic / Distance Plan",
   ROUTE_PREFIX: "Route: ",
@@ -315,8 +332,6 @@ export const FEE_PLAN_UI_TEXT = {
   OF: "of",
   PLAN_SINGULAR: "plan",
   PLAN_PLURAL: "plans",
-
-  // Modal Titles & Buttons
   CREATE_MODAL_TITLE: "Create Fee Plan",
   EDIT_MODAL_TITLE: "Edit Fee Plan",
   BTN_CANCEL: "Cancel",
@@ -324,8 +339,6 @@ export const FEE_PLAN_UI_TEXT = {
   BTN_SAVING: "Saving…",
   BTN_UPDATE: "Update Plan",
   BTN_UPDATING: "Updating…",
-
-  // Form Labels, Placeholders & Options
   LBL_PLAN_NAME: "Plan Name",
   PH_PLAN_NAME: "e.g. Route C Monthly Fee",
   LBL_ROUTE: "Route (optional)",
@@ -343,11 +356,8 @@ export const FEE_PLAN_UI_TEXT = {
 
 // ─── Reports UI Text, Labels & Export Constants ──────────────────────
 export const REPORT_UI_TEXT = {
-  // Page Level
   PAGE_TITLE: "Reports Management",
   PAGE_SUBTITLE: "View route-wise student lists, vehicle capacity, staff assignments, and student fee reports.",
-
-  // Tab: Route Student List
   ROUTE_TAB_TITLE: "Route-wise Student List",
   ROUTE_META_LABELS: {
     ROUTE: "Route",
@@ -363,8 +373,6 @@ export const REPORT_UI_TEXT = {
   OPT_LOADING_ROUTES: "Loading routes…",
   STUDENT_COUNT_SINGULAR: "student",
   STUDENT_COUNT_PLURAL: "students",
-
-  // Tab: Staff Assignments
   STAFF_TAB_TITLE: "🧑‍✈️ Driver & Attendant Assignment Report",
   SHOW_EXPIRING_LICENSES: "Show only expiring licences",
   NO_STAFF_RECORDS: "No staff records found.",
@@ -374,8 +382,6 @@ export const REPORT_UI_TEXT = {
   BADGE_EXPIRED: "Expired",
   BADGE_EXPIRING: "Expiring",
   BADGE_VALID: "Valid",
-
-  // Tab: Student Fee Report
   FEE_TAB_TITLE: "🪪 Student Transport Fee Report",
   OPT_ALL_ROUTES: "All Routes",
   LBL_TOTAL_STUDENTS_TRANSPORT: "Students with Transport",
@@ -386,8 +392,6 @@ export const REPORT_UI_TEXT = {
   NO_ROUTE_DATA: "No route data.",
   NO_FREQ_DATA: "No frequency data.",
   NO_STUDENTS_FOUND: "No students found.",
-
-  // Tab: Vehicle Capacity
   CAPACITY_TAB_TITLE: "🚌 Vehicle Capacity Utilisation Report",
   SHOW_OVER_CAPACITY: "Show only over-capacity vehicles",
   EXPIRY_ALERT_WITHIN: "Expiry alert within",
@@ -398,8 +402,6 @@ export const REPORT_UI_TEXT = {
   LBL_AVAILABLE: "Available",
   LBL_INS: "Ins:",
   LBL_FIT: "Fit:",
-
-  // Shared Common
   BTN_EXPORT_CSV: "Export CSV",
   BTN_REFRESH: "Refresh",
   LBL_LOADING: "Loading…",
@@ -409,24 +411,17 @@ export const REPORT_UI_TEXT = {
 };
 
 export const EXPORT_CONSTANTS = {
-  // Route Student List
   ROUTE_REPORT_TITLE: "Route Report",
   ROUTE_REPORT_PREFIX: "student_report.csv",
-
-  // Staff Assignment
   STAFF_REPORT_TITLE: "Staff Assignment Report",
   STAFF_FILE_NAME: "staff_assignment_report.csv",
   STAFF_LIC_EXPIRED: "EXPIRED",
   STAFF_LIC_EXPIRING: "EXPIRING SOON",
-
-  // Student Fee
   FEE_REPORT_TITLE: "Student Transport Fee Report",
   FEE_FILE_NAME: "student_fee_report.csv",
   FEE_META_TOTAL_STUDENTS: "Total Students",
   FEE_META_WITH_PLAN: "Students with Fee Plan",
   FEE_META_WITHOUT_PLAN: "Students without Plan",
-
-  // Vehicle Capacity
   CAPACITY_REPORT_TITLE: "Vehicle Capacity Utilisation Report",
   CAPACITY_FILE_NAME: "vehicle_capacity_report.csv",
 };
@@ -436,10 +431,8 @@ export const REPORT_TABLE_HEADERS = {
   FREQ_DISTRIBUTION: ["Frequency", "Students"],
 };
 
-// ─── Allocation ui text  ────────────────────
-
+// ─── Allocation UI Text ───────────────────────────────────────────────
 export const ALLOCATION_UI_TEXT = {
-  // Page Level
   PAGE_TITLE: "Student Allocation Management",
   PAGE_SUBTITLE: "Allocate students to transport routes and stops, manage pickup/drop preferences and fee plans.",
   SECTION_TITLE: "Student Transport Allocations",
@@ -451,24 +444,18 @@ export const ALLOCATION_UI_TEXT = {
   ROWS_PER_PAGE: "Rows per page:",
   SHOWING: "Showing",
   OF: "of",
-
-  // Add Modal
   ADD_MODAL_TITLE: "Allocate Student to Transport",
   ADD_MODAL_SUBTITLE: "Assign a student to a route, stop and fee plan",
-  INFO_BANNER_ADD: "Vehicle capacity is validated automatically. A student can only have one active transport allocation.",
+  INFO_BANNER_ADD: "Unchecking a month removes it from the transport fee billing schedule while preserving student transport validity.",
   BTN_ALLOCATING: "Allocating…",
   BTN_ALLOCATE_SAVE: "Allocate",
-
-  // Edit Modal
   EDIT_MODAL_TITLE: "Edit Transport Allocation",
   EDIT_MODAL_SUBTITLE_PREFIX: "Editing allocation for",
-  INFO_BANNER_EDIT: "Changes to route or stop will take effect immediately. Student cannot be changed after allocation.",
+  INFO_BANNER_EDIT: "Changes to route, stop, or fee months take effect immediately for future billing cycles.",
   BTN_UPDATING: "Updating…",
   BTN_UPDATE_SAVE: "Update Allocation",
   LBL_READONLY_STUDENT: "Student cannot be changed after allocation",
   LBL_ADM: "Adm:",
-
-  // Form Fields & Placeholders
   LBL_STUDENT: "Student",
   LBL_ROUTE: "Route",
   LBL_STOP: "Stop",
@@ -485,8 +472,6 @@ export const ALLOCATION_UI_TEXT = {
   PH_FEE_PLAN: "— Select Fee Plan —",
   PH_OPTIONAL: "Optional",
   PH_SELECT_DEFAULT: "— Select —",
-  
-  // Select Input UI
   PH_SELECT_SEARCH: "Search…",
   NO_RESULTS: "No results found",
   OPTION_SINGULAR: "option",
@@ -591,7 +576,7 @@ export const DASHBOARD_UI_TEXT = {
 export const VEHICLE_UI_TEXT = {
   PAGE_TITLE: "Vehicle Management",
   PAGE_SUBTITLE: "Manage your entire fleet — add vehicles, track GPS status, monitor insurance & fitness expiry, and toggle active status in one place.",
-  SECTION_TITLE: "Manage Vehicles",
+  SECTION_TITLE: "Vehicle Management",
   BTN_ADD_VEHICLE: "Add Vehicle",
   SEARCH_PLACEHOLDER: "Search by vehicle number or model…",
   EMPTY_TITLE: "No vehicles found",
