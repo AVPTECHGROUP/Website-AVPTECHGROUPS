@@ -1,18 +1,22 @@
 import { useState, useEffect, useRef } from "react";
-import { X, GraduationCap, Save, Loader2, Info, ChevronDown, Search, XIcon } from "lucide-react";
+import { X, GraduationCap, Save, Loader2, Info, ChevronDown, Search, X as XIcon, CheckSquare, Square } from "lucide-react";
 import { toast } from "react-toastify";
 import { addTransportAllocation, updateTransportAllocation, getActiveRoutes } from "../../../Api/Transport/TransportAPI";
 import { getStudents } from "../../../Api/Students/StudentsApi";
 import {
+  TRANSPORT_FEE_MONTHS,
+  ALL_TRANSPORT_FEE_MONTH_VALUES,
   PICKUP_TYPES_OPTIONS,
   EMPTY_ALLOCATION,
   SHARED_INPUT_STYLES,
   VALIDATION_MESSAGES,
-  ALLOCATION_UI_TEXT
+  ALLOCATION_UI_TEXT,
+  getMonthValueFromDateString
 } from "../../../Constants/StringConstants/TransportConstants";
+import MonthFilteredDatePicker from "../../../Pages/Transport/MonthFilteredDatePicker";
 
 // ─── Styles ───────────────────────────────────────────────────────
-const disCls = "opacity-50 cursor-allowed bg-gray-50";
+const disCls = "opacity-50 cursor-not-allowed bg-gray-50";
 
 // ─── Field wrapper ────────────────────────────────────────────────
 function Field({ label, required, children }) {
@@ -185,7 +189,12 @@ function SelectInput({ value, onChange, options = [], placeholder = ALLOCATION_U
 export default function AllocateStudentCard({ isOpen, onClose, onSave, allocationData = null }) {
   const isEditMode = !!allocationData;
 
-  const [form, setForm] = useState({ ...EMPTY_ALLOCATION, monthlyFee: "", overrideReason: "" });
+  const [form, setForm] = useState({
+    ...EMPTY_ALLOCATION,
+    monthlyFee: "",
+    overrideReason: "",
+    applicableFeeMonths: ALL_TRANSPORT_FEE_MONTH_VALUES,
+  });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -209,6 +218,10 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave, allocatio
           ? String(allocationData.feeAmount)
           : "";
 
+      const initialMonths = (Array.isArray(allocationData.applicableFeeMonths) && allocationData.applicableFeeMonths.length > 0)
+        ? allocationData.applicableFeeMonths
+        : ALL_TRANSPORT_FEE_MONTH_VALUES;
+
       setForm({
         studentId: allocationData.studentId || "",
         routeId: allocationData.routeId || "",
@@ -218,10 +231,16 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave, allocatio
         effectiveTo: allocationData.effectiveTo || "",
         monthlyFee: initialFee,
         overrideReason: allocationData.overrideReason || "",
-        remarks: allocationData.remarks || ""
+        remarks: allocationData.remarks || "",
+        applicableFeeMonths: initialMonths,
       });
     } else {
-      setForm({ ...EMPTY_ALLOCATION, monthlyFee: "", overrideReason: "" });
+      setForm({
+        ...EMPTY_ALLOCATION,
+        monthlyFee: "",
+        overrideReason: "",
+        applicableFeeMonths: ALL_TRANSPORT_FEE_MONTH_VALUES,
+      });
     }
 
     const fetchAll = async () => {
@@ -236,7 +255,6 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave, allocatio
       if (studRes.status === "fulfilled") {
         const list = studRes.value?.data || studRes.value || [];
 
-        // 🔹 Map all students regardless of transport allocation
         const allStudents = Array.isArray(list) ? list : [];
 
         setStudents(allStudents.map((s) => ({
@@ -289,6 +307,25 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave, allocatio
     setErrors((p) => ({ ...p, [k]: "" }));
   };
 
+  const toggleMonth = (monthVal) => {
+    setForm((p) => {
+      const current = p.applicableFeeMonths || [];
+      const exists = current.includes(monthVal);
+      const updated = exists ? current.filter((m) => m !== monthVal) : [...current, monthVal];
+      return { ...p, applicableFeeMonths: updated };
+    });
+    setErrors((p) => ({ ...p, applicableFeeMonths: "" }));
+  };
+
+  const handleSelectAllMonths = () => {
+    setForm((p) => ({ ...p, applicableFeeMonths: ALL_TRANSPORT_FEE_MONTH_VALUES }));
+    setErrors((p) => ({ ...p, applicableFeeMonths: "" }));
+  };
+
+  const handleClearAllMonths = () => {
+    setForm((p) => ({ ...p, applicableFeeMonths: [] }));
+  };
+
   // Determine if the fee differs from the base price structure
   const currentStop = stops.find((s) => String(s.value) === String(form.stopId));
   const defaultFee = currentStop?.monthlyFee != null
@@ -304,6 +341,27 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave, allocatio
     if (!form.stopId) e.stopId = VALIDATION_MESSAGES.REQ_STOP;
     if (!form.pickupDropType) e.pickupDropType = VALIDATION_MESSAGES.REQ_PICKUP_DROP;
     if (!form.effectiveFrom) e.effectiveFrom = VALIDATION_MESSAGES.REQ_EFFECTIVE_FROM;
+
+    if (!form.applicableFeeMonths || form.applicableFeeMonths.length === 0) {
+      e.applicableFeeMonths = VALIDATION_MESSAGES.REQ_FEE_MONTHS;
+    }
+
+    // Defense-in-depth: the calendar itself can no longer produce a date
+    // outside the applicable months, but re-validate here too in case
+    // applicableFeeMonths and effectiveFrom/effectiveTo ever get out of
+    // sync (e.g. programmatic form state changes).
+    if (form.effectiveFrom) {
+      const fromMonth = getMonthValueFromDateString(form.effectiveFrom);
+      if (fromMonth && form.applicableFeeMonths && !form.applicableFeeMonths.includes(fromMonth)) {
+        e.effectiveFrom = "Effective From falls in a month that isn't an applicable transport fee month.";
+      }
+    }
+    if (form.effectiveTo) {
+      const toMonth = getMonthValueFromDateString(form.effectiveTo);
+      if (toMonth && form.applicableFeeMonths && !form.applicableFeeMonths.includes(toMonth)) {
+        e.effectiveTo = "Effective To falls in a month that isn't an applicable transport fee month.";
+      }
+    }
 
     if (isFeeOverridden && !form.overrideReason.trim()) {
       e.overrideReason = "Override reason is required when the fee amount is changed.";
@@ -325,7 +383,6 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave, allocatio
     if (!validate()) return;
     setSaving(true);
 
-    // FIXED: Only populate override fields if user has explicitly changed the fee amount
     const payload = {
       studentId: Number(form.studentId),
       routeId: Number(form.routeId),
@@ -336,6 +393,7 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave, allocatio
       overrideFeeAmount: isFeeOverridden && form.monthlyFee !== "" ? Number(form.monthlyFee) : null,
       overrideReason: isFeeOverridden ? form.overrideReason : null,
       remarks: form.remarks || null,
+      applicableFeeMonths: form.applicableFeeMonths,
     };
 
     try {
@@ -435,20 +493,93 @@ export default function AllocateStudentCard({ isOpen, onClose, onSave, allocatio
             </Field>
           </div>
 
-          {/* Effective From | Effective To */}
+          {/* Applicable Transport Fee Months Section (Jan to Dec) */}
+          <div className="space-y-2.5 bg-gray-50/80 p-4 border border-gray-200/80 rounded-xl">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-semibold text-gray-800">Transport Fee Months</span>
+                <span className="text-red-500 text-sm">*</span>
+                <span className="text-xs font-normal text-gray-500 ml-1">
+                  ({form.applicableFeeMonths?.length || 0} selected)
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-xs font-medium">
+                <button
+                  type="button"
+                  onClick={handleSelectAllMonths}
+                  className="text-blue-600 hover:text-blue-800 hover:underline transition-colors focus:outline-none"
+                >
+                  Select All
+                </button>
+                <span className="text-gray-300">|</span>
+                <button
+                  type="button"
+                  onClick={handleClearAllMonths}
+                  className="text-gray-500 hover:text-gray-700 hover:underline transition-colors focus:outline-none"
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Uncheck any month to exclude it from fee generation calendar billing.
+            </p>
+
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 pt-1">
+              {TRANSPORT_FEE_MONTHS.map((m) => {
+                const isSelected = form.applicableFeeMonths?.includes(m.value);
+                return (
+                  <button
+                    key={m.value}
+                    type="button"
+                    onClick={() => toggleMonth(m.value)}
+                    aria-pressed={isSelected}
+                    className={[
+                      "flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-semibold border transition-all duration-150 select-none focus:outline-none focus:ring-2 focus:ring-blue-400",
+                      isSelected
+                        ? "bg-blue-50/90 border-blue-400 text-blue-700 shadow-sm"
+                        : "bg-white border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                    ].join(" ")}
+                  >
+                    {isSelected ? (
+                      <CheckSquare className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    ) : (
+                      <Square className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+                    )}
+                    <span className="truncate">{m.shortLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {errors.applicableFeeMonths && (
+              <p className="text-xs font-medium text-red-500 mt-1">{errors.applicableFeeMonths}</p>
+            )}
+          </div>
+
+          {/* Effective From | Effective To — calendar is filtered to only the
+              currently checked Transport Fee Months (form.applicableFeeMonths
+              is the single source of truth; see MonthFilteredDatePicker). */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label={ALLOCATION_UI_TEXT.LBL_EFFECTIVE_FROM} required>
-              <input type="date" value={form.effectiveFrom}
-                onChange={(e) => set("effectiveFrom", e.target.value)}
-                className={`${SHARED_INPUT_STYLES.base} ${errors.effectiveFrom ? SHARED_INPUT_STYLES.errCls : ""}`} />
+              <MonthFilteredDatePicker
+                value={form.effectiveFrom}
+                onChange={(val) => set("effectiveFrom", val)}
+                applicableMonths={form.applicableFeeMonths}
+                hasError={!!errors.effectiveFrom}
+              />
               {errors.effectiveFrom && <p className="text-xs text-red-500 mt-0.5">{errors.effectiveFrom}</p>}
             </Field>
 
             <Field label={ALLOCATION_UI_TEXT.LBL_EFFECTIVE_TO}>
-              <input type="date" value={form.effectiveTo}
-                min={form.effectiveFrom}
-                onChange={(e) => set("effectiveTo", e.target.value)}
-                className={`${SHARED_INPUT_STYLES.base} ${errors.effectiveTo ? SHARED_INPUT_STYLES.errCls : ""}`} />
+              <MonthFilteredDatePicker
+                value={form.effectiveTo}
+                onChange={(val) => set("effectiveTo", val)}
+                applicableMonths={form.applicableFeeMonths}
+                minDate={form.effectiveFrom}
+                hasError={!!errors.effectiveTo}
+                clearable
+              />
               {errors.effectiveTo && <p className="text-xs text-red-500 mt-0.5">{errors.effectiveTo}</p>}
             </Field>
           </div>

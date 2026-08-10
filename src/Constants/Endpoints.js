@@ -145,6 +145,13 @@ export const API_ENDPOINTS = {
   eventStudentRemarks: (eventId, classId, studentId) => `${BASE_URL_DOUBLE_V1}/exam-events/${eventId}/classes/${classId}/report-cards/${studentId}/remarks`,
   examEventSchedule: (id) => `${BASE_URL_DOUBLE_V1}/exam-events/${id}/schedule`,
 
+  // ─── Student Promotion ───
+  STUDENT_PROMOTION_ELIGIBLE: `${BASE_URL_V1}/students/promotion/eligible`,
+  STUDENT_PROMOTION_EXECUTE: `${BASE_URL_V1}/students/promotion/execute`,
+  STUDENT_PROMOTION_PREVIEW: `${BASE_URL_V1}/students/promotion/preview`,
+
+  studentPromotionHistory: (studentId) => `${BASE_URL_DOUBLE_V1}/students/promotion/history/${studentId}`,
+
   // ─── Fee Collections ───
   FEE_COLLECTIONS: `${BASE_URL_V1}/fee/collections`,
   FEE_COLLECTIONS_BULK: `${BASE_URL_V1}/fee/collections/bulk`,
@@ -162,6 +169,7 @@ export const API_ENDPOINTS = {
   // ─── Fee Periods ───
   FEE_PERIODS: `${BASE_URL_V1}/fee/periods`,
   FEE_PERIODS_ACADEMIC_YEARS: `${BASE_URL_V1}/fee/periods/academic-years`,
+  FEE_NOTIFICATIONS_OVERDUE: `${BASE_URL_V1}/fee/notifications/overdue`,
   feePeriodById: (id) => `${BASE_URL_V1}/fee/periods/${id}`,
   feePeriodClose: (id) => `${BASE_URL_V1}/fee/periods/${id}/close`,
   feePeriodreopen: (id) => `${BASE_URL_V1}/fee/periods/${id}/reopen`,

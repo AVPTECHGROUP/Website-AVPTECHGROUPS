@@ -5,11 +5,12 @@ import {
   ChevronDown, UserCog, Package, Bus, Shield, ChevronUp,
   ArrowLeftRight, BookOpenText, GraduationCap, SchoolIcon,
   MessageSquare, IndianRupee, Mail, Phone, Printer, CreditCard,
-  Ticket, Award, Receipt
+  Ticket, Award, Receipt, DoorOpen
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef, useMemo } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
 import { PERMISSIONS as P, SYSTEM_ROLES } from '../Constants/Permission'
+import OverdueFeeNotifications from "../Pages/FeeManagement/Overduefeenotification.jsx";
 
 const SCHOOL_SWITCHER_ROLES = SYSTEM_ROLES.SCHOOL_SWITCHER;
 
@@ -49,7 +50,8 @@ const menuSections = [
         subItems: [
           { label: 'Subjects', route: '/subjectMaster', permission: P.ACADEMIC_VIEW },
           { label: 'Class & Sections', route: '/academics/classSections', permission: P.ACADEMIC_YEAR_MANAGE },
-          { label: 'HomeWork', route: '/homework', permission: P.HOMEWORK_VIEW, featureFlag: 'homeworkEnabled' },
+          { label: 'Student Promotion', route: '/academics/studentPromotion', permission: P.STUDENT_PROMOTE },
+          { label: 'Homework', route: '/homework', permission: P.HOMEWORK_VIEW, featureFlag: 'homeworkEnabled' },
           { label: 'Time Table', route: '/schedule', permission: P.TIMETABLE_VIEW, featureFlag: 'timetableEnabled' },
           {
             id: 'exams',
@@ -177,6 +179,7 @@ const menuSections = [
         subItems: [
           { label: 'Fee Config', route: '/feeManagement/config', permission: P.FEE_STRUCTURE_MANAGE },
           { label: 'Collection and History', route: '/feeManagement/collections', permission: P.FEE_COLLECT },
+          { label: 'Overdue Fee Notifications', route: 'overduefeenotifications', permission: P.FEE_COLLECT }
         ]
       }
     ]
@@ -186,13 +189,14 @@ const menuSections = [
     items: [
       {
         id: 'templates', icon: Printer, label: 'Templates', route: '/templates/reportCard',
-        systemRole: true, // 👈 Added System Role Protection
+        systemRole: true,
         subItems: [
           { label: 'Report Card Templates', route: '/templates/reportCard', icon: FileText },
           { label: 'ID Card Templates', route: '/templates/idCard', icon: CreditCard },
           { label: 'Admit Card Templates', route: '/templates/admitCard', icon: Ticket },
           { label: 'Certificate Templates', route: '/templates/certificate', icon: Award },
           { label: 'Fee Receipt Templates', route: '/templates/feeReceipt', icon: Receipt },
+          // { label: 'Gate Pass Templates', route: '/templates/gatePass', icon: DoorOpen },
         ]
       }
     ]

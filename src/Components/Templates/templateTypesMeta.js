@@ -1,8 +1,7 @@
 import {
   FileText, CreditCard, Ticket, Award, Receipt, IndianRupee,
-  FileOutput, ShieldCheck, ArrowRightLeft, ClipboardCheck,
+  FileOutput, ShieldCheck, ArrowRightLeft, ClipboardCheck, DoorOpen,
 } from 'lucide-react'
-
 // Keys must match backend `templateType` enum values used by
 // /v1/print-templates (see Constants/Endpoints.js -> PRINT_TEMPLATES).
 //
@@ -202,17 +201,128 @@ export const TEMPLATE_TYPES = {
     label: 'ID Card Templates',
     shortLabel: 'ID Card',
     icon: CreditCard,
-    stub: `<div style="width:300px;margin:auto;border:2px solid #2563eb;border-radius:10px;padding:14px;font-family:Arial;background:linear-gradient(#fff,#eff6ff);">
-  <div style="text-align:center;font-weight:bold;color:#2563eb;font-size:13px;">{{schoolName}}</div>
-  <div style="display:flex;gap:10px;margin-top:10px;">
-    <div style="width:64px;height:76px;background:#e5e7eb;border-radius:6px;flex-shrink:0;"></div>
-    <div style="font-size:11.5px;line-height:1.7;">
-      <b>{{studentName}}</b><br>
-      Class: {{className}}<br>
-      Roll No: {{rollNo}}
+    // CR80-ratio card (~54mm x 85.6mm), rendered as FRONT + BACK side by
+    // side in one pass — same dual-block pattern as FEE_RECEIPT.
+    // Optional rows (bloodGroup, transport, house, emergency contact)
+    // follow the {{#xxxRows}} convention — present only when set.
+    stub: `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Student ID Card</title></head>
+<body style="margin:0;padding:14px;background:#eef2f7;">
+<div class="idc-wrap">
+<style>
+  .idc-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 640px; margin: 0 auto; }
+  .idc-card { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; width: 300px; aspect-ratio: 54/85.6; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 10px 26px rgba(15,23,42,0.14); border: 1px solid #e0e7ff; position: relative; display: flex; flex-direction: column; }
+
+  /* ── FRONT ── */
+  .idc-front .idc-head { position: relative; overflow: hidden; text-align: center; padding: 12px 10px 10px; background: linear-gradient(135deg,#4338ca,#2563eb); color: #fff; }
+  .idc-front .idc-blob { position: absolute; top: -20px; right: -20px; width: 90px; height: 90px; border-radius: 50%; background: rgba(255,255,255,.14); }
+  .idc-front .idc-logo { position: relative; width: 34px; height: 34px; margin: 0 auto 6px; border-radius: 9px; background: rgba(255,255,255,.2); border: 1.5px solid rgba(255,255,255,.55); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; overflow: hidden; }
+  .idc-front .idc-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .idc-front .idc-school-name { position: relative; margin: 0; font-size: 12.5px; font-weight: 800; letter-spacing: -.1px; line-height: 1.25; }
+  .idc-front .idc-card-title { position: relative; margin-top: 3px; font-size: 8.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+
+  .idc-front .idc-body { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 14px 12px 10px; }
+  .idc-front .idc-photo { width: 78px; height: 92px; border-radius: 10px; background: #e5e7eb; border: 3px solid #eef2ff; box-shadow: 0 4px 10px rgba(79,70,229,.18); margin-bottom: 10px; overflow: hidden; }
+  .idc-front .idc-photo img { width: 100%; height: 100%; object-fit: cover; }
+  .idc-front .idc-student-name { font-size: 14px; font-weight: 800; color: #111827; text-align: center; margin: 0 0 2px; }
+  .idc-front .idc-admission { font-size: 9.5px; color: #6366f1; font-weight: 700; margin-bottom: 10px; }
+
+  .idc-front .idc-info-grid { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; }
+  .idc-front .idc-info-cell { background: #f8f9ff; border: 1px solid #eef0f6; border-radius: 8px; padding: 5px 8px; }
+  .idc-front .idc-info-label { display: block; font-size: 7.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #818cf8; margin-bottom: 1px; }
+  .idc-front .idc-info-value { font-size: 10.5px; font-weight: 700; color: #111827; }
+
+  .idc-front .idc-footer { text-align: center; font-size: 8px; color: #9ca3af; padding: 6px 10px 10px; border-top: 1px dashed #e5e7eb; margin-top: 8px; }
+
+  /* ── BACK ── */
+  .idc-back { padding: 1px 14px; }
+  .idc-back .idc-back-title { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: #4f46e5; margin: 0 0 8px; display: flex; align-items: center; gap: 6px; }
+  .idc-back .idc-back-title .idc-bar { width: 4px; height: 12px; border-radius: 2px; background: #6366f1; display: inline-block; }
+
+  .idc-back .idc-kv-row { display: flex; gap: 6px; font-size: 9.5px; margin-bottom: 5px; line-height: 1.4; }
+  .idc-back .idc-kv-row .idc-k { font-weight: 700; min-width: 78px; color: #6b7280; flex-shrink: 0; }
+  .idc-back .idc-kv-row .idc-v { color: #111827; font-weight: 600; }
+
+  .idc-back .idc-tag-row { display: flex; gap: 6px; margin: 8px 0; flex-wrap: wrap; }
+  .idc-back .idc-tag { font-size: 8.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+  .idc-back .idc-tag.idc-tag-amber { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+
+  .idc-back .idc-qr-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e5e7eb; }
+  .idc-back .idc-qr { width: 52px; height: 52px; border-radius: 6px; background: #f3f4f6; border: 1px solid #e5e7eb; flex-shrink: 0; overflow: hidden; }
+  .idc-back .idc-qr img { width: 100%; height: 100%; object-fit: contain; }
+  .idc-back .idc-return-note { font-size: 8px; color: #6b7280; line-height: 1.5; }
+  .idc-back .idc-return-note b { color: #111827; display: block; font-size: 9px; }
+
+  .idc-back .idc-signature { margin-top: 10px; text-align: center; font-size: 8px; color: #9ca3af; border-top: 1px solid #f1f2f6; padding-top: 6px; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .idc-wrap { max-width: 100%; gap: 8mm; }
+    .idc-card { box-shadow: none; border: 1px solid #ccc; }
+  }
+</style>
+
+  <!-- ══════════════ FRONT ══════════════ -->
+  <div class="idc-card idc-front">
+    <div class="idc-head">
+      <div class="idc-blob"></div>
+      <div class="idc-logo"><img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.src='{{schoolLogoFallback}}'"></div>
+      <h1 class="idc-school-name">{{schoolName}}</h1>
+      <div class="idc-card-title">Student Identity Card</div>
     </div>
+
+    <div class="idc-body">
+      <div class="idc-photo"><img src="{{studentPhoto}}" alt="{{studentName}}" onerror="this.style.display='none'"></div>
+      <div class="idc-student-name">{{studentName}}</div>
+      <div class="idc-admission">Admission No: {{admissionNumber}}</div>
+
+      <div class="idc-info-grid">
+        <div class="idc-info-cell"><span class="idc-info-label">Class</span><span class="idc-info-value">{{className}} - {{sectionName}}</span></div>
+        <div class="idc-info-cell"><span class="idc-info-label">Roll No</span><span class="idc-info-value">{{rollNo}}</span></div>
+        <div class="idc-info-cell"><span class="idc-info-label">DOB</span><span class="idc-info-value">{{dateOfBirth}}</span></div>
+        <div class="idc-info-cell"><span class="idc-info-label">Blood Group</span><span class="idc-info-value">{{bloodGroup}}</span></div>
+      </div>
+    </div>
+
+    <div class="idc-footer">Session {{academicSession}} &middot; Valid till {{sessionEndDate}}</div>
   </div>
-</div>`,
+
+  <!-- ══════════════ BACK ══════════════ -->
+  <div class="idc-card idc-back">
+    <div class="idc-back-title"><span class="idc-bar"></span> Guardian & Emergency</div>
+
+    <div class="idc-kv-row"><span class="idc-k">Parent/Guardian</span><span class="idc-v">{{parentName}}</span></div>
+    <div class="idc-kv-row"><span class="idc-k">Contact</span><span class="idc-v">{{parentMobile}}</span></div>
+    <div class="idc-kv-row"><span class="idc-k">Address</span><span class="idc-v">{{studentAddress}}</span></div>
+
+    {{#emergencyContactRows}}
+    <div class="idc-kv-row"><span class="idc-k">Emergency</span><span class="idc-v">{{emergencyContact}}</span></div>
+    {{/emergencyContactRows}}
+
+    <div class="idc-tag-row">
+      {{#transportRows}}
+      <span class="idc-tag">🚌 {{transportRoute}}</span>
+      {{/transportRows}}
+      {{#houseRows}}
+      <span class="idc-tag idc-tag-amber">🏠 {{houseName}}</span>
+      {{/houseRows}}
+    </div>
+
+    <div class="idc-qr-row">
+      <div class="idc-qr"><img src="{{qrCodeUrl}}" alt="QR" onerror="this.style.display='none'"></div>
+      <div class="idc-return-note">
+        <b>If found, please return to:</b>
+        {{schoolName}}<br>{{schoolAddress}}<br>{{schoolPhone}}
+      </div>
+    </div>
+
+    <div class="idc-signature">Authorised Signature / School Stamp</div>
+  </div>
+
+</div>
+</body>
+</html>`,
   },
   ADMIT_CARD: {
     key: 'ADMIT_CARD',
@@ -228,6 +338,157 @@ export const TEMPLATE_TYPES = {
 </div>`,
   },
 
+  GATE_PASS: {
+    key: 'GATE_PASS',
+    label: 'Gate Pass Templates',
+    shortLabel: 'Gate Pass',
+    icon: DoorOpen,
+    // Student/receipt-style fields are merge-driven; the Reason checklist,
+    // leaving date/time, and all 4 signature boxes stay blank on purpose —
+    // this is a print-and-fill form, staff tick/sign it by hand at the gate.
+    stub: `<div class="gp-premium">
+<style>
+  .gp-premium { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; max-width: 700px; margin: 0 auto; border: 2px solid #0f1e3d; border-radius: 14px; overflow: hidden; background: #ffffff; color: #1f2937; box-shadow: 0 12px 32px rgba(15,30,61,0.14); }
+
+  .gp-header { display: flex; align-items: center; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid #e5e7eb; }
+  .gp-logo { width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg,#0f1e3d,#1e3a8a); color: #fbbf24; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; border: 2px solid #fbbf24; overflow: hidden; }
+  .gp-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .gp-school-block { flex: 1; min-width: 0; }
+  .gp-school-name { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.2px; color: #0f1e3d; text-transform: uppercase; }
+  .gp-school-tagline { margin: 1px 0 6px; font-size: 10.5px; font-style: italic; color: #6b7280; }
+  .gp-school-meta { font-size: 10px; color: #4b5563; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+
+  .gp-pass-box { flex-shrink: 0; border: 1.5px solid #0f1e3d; border-radius: 10px; padding: 8px 14px; text-align: center; min-width: 118px; }
+  .gp-pass-box .gp-pb-label { font-size: 8px; font-weight: 800; letter-spacing: .06em; color: #6b7280; }
+  .gp-pass-box .gp-pb-value { font-size: 12px; font-weight: 800; color: #dc2626; margin: 1px 0 6px; }
+  .gp-pass-box .gp-pb-value.gp-pb-date { color: #0f1e3d; margin-bottom: 0; }
+
+  .gp-title-banner { text-align: center; background: #0f1e3d; color: #fff; font-size: 17px; font-weight: 800; letter-spacing: .15em; padding: 9px; margin: 16px 22px 0; border-radius: 8px; }
+
+  .gp-section { padding: 16px 22px 0; }
+  .gp-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #e5e7eb; }
+  .gp-row:last-child { border-bottom: none; }
+  .gp-num { flex-shrink: 0; width: 20px; height: 20px; border-radius: 5px; background: #0f1e3d; color: #fff; font-size: 10.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .gp-row-label { flex-shrink: 0; width: 130px; font-size: 12px; font-weight: 700; color: #374151; }
+  .gp-row-value { flex: 1; font-size: 12.5px; font-weight: 700; color: #111827; border-bottom: 1px solid #d1d5db; padding-bottom: 3px; }
+
+  .gp-band { background: #0f1e3d; color: #fff; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 7px; margin: 18px 0 0; }
+
+  .gp-two-col { display: flex; gap: 22px; padding: 12px 22px 0; }
+  .gp-field { flex: 1; }
+  .gp-field-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; margin-bottom: 3px; }
+  .gp-field-value { font-size: 12.5px; font-weight: 700; color: #111827; border-bottom: 1px solid #d1d5db; padding-bottom: 4px; min-height: 15px; }
+
+  .gp-reason-row { padding: 14px 22px 0; font-size: 11.5px; color: #374151; }
+  .gp-reason-title { font-weight: 700; margin-bottom: 8px; }
+  .gp-checks { display: flex; flex-wrap: wrap; gap: 14px 20px; margin-bottom: 10px; }
+  .gp-check { display: inline-flex; align-items: center; gap: 6px; }
+  .gp-box { width: 13px; height: 13px; border: 1.5px solid #6b7280; border-radius: 3px; display: inline-block; }
+  .gp-reason-details { border-bottom: 1px solid #d1d5db; padding-bottom: 4px; font-size: 12px; font-weight: 700; color: #111827; min-height: 16px; }
+
+  .gp-instructions { padding: 14px 22px 4px; display: flex; justify-content: space-between; gap: 12px; }
+  .gp-instructions ul { margin: 0; padding-left: 16px; font-size: 11px; color: #374151; line-height: 1.9; }
+  .gp-instructions .gp-badge-icon { font-size: 38px; opacity: .12; flex-shrink: 0; }
+
+  .gp-signatures { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; padding: 16px 22px 6px; }
+  .gp-sign-box { border: 1px solid #d1d5db; border-radius: 8px; padding: 20px 8px 8px; text-align: center; position: relative; min-height: 66px; }
+  .gp-sign-box .gp-sign-title { position: absolute; top: 7px; left: 8px; right: 8px; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: #6b7280; text-align: left; }
+  .gp-sign-line { border-top: 1px solid #9ca3af; font-size: 9px; color: #6b7280; padding-top: 3px; }
+  .gp-stamp { position: absolute; bottom: 8px; right: 8px; width: 34px; height: 34px; border: 1.5px dashed #1e3a8a; border-radius: 50%; color: #1e3a8a; font-size: 6px; font-weight: 800; display: flex; align-items: center; justify-content: center; text-align: center; transform: rotate(-12deg); opacity: .55; }
+
+  .gp-footer { padding: 4px 22px 18px; font-size: 10px; color: #6b7280; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .gp-thankyou { font-family: Georgia, serif; font-style: italic; font-size: 15px; color: #0f1e3d; }
+</style>
+
+  <!-- ══ Header ══ -->
+  <div class="gp-header">
+    <div class="gp-logo"><img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.parentElement.textContent='{{schoolInitials}}'"></div>
+    <div class="gp-school-block">
+      <h1 class="gp-school-name">{{schoolName}}</h1>
+      <div class="gp-school-tagline">{{schoolTagline}}</div>
+      <div class="gp-school-meta">
+        <span>📍 {{schoolAddress}}</span>
+        <span>📞 {{schoolPhone}}</span>
+        <span>🌐 {{schoolWebsite}}</span>
+        <span>✉ {{schoolEmail}}</span>
+      </div>
+    </div>
+    <div class="gp-pass-box">
+      <div class="gp-pb-label">GATE PASS NO.</div>
+      <div class="gp-pb-value">{{gatePassNo}}</div>
+      <div class="gp-pb-label">DATE</div>
+      <div class="gp-pb-value gp-pb-date">{{issueDate}}</div>
+    </div>
+  </div>
+
+  <div class="gp-title-banner">GATE PASS</div>
+
+  <!-- ══ Student Details ══ -->
+  <div class="gp-section">
+    <div class="gp-row"><span class="gp-num">1</span><span class="gp-row-label">Student</span><span class="gp-row-value">{{studentName}}</span></div>
+    <div class="gp-row"><span class="gp-num">2</span><span class="gp-row-label">Class &amp; Section</span><span class="gp-row-value">{{className}} - {{sectionName}}</span></div>
+    <div class="gp-row"><span class="gp-num">3</span><span class="gp-row-label">Roll No.</span><span class="gp-row-value">{{rollNo}}</span></div>
+    <div class="gp-row"><span class="gp-num">4</span><span class="gp-row-label">Contact Number</span><span class="gp-row-value">{{parentMobile}}</span></div>
+    <div class="gp-row"><span class="gp-num">5</span><span class="gp-row-label">Father's / Guardian's Name</span><span class="gp-row-value">{{parentName}}</span></div>
+  </div>
+
+  <!-- ══ Details of Leaving ══ -->
+  <div class="gp-band">Details of Leaving</div>
+  <div class="gp-two-col">
+    <div class="gp-field"><div class="gp-field-label">Date</div><div class="gp-field-value">{{leavingDate}}</div></div>
+    <div class="gp-field"><div class="gp-field-label">Time</div><div class="gp-field-value">{{leavingTime}}</div></div>
+  </div>
+
+  <div class="gp-reason-row">
+    <div class="gp-reason-title">Reason</div>
+    <div class="gp-checks">
+      <span class="gp-check"><span class="gp-box"></span> Medical</span>
+      <span class="gp-check"><span class="gp-box"></span> Personal</span>
+      <span class="gp-check"><span class="gp-box"></span> Family Function</span>
+      <span class="gp-check"><span class="gp-box"></span> Emergency</span>
+      <span class="gp-check"><span class="gp-box"></span> Others</span>
+    </div>
+    <div class="gp-field-label" style="margin-top:4px;">Details</div>
+    <div class="gp-reason-details">{{reasonDetails}}</div>
+  </div>
+
+  <!-- ══ Authorised Pickup ══ -->
+  <div class="gp-band">Person Authorised to Pick Up</div>
+  <div class="gp-two-col" style="padding-bottom:4px;">
+    <div class="gp-field"><div class="gp-field-label">Name</div><div class="gp-field-value">{{pickupPersonName}}</div></div>
+    <div class="gp-field"><div class="gp-field-label">Relation</div><div class="gp-field-value">{{pickupRelation}}</div></div>
+  </div>
+  <div class="gp-two-col" style="padding-top:10px;">
+    <div class="gp-field"><div class="gp-field-label">Contact No.</div><div class="gp-field-value">{{pickupContact}}</div></div>
+    <div class="gp-field"><div class="gp-field-label">ID Proof</div><div class="gp-field-value">{{pickupIdProof}}</div></div>
+  </div>
+
+  <!-- ══ Instructions ══ -->
+  <div class="gp-band" style="margin-top:18px;">Instructions</div>
+  <div class="gp-instructions">
+    <ul>
+      <li>Student must be picked up by the authorised person only.</li>
+      <li>This Gate Pass is valid only for the date and time mentioned above.</li>
+      <li>Student must report back to school on the next working day with a valid explanation.</li>
+    </ul>
+    <div class="gp-badge-icon">🏫</div>
+  </div>
+
+  <!-- ══ Signatures ══ -->
+  <div class="gp-signatures">
+    <div class="gp-sign-box"><span class="gp-sign-title">Class Teacher</span><div class="gp-sign-line">Signature</div></div>
+    <div class="gp-sign-box"><span class="gp-sign-title">HOD / Coordinator</span><div class="gp-sign-line">Signature</div></div>
+    <div class="gp-sign-box"><span class="gp-sign-title">Admin Office</span><div class="gp-sign-line">Signature</div><div class="gp-stamp">RECEIVED</div></div>
+    <div class="gp-sign-box"><span class="gp-sign-title">Security</span><div class="gp-sign-line">Signature</div></div>
+  </div>
+
+  <div class="gp-footer">
+    <span><b>Note:</b> Students are not allowed to leave the school campus without a valid Gate Pass.</span>
+    <span class="gp-thankyou">Thank You!</span>
+  </div>
+
+</div>`,
+  },
   // ─────────────────────────────────────────────────────────────────────
   // Certificate family — all 5 of these live under one sidebar entry
   // ("Certificate Templates") and are switched via a dropdown on the
