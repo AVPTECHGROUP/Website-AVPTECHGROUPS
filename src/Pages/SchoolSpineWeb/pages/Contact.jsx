@@ -20,6 +20,12 @@ import { UserContext } from "../../../ContextAPI/UserContext";
 
 import ContactImg from "../../../assets/Images/Contact/Contact.png";
 
+import { submitDemoRequest } from "../../../Api/DemorequestApi";
+import {
+    STUDENT_STRENGTH_OPTIONS,
+    DEFAULT_COUNTRY_CODE,
+} from "../../../Constants/Demorequestconstant";
+
 const inquiryTypes = ["Technical Support", "Book a Free Demo", "Feedback", "Product Training & Support", "Other Inquiries"];
 
 const helpDesks = [
@@ -76,30 +82,107 @@ const staggerContainer = {
     }
 };
 
+// NOTE ON DROPDOWNS:
+// Native <select> popup lists are rendered by the OS/browser, not by our CSS —
+// on most browsers (esp. Windows Chrome) that popup always has a WHITE
+// background no matter what dark-theme classes we put on <option>. So option
+// text color is kept dark/readable here regardless of `isDark`, otherwise
+// dark-theme text (white-on-white) becomes invisible inside the open list.
+const OPTION_CLASSES = "bg-white text-slate-900";
+
+// Single source of truth for a brand-new form's shape. Keeping this as a
+// factory function (rather than a shared mutable object) means every call
+// gets its own fresh object, and the default dial code always comes from
+// the constants file instead of being retyped as a literal "+91".
+const buildInitialForm = () => ({
+    name: "",
+    email: "",
+    countryCode: DEFAULT_COUNTRY_CODE,
+    phone: "",
+    inquiry: "",
+    message: "",
+    schoolName: "",
+    studentStrength: "",
+});
+
 const Contact = () => {
     const { theme } = useContext(UserContext);
     const isDark = theme === "dark";
 
-    const [form, setForm] = useState({
-        name: "",
-        email: "",
-        phone: "",
-        inquiry: "",
-        message: "",
-    });
+    const [form, setForm] = useState(buildInitialForm);
     const [submitted, setSubmitted] = useState(false);
+    const [successMsg, setSuccessMsg] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [errorMsg, setErrorMsg] = useState("");
+
+    const isDemoInquiry = form.inquiry === "Book a Free Demo";
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const resetForm = () => {
+        setForm(buildInitialForm());
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!form.name || !form.email || !form.phone || !form.inquiry || !form.message) return;
+        setErrorMsg("");
+
+        // ── Path 1: "Book a Free Demo" → calls the real /v1/public/demo-request API ──
+        if (isDemoInquiry) {
+            if (!form.name || !form.phone || !form.schoolName || !form.studentStrength) {
+                setErrorMsg("Please fill all required demo fields.");
+                return;
+            }
+
+            const digitsOnly = form.phone.replace(/\D/g, "");
+            if (digitsOnly.length < 6) {
+                setErrorMsg("Please enter a valid phone number.");
+                return;
+            }
+
+            const payload = {
+                fullName: form.name.trim(),
+                schoolName: form.schoolName.trim(),
+                phoneNumber: `${form.countryCode}${digitsOnly}`,
+                studentStrength: form.studentStrength,
+            };
+
+            setLoading(true);
+            try {
+                const result = await submitDemoRequest(payload);
+                setSuccessMsg(
+                    result?.message ||
+                    "Demo request received! Our team will reach out within 24 hours."
+                );
+                setSubmitted(true);
+                resetForm();
+                setTimeout(() => {
+                    setSubmitted(false);
+                    setSuccessMsg("");
+                }, 5000);
+            } catch (err) {
+                setErrorMsg(err.message || "We couldn't reach the server. Please try again.");
+            } finally {
+                setLoading(false);
+            }
+            return;
+        }
+
+        // ── Path 2: all other inquiry types → existing local-only behaviour ──
+        if (!form.name || !form.email || !form.phone || !form.inquiry || !form.message) {
+            setErrorMsg("Please fill all required fields.");
+            return;
+        }
+        setSuccessMsg("Message sent! We'll get back to you shortly.");
         setSubmitted(true);
-        setForm({ name: "", email: "", phone: "", inquiry: "", message: "" });
-        setTimeout(() => setSubmitted(false), 5000);
+        resetForm();
+        setTimeout(() => {
+            setSubmitted(false);
+            setSuccessMsg("");
+        }, 5000);
     };
 
     const inputClasses = `w-full h-12 px-4 rounded-xl border outline-none transition-all text-sm ${isDark
@@ -109,7 +192,7 @@ const Contact = () => {
     const labelClasses = `text-xs font-semibold uppercase tracking-wide mb-2 block ${isDark ? "text-slate-400" : "text-slate-500"
         }`;
 
-    return (
+    return (    
         <div
             className={`relative min-h-screen overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030712] text-slate-100" : "bg-slate-50 text-slate-900"
                 }`}
@@ -253,14 +336,25 @@ const Contact = () => {
                                     animate={{ opacity: 1, scale: 1 }}
                                     className="mb-6 flex items-center gap-2 px-4 py-3 rounded-xl border border-[#00C9B1]/30 bg-[#00C9B1]/10 text-[#00C9B1] text-sm font-medium"
                                 >
-                                    <CheckCircle2 size={16} /> Message sent! We'll get back to you shortly.
+                                    <CheckCircle2 size={16} />
+                                    {successMsg}
+                                </motion.div>
+                            )}
+
+                            {errorMsg && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="mb-6 flex items-center gap-2 px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-500 text-sm font-medium"
+                                >
+                                    {errorMsg}
                                 </motion.div>
                             )}
 
                             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <div>
-                                        <label className={labelClasses}>Your Full Name *</label>
+                                        <label className={labelClasses}>Full Name *</label>
                                         <input
                                             type="text"
                                             name="name"
@@ -271,18 +365,20 @@ const Contact = () => {
                                             required
                                         />
                                     </div>
-                                    <div>
-                                        <label className={labelClasses}>Email Address *</label>
-                                        <input
-                                            type="email"
-                                            name="email"
-                                            value={form.email}
-                                            onChange={handleChange}
-                                            placeholder="you@example.com"
-                                            className={inputClasses}
-                                            required
-                                        />
-                                    </div>
+                                    {!isDemoInquiry && (
+                                        <div>
+                                            <label className={labelClasses}>Email Address *</label>
+                                            <input
+                                                type="email"
+                                                name="email"
+                                                value={form.email}
+                                                onChange={handleChange}
+                                                placeholder="you@example.com"
+                                                className={inputClasses}
+                                                required
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -293,7 +389,7 @@ const Contact = () => {
                                             name="phone"
                                             value={form.phone}
                                             onChange={handleChange}
-                                            placeholder="A valid contact number"
+                                            placeholder={isDemoInquiry ? "98765 43210" : "A valid contact number"}
                                             className={inputClasses}
                                             required
                                         />
@@ -309,19 +405,11 @@ const Contact = () => {
                                                     }`}
                                                 required
                                             >
-                                                <option
-                                                    value=""
-                                                    disabled
-                                                    className={isDark ? "bg-slate-900 text-slate-500" : "bg-white text-slate-400"}
-                                                >
+                                                <option value="" disabled className={OPTION_CLASSES}>
                                                     Select an inquiry type
                                                 </option>
                                                 {inquiryTypes.map((t) => (
-                                                    <option
-                                                        key={t}
-                                                        value={t}
-                                                        className={isDark ? "bg-slate-950 text-slate-100" : "bg-white text-slate-900"}
-                                                    >
+                                                    <option key={t} value={t} className={OPTION_CLASSES}>
                                                         {t}
                                                     </option>
                                                 ))}
@@ -334,26 +422,73 @@ const Contact = () => {
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className={labelClasses}>Message *</label>
-                                    <textarea
-                                        name="message"
-                                        value={form.message}
-                                        onChange={handleChange}
-                                        placeholder="Please provide as much detail as possible"
-                                        rows={5}
-                                        className={`${inputClasses} h-auto py-3 resize-none`}
-                                        required
-                                    />
-                                </div>
+                                {/* Demo-only fields — required by /v1/public/demo-request */}
+                                {isDemoInquiry && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                        <div>
+                                            <label className={labelClasses}>School Name *</label>
+                                            <input
+                                                type="text"
+                                                name="schoolName"
+                                                value={form.schoolName}
+                                                onChange={handleChange}
+                                                placeholder="e.g. Sunrise Public School"
+                                                className={inputClasses}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={labelClasses}>Number of Students *</label>
+                                            <div className="relative">
+                                                <select
+                                                    name="studentStrength"
+                                                    value={form.studentStrength}
+                                                    onChange={handleChange}
+                                                    className={`${inputClasses} appearance-none pr-10 cursor-pointer ${!form.studentStrength ? (isDark ? "text-slate-500" : "text-slate-400") : ""
+                                                        }`}
+                                                    required
+                                                >
+                                                    <option value="" disabled className={OPTION_CLASSES}>
+                                                        Select a range
+                                                    </option>
+                                                    {STUDENT_STRENGTH_OPTIONS.map((s) => (
+                                                        <option key={s.value} value={s.value} className={OPTION_CLASSES}>
+                                                            {s.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <ChevronDown
+                                                    size={16}
+                                                    className={`pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {!isDemoInquiry && (
+                                    <div>
+                                        <label className={labelClasses}>Message *</label>
+                                        <textarea
+                                            name="message"
+                                            value={form.message}
+                                            onChange={handleChange}
+                                            placeholder="Please provide as much detail as possible"
+                                            rows={5}
+                                            className={`${inputClasses} h-auto py-3 resize-none`}
+                                            required
+                                        />
+                                    </div>
+                                )}
 
                                 <motion.button
                                     whileHover={{ scale: 1.015 }}
                                     whileTap={{ scale: 0.98 }}
                                     type="submit"
-                                    className="mt-2 h-12 px-6 rounded-xl font-semibold text-slate-950 bg-gradient-to-r from-[#00C9B1] to-[#F5A623] transition-all duration-300 shadow-lg shadow-teal-500/10 cursor-pointer flex items-center justify-center gap-2"
+                                    disabled={loading}
+                                    className="mt-2 h-12 px-6 rounded-xl font-semibold text-slate-950 bg-gradient-to-r from-[#00C9B1] to-[#F5A623] transition-all duration-300 shadow-lg shadow-teal-500/10 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
-                                    Send Message <Send size={16} />
+                                    {loading ? "Sending..." : isDemoInquiry ? "Request Demo" : "Send Message"} <Send size={16} />
                                 </motion.button>
                             </form>
                         </div>
