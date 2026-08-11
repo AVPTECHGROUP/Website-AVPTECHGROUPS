@@ -80,6 +80,7 @@ export const ROUTE_PATHS = {
   HOME: '/',
   ABOUT: '/about',
   CONTACT: '/contact',
+  BOOK_DEMO: '/book-demo',
   PRIVACY_POLICY: '/privacy-policy',
   TERMS: '/terms',
   COOKIES: '/cookies',
