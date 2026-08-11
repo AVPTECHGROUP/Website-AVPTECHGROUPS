@@ -5,7 +5,9 @@ import {
   ChevronDown, UserCog, Package, Bus, Shield, ChevronUp,
   ArrowLeftRight, BookOpenText, GraduationCap, SchoolIcon,
   MessageSquare, IndianRupee, Mail, Phone, Printer, CreditCard,
-  Ticket, Award, Receipt, DoorOpen
+  Ticket, Award, Receipt, DoorOpen,
+  Bike,
+  UserCheck
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef, useMemo } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
@@ -196,7 +198,9 @@ const menuSections = [
           { label: 'Admit Card Templates', route: '/templates/admitCard', icon: Ticket },
           { label: 'Certificate Templates', route: '/templates/certificate', icon: Award },
           { label: 'Fee Receipt Templates', route: '/templates/feeReceipt', icon: Receipt },
-          // { label: 'Gate Pass Templates', route: '/templates/gatePass', icon: DoorOpen },
+          { label: 'Gate Pass Templates', route: '/templates/gatePass', icon: DoorOpen },
+          // { label: 'Visitor Pass Templates', route: '/templates/visitorPass', icon: UserCheck },
+          // { label: 'Cycle Stand Templates', route: '/templates/cycleStandPass', icon: Bike },
         ]
       }
     ]
