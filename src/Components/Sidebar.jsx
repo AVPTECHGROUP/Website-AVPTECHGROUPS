@@ -5,7 +5,7 @@ import {
   ChevronDown, UserCog, Package, Bus, Shield, ChevronUp,
   ArrowLeftRight, BookOpenText, GraduationCap, SchoolIcon,
   MessageSquare, IndianRupee, Mail, Phone, Printer, CreditCard,
-  Ticket, Award, Receipt
+  Ticket, Award, Receipt, DoorOpen
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef, useMemo } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
@@ -179,7 +179,7 @@ const menuSections = [
         subItems: [
           { label: 'Fee Config', route: '/feeManagement/config', permission: P.FEE_STRUCTURE_MANAGE },
           { label: 'Collection and History', route: '/feeManagement/collections', permission: P.FEE_COLLECT },
-          {label: 'Overdue Fee Notifications', route: 'overduefeenotifications', permission: P.FEE_COLLECT}
+          { label: 'Overdue Fee Notifications', route: 'overduefeenotifications', permission: P.FEE_COLLECT }
         ]
       }
     ]
@@ -189,13 +189,14 @@ const menuSections = [
     items: [
       {
         id: 'templates', icon: Printer, label: 'Templates', route: '/templates/reportCard',
-        systemRole: true, // 👈 Added System Role Protection
+        systemRole: true,
         subItems: [
           { label: 'Report Card Templates', route: '/templates/reportCard', icon: FileText },
           { label: 'ID Card Templates', route: '/templates/idCard', icon: CreditCard },
           { label: 'Admit Card Templates', route: '/templates/admitCard', icon: Ticket },
           { label: 'Certificate Templates', route: '/templates/certificate', icon: Award },
           { label: 'Fee Receipt Templates', route: '/templates/feeReceipt', icon: Receipt },
+          // { label: 'Gate Pass Templates', route: '/templates/gatePass', icon: DoorOpen },
         ]
       }
     ]
