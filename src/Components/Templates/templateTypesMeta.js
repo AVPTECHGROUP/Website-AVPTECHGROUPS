@@ -1,6 +1,7 @@
 import {
   FileText, CreditCard, Ticket, Award, Receipt, IndianRupee,
   FileOutput, ShieldCheck, ArrowRightLeft, ClipboardCheck, DoorOpen,
+  Bike, UserCheck,
 } from 'lucide-react'
 // Keys must match backend `templateType` enum values used by
 // /v1/print-templates (see Constants/Endpoints.js -> PRINT_TEMPLATES).
@@ -486,6 +487,223 @@ export const TEMPLATE_TYPES = {
     <span><b>Note:</b> Students are not allowed to leave the school campus without a valid Gate Pass.</span>
     <span class="gp-thankyou">Thank You!</span>
   </div>
+
+</div>`,
+  },
+  CYCLE_STAND_PASS: {
+    key: 'CYCLE_STAND_PASS',
+    label: 'Cycle Stand Pass Templates',
+    shortLabel: 'Cycle Stand Pass',
+    icon: Bike,
+    // Green-themed print-and-fill pass, same convention as GATE_PASS —
+    // Student + Validity fields are merge-driven, Terms & Conditions and
+    // both signature boxes stay blank for manual fill/sign at issue time.
+    stub: `<div class="cs-premium">
+<style>
+  .cs-premium { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; max-width: 700px; margin: 0 auto; border: 2px solid #14532d; border-radius: 14px; overflow: hidden; background: #ffffff; color: #1f2937; box-shadow: 0 12px 32px rgba(20,83,45,0.14); }
+
+  .cs-header { display: flex; align-items: center; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid #e5e7eb; }
+  .cs-logo { width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg,#14532d,#166534); color: #fbbf24; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; border: 2px solid #fbbf24; overflow: hidden; }
+  .cs-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .cs-school-block { flex: 1; min-width: 0; }
+  .cs-school-name { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.2px; color: #14532d; text-transform: uppercase; }
+  .cs-school-meta { font-size: 10px; color: #4b5563; display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; }
+
+  .cs-pass-box { flex-shrink: 0; border: 1.5px solid #14532d; border-radius: 10px; padding: 8px 14px; text-align: center; min-width: 118px; }
+  .cs-pass-box .cs-pb-label { font-size: 8px; font-weight: 800; letter-spacing: .06em; color: #6b7280; }
+  .cs-pass-box .cs-pb-value { font-size: 12px; font-weight: 800; color: #14532d; margin: 1px 0 0; }
+
+  .cs-title-banner { text-align: center; background: #14532d; color: #fff; font-size: 17px; font-weight: 800; letter-spacing: .15em; padding: 9px; margin: 16px 22px 0; border-radius: 8px; }
+
+  .cs-band { background: #14532d; color: #fff; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 7px; margin: 18px 0 0; }
+
+  .cs-section { padding: 16px 22px 0; }
+  .cs-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #e5e7eb; }
+  .cs-row:last-child { border-bottom: none; }
+  .cs-num { flex-shrink: 0; width: 20px; height: 20px; border-radius: 5px; background: #14532d; color: #fff; font-size: 10.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .cs-row-label { flex-shrink: 0; width: 140px; font-size: 12px; font-weight: 700; color: #374151; }
+  .cs-row-value { flex: 1; font-size: 12.5px; font-weight: 700; color: #111827; border-bottom: 1px solid #d1d5db; padding-bottom: 3px; }
+
+  .cs-terms { padding: 14px 22px 4px; font-size: 11.5px; color: #374151; }
+  .cs-terms ul { margin: 6px 0 0; padding-left: 16px; line-height: 1.9; }
+
+  .cs-signatures { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; padding: 16px 22px 6px; }
+  .cs-sign-box { border: 1px solid #d1d5db; border-radius: 8px; padding: 20px 8px 8px; text-align: center; position: relative; min-height: 66px; }
+  .cs-sign-box .cs-sign-title { position: absolute; top: 7px; left: 8px; right: 8px; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: #6b7280; text-align: left; }
+  .cs-sign-line { border-top: 1px solid #9ca3af; font-size: 9px; color: #6b7280; padding-top: 3px; }
+
+  .cs-footer { text-align: center; background: #14532d; color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; padding: 10px; margin-top: 18px; }
+</style>
+
+  <!-- ══ Header ══ -->
+  <div class="cs-header">
+    <div class="cs-logo"><img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.parentElement.textContent='{{schoolInitials}}'"></div>
+    <div class="cs-school-block">
+      <h1 class="cs-school-name">{{schoolName}}</h1>
+      <div class="cs-school-meta">
+        <span>📍 {{schoolAddress}}</span>
+        <span>📞 {{schoolPhone}}</span>
+      </div>
+    </div>
+    <div class="cs-pass-box">
+      <div class="cs-pb-label">PASS NO.</div>
+      <div class="cs-pb-value">{{passNo}}</div>
+    </div>
+  </div>
+
+  <div class="cs-title-banner">CYCLE STAND PASS</div>
+
+  <!-- ══ Student Details ══ -->
+  <div class="cs-band">Student Details</div>
+  <div class="cs-section">
+    <div class="cs-row"><span class="cs-num">1</span><span class="cs-row-label">Student Name</span><span class="cs-row-value">{{studentName}}</span></div>
+    <div class="cs-row"><span class="cs-num">2</span><span class="cs-row-label">Class / Section</span><span class="cs-row-value">{{className}} - {{sectionName}}</span></div>
+    <div class="cs-row"><span class="cs-num">3</span><span class="cs-row-label">Roll Number</span><span class="cs-row-value">{{rollNo}}</span></div>
+    <div class="cs-row"><span class="cs-num">4</span><span class="cs-row-label">Admission / ID No.</span><span class="cs-row-value">{{admissionNumber}}</span></div>
+  </div>
+
+  <!-- ══ Validity Details ══ -->
+  <div class="cs-band">Validity Details</div>
+  <div class="cs-section">
+    <div class="cs-row"><span class="cs-num">1</span><span class="cs-row-label">Date of Issue</span><span class="cs-row-value">{{issueDate}}</span></div>
+    <div class="cs-row"><span class="cs-num">2</span><span class="cs-row-label">Valid From</span><span class="cs-row-value">{{validFrom}}</span></div>
+    <div class="cs-row"><span class="cs-num">3</span><span class="cs-row-label">Valid Until</span><span class="cs-row-value">{{validUntil}}</span></div>
+  </div>
+
+  <!-- ══ Terms & Conditions ══ -->
+  <div class="cs-band">Terms &amp; Conditions</div>
+  <div class="cs-terms">
+    <ul>
+      <li>This pass is non-transferable.</li>
+      <li>Park your cycle only in the designated cycle stand area.</li>
+      <li>School is not responsible for any loss or damage to the cycle.</li>
+      <li>Show this pass when required.</li>
+    </ul>
+  </div>
+
+  <!-- ══ Authorization ══ -->
+  <div class="cs-band">Authorization</div>
+  <div class="cs-signatures">
+    <div class="cs-sign-box"><span class="cs-sign-title">Authorized By</span><div class="cs-sign-line">Signature</div></div>
+    <div class="cs-sign-box"><span class="cs-sign-title">Issuing Authority / Sign</span><div class="cs-sign-line">Signature</div></div>
+  </div>
+
+  <div class="cs-footer">🛡 KEEP YOUR CAMPUS CLEAN AND PARK IN THE DESIGNATED AREA 🛡</div>
+
+</div>`,
+  },
+  VISITOR_PASS: {
+    key: 'VISITOR_PASS',
+    label: "Visitor's Pass Templates",
+    shortLabel: "Visitor's Pass",
+    icon: UserCheck,
+    // Blue-themed print-and-fill pass. Vehicle Details and Remarks are
+    // optional-on-paper sections (staff fill only if applicable), so no
+    // {{#xxxRows}} conditionals needed — always rendered like GATE_PASS.
+    stub: `<div class="vp-premium">
+<style>
+  .vp-premium { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; max-width: 700px; margin: 0 auto; border: 2px solid #1e3a8a; border-radius: 14px; overflow: hidden; background: #ffffff; color: #1f2937; box-shadow: 0 12px 32px rgba(30,58,138,0.14); }
+
+  .vp-header { display: flex; align-items: center; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid #e5e7eb; }
+  .vp-logo { width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg,#1e3a8a,#2563eb); color: #fbbf24; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; border: 2px solid #fbbf24; overflow: hidden; }
+  .vp-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .vp-school-block { flex: 1; min-width: 0; }
+  .vp-school-name { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.2px; color: #1e3a8a; text-transform: uppercase; }
+  .vp-school-meta { font-size: 10px; color: #4b5563; display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; }
+
+  .vp-pass-box { flex-shrink: 0; border: 1.5px solid #1e3a8a; border-radius: 10px; padding: 8px 14px; text-align: center; min-width: 118px; }
+  .vp-pass-box .vp-pb-label { font-size: 8px; font-weight: 800; letter-spacing: .06em; color: #6b7280; }
+  .vp-pass-box .vp-pb-value { font-size: 12px; font-weight: 800; color: #1e3a8a; margin: 1px 0 0; }
+
+  .vp-title-banner { text-align: center; background: #1e3a8a; color: #fff; font-size: 17px; font-weight: 800; letter-spacing: .15em; padding: 9px; margin: 16px 22px 0; border-radius: 8px; }
+
+  .vp-band { background: #1e3a8a; color: #fff; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 7px; margin: 18px 0 0; }
+
+  .vp-section { padding: 16px 22px 0; }
+  .vp-two-col { display: flex; gap: 22px; padding: 16px 22px 0; }
+  .vp-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #e5e7eb; }
+  .vp-row:last-child { border-bottom: none; }
+  .vp-num { flex-shrink: 0; width: 20px; height: 20px; border-radius: 5px; background: #1e3a8a; color: #fff; font-size: 10.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .vp-row-label { flex-shrink: 0; width: 140px; font-size: 12px; font-weight: 700; color: #374151; }
+  .vp-row-value { flex: 1; font-size: 12.5px; font-weight: 700; color: #111827; border-bottom: 1px solid #d1d5db; padding-bottom: 3px; }
+
+  .vp-field { flex: 1; }
+  .vp-field-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; margin-bottom: 3px; }
+  .vp-field-value { font-size: 12.5px; font-weight: 700; color: #111827; border-bottom: 1px solid #d1d5db; padding-bottom: 4px; min-height: 15px; }
+
+  .vp-signatures { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; padding: 16px 22px 18px; }
+  .vp-sign-box { border: 1px solid #d1d5db; border-radius: 8px; padding: 20px 8px 8px; text-align: center; position: relative; min-height: 66px; }
+  .vp-sign-box .vp-sign-title { position: absolute; top: 7px; left: 8px; right: 8px; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: #6b7280; text-align: left; }
+  .vp-sign-line { border-top: 1px solid #9ca3af; font-size: 9px; color: #6b7280; padding-top: 3px; }
+
+  .vp-footer { text-align: center; background: #1e3a8a; color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; padding: 10px; margin-top: 4px; }
+</style>
+
+  <!-- ══ Header ══ -->
+  <div class="vp-header">
+    <div class="vp-logo"><img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.parentElement.textContent='{{schoolInitials}}'"></div>
+    <div class="vp-school-block">
+      <h1 class="vp-school-name">{{schoolName}}</h1>
+      <div class="vp-school-meta">
+        <span>📍 {{schoolAddress}}</span>
+        <span>📞 {{schoolPhone}}</span>
+      </div>
+    </div>
+    <div class="vp-pass-box">
+      <div class="vp-pb-label">PASS NO.</div>
+      <div class="vp-pb-value">{{passNo}}</div>
+    </div>
+  </div>
+
+  <div class="vp-title-banner">VISITOR PASS</div>
+
+  <!-- ══ Visitor Details ══ -->
+  <div class="vp-band">Visitor Details</div>
+  <div class="vp-section">
+    <div class="vp-row"><span class="vp-num">1</span><span class="vp-row-label">Visitor Name</span><span class="vp-row-value">{{visitorName}}</span></div>
+    <div class="vp-row"><span class="vp-num">2</span><span class="vp-row-label">Mobile Number</span><span class="vp-row-value">{{visitorMobile}}</span></div>
+    <div class="vp-row"><span class="vp-num">3</span><span class="vp-row-label">ID Proof Type</span><span class="vp-row-value">{{idProofType}}</span></div>
+    <div class="vp-row"><span class="vp-num">4</span><span class="vp-row-label">ID Proof Number</span><span class="vp-row-value">{{idProofNumber}}</span></div>
+  </div>
+
+  <!-- ══ Visit Details ══ -->
+  <div class="vp-band">Visit Details</div>
+  <div class="vp-section">
+    <div class="vp-row"><span class="vp-num">1</span><span class="vp-row-label">Purpose of Visit</span><span class="vp-row-value">{{purposeOfVisit}}</span></div>
+    <div class="vp-row"><span class="vp-num">2</span><span class="vp-row-label">Person to Meet</span><span class="vp-row-value">{{personToMeet}}</span></div>
+    <div class="vp-row"><span class="vp-num">3</span><span class="vp-row-label">Student / Employee</span><span class="vp-row-value">{{studentOrEmployeeName}}</span></div>
+    <div class="vp-row"><span class="vp-num">4</span><span class="vp-row-label">Class / Section / Dept</span><span class="vp-row-value">{{classSectionDept}}</span></div>
+  </div>
+
+  <!-- ══ Vehicle Details ══ -->
+  <div class="vp-band">Vehicle Details (If Any)</div>
+  <div class="vp-section">
+    <div class="vp-row" style="border-bottom:none;"><span class="vp-num">1</span><span class="vp-row-label">Vehicle Number</span><span class="vp-row-value">{{vehicleNumber}}</span></div>
+  </div>
+
+  <!-- ══ Remarks / Items Carried ══ -->
+  <div class="vp-band">Remarks / Items Carried (If Any)</div>
+  <div class="vp-section">
+    <div class="vp-row" style="border-bottom:none;"><span class="vp-num">1</span><span class="vp-row-label">Remarks</span><span class="vp-row-value">{{remarks}}</span></div>
+  </div>
+
+  <!-- ══ Date & Time ══ -->
+  <div class="vp-band">Date &amp; Time</div>
+  <div class="vp-two-col">
+    <div class="vp-field"><div class="vp-field-label">Date of Visit</div><div class="vp-field-value">{{dateOfVisit}}</div></div>
+    <div class="vp-field"><div class="vp-field-label">Entry Time</div><div class="vp-field-value">{{entryTime}}</div></div>
+    <div class="vp-field"><div class="vp-field-label">Expected Exit Time</div><div class="vp-field-value">{{expectedExitTime}}</div></div>
+  </div>
+
+  <!-- ══ Authorization ══ -->
+  <div class="vp-band" style="margin-top:18px;">Authorization</div>
+  <div class="vp-signatures">
+    <div class="vp-sign-box"><span class="vp-sign-title">Visitor Signature</span><div class="vp-sign-line">Signature</div></div>
+    <div class="vp-sign-box"><span class="vp-sign-title">Authorized By</span><div class="vp-sign-line">Signature</div></div>
+    <div class="vp-sign-box"><span class="vp-sign-title">Security Guard</span><div class="vp-sign-line">Signature</div></div>
+  </div>
+
+  <div class="vp-footer">🛡 PLEASE DISPLAY THIS PASS WHILE ON CAMPUS 🛡</div>
 
 </div>`,
   },
