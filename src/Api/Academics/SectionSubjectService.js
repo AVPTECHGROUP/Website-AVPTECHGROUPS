@@ -1,6 +1,6 @@
 import { authFetch } from "../../Authfetch/Authfetch";
 import { toast } from "react-toastify";
-import { getCurrUserDetails } from "../../utils/getCurrUserDetails";
+import { getCurrUserDetails } from "../../utils/getCurrUserDetails/GetCurrUserDetails";
 import {API_ENDPOINTS} from "../../Constants/Endpoints";
 
 /** * Safely extracts an array from various common API response wrappers.
