@@ -8,8 +8,8 @@ import { getCurrUserDetails, getUserId } from "../../utils/getCurrUserDetails";
 import { isTeacher } from "../../utils/authSession";
 import { getTeacherById, getTeacherSalary } from "../../Api/Teachers/TeachersAPI";
 import { getUsersLeaveBalance, getUserLeaveRequest } from "../../Api/Leaves/LeavesManagementAPI.js";
-import { getAllLeaveConfigs } from "../../Api/Leaves/LeaveConfigAPI"; // TODO: confirm path matches your project
-import { getUserMonthlyAttendance } from "../../Api/Attendance/AttendanceAPI"; // TODO: confirm path/filename
+import {getAllLeaveConfigs} from "../../Api/Leaves/LeaveConfigAPI.js";
+import {getUserMonthlyAttendance} from "../../Api/Attendance/AttendanceApi.js";
 
 const MONTHS = [
     "January", "February", "March", "April", "May", "June",
