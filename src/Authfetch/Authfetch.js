@@ -1,4 +1,4 @@
-import { getCurrUserDetails } from "../utils/getCurrUserDetails";
+import {getCurrUserDetails} from "../utils/getCurrUserDetails/GetCurrUserDetails.js";
 
 const clearSessionAndRedirect = () => {
   localStorage.removeItem("token");
