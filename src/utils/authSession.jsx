@@ -1,4 +1,4 @@
-import {  getUserId } from './getCurrUserDetails';
+import {getUserId} from "./getCurrUserDetails/GetCurrUserDetails.js";
 import {getUserRole} from "./getCurrUserDetails/GetCurrUserDetails.js";
 
 

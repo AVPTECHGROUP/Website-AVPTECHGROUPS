@@ -1,5 +1,5 @@
 import TeacherPayrollSelfView from "./TeacherPayrollselfview.jsx";
-import { getCurrUserDetails } from '../../utils/GetCurrUserDetails';
+import {getCurrUserDetails} from "../../utils/getCurrUserDetails/index.js";
 
 export default function MyPayroll() {
     const currentUser = getCurrUserDetails();

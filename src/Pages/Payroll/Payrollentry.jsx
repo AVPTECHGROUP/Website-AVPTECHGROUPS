@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
-import { getCurrUserDetails, getUserRole } from '../../utils/getCurrUserDetails';
+import { getCurrUserDetails } from '../../utils/getCurrUserDetails/index.js';
+import {getUserRole} from "../../utils/getCurrUserDetails/GetCurrUserDetails.js";
 import { ROLE_GROUPS, ROUTE_PATHS } from '../../Constants/RoutesConstants/RoutesConst';
 import Payroll from './Payroll';
 
