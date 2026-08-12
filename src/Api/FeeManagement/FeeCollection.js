@@ -107,3 +107,26 @@ export const getFeeReceiptById = async (id) => {
   const timestamp = json?.timestamp || data?.timestamp || data?.generatedAt || data?.createdAt || '';
   return { data, timestamp };
 };
+
+export const deleteFeeCollection = async (paymentId) => {
+  if (!paymentId) {
+    throw new Error("Payment ID is required");
+  }
+
+  const res = await authFetch(
+      API_ENDPOINTS.DELETE_FEE_COLLECTION(paymentId),
+      {
+        method: "DELETE",
+      }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(
+        data?.message || "Failed to delete fee collection"
+    );
+  }
+
+  return data;
+};
