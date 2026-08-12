@@ -146,6 +146,10 @@ const menuSections = [
   {
     section: 'OPERATIONS',
     items: [
+      // {
+      //   id: 'passManagement', icon: CreditCard, label: 'Pass & ID Management', route: '/passManagement',
+      //   permission: P.STUDENT_VIEW,
+      // },
       {
         id: 'stock', icon: Package, label: 'Stock', route: '/stock',
         permission: P.STOCK_OVERVIEW,
