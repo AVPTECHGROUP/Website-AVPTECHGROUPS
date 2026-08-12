@@ -1,4 +1,6 @@
-import { getUserRole, getUserId } from './getCurrUserDetails';
+import {  getUserId } from './getCurrUserDetails';
+import {getUserRole} from "./getCurrUserDetails/GetCurrUserDetails.js";
+
 
 // Role helpers used across the payroll module.
 // Adjust the role strings below if your JWT uses different values.
