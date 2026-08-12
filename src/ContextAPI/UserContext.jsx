@@ -8,7 +8,7 @@ import {
   useMemo,
 } from "react";
 
-import { jwtDecode } from "../utils/GetCurrUserDetails";
+import {jwtDecode} from "../utils/getCurrUserDetails/GetCurrUserDetails.js";
 import { useFcmToken } from "../hooks/useFcmtoken";
 
 export const UserContext = createContext();
