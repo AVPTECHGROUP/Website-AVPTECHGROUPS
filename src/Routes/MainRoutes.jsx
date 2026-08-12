@@ -23,6 +23,7 @@ import StudentsRoutes from './Students/StudentsRoutes';
 import SubjectManagementRoutes from './Academics/SubjectManagement/SubjectManagementRoutes';
 import { superAdminSchoolPickerRoute, superAdminManageUsersRoutes } from './SuperAdmin/SuperAdminRoutes';
 import TeachersRoutes from './Teachers/TeachersRoutes';
+import PayrollRoutes from './Payroll/PayrollRoutes';
 import TransportRoutes from './Transport/TransportRoutes';
 import TemplatesRoutes from './Templates/TemplatesRoutes';
 
@@ -202,6 +203,7 @@ const MainRoutes = () => {
             {SubjectManagementRoutes()}
             {superAdminManageUsersRoutes()}
             {TeachersRoutes()}
+            {PayrollRoutes()}
             {TransportRoutes()}
             {TemplatesRoutes()}
 

@@ -10,6 +10,7 @@ import {
   createFeeCollection,
   createBulkFeeCollection,
   getFeeReceiptById,
+  deleteFeeCollection,
 } from '../../Api/FeeManagement/FeeCollection';
 import { getFeePeriods } from '../../Api/FeeManagement/FeePeriods';
 import { getFeeStructures } from '../../Api/FeeManagement/FeeStructures';
@@ -18,6 +19,13 @@ import { getActiveClasses } from '../../Api/Academics/ClassSectionAPI';
 import { getTransportBilling, getStudentTransportBilling, getTransportbillingconfig } from '../../Api/Transport/TransportAPI';
 import { authFetch } from '../../Authfetch/Authfetch';
 import { UserContext } from '../../ContextAPI/UserContext';
+
+// TODO: confirm this matches your actual auth hook / permission constants
+// module — same pattern already used for P.FEE_COLLECT, P.TRANSPORT_VIEW
+// elsewhere in the app (e.g. Sidebar.jsx / MainRoutes.jsx permission
+// gating). Adjust the import paths below if they differ in your project.
+import {useAuth} from "../../hooks/useAuth.js";
+import { PERMISSIONS as P } from '../../Constants/Permission';
 
 import FeeReceiptPrint from '../../Components/FeeModal/FeeReciptPrint';
 
@@ -68,6 +76,16 @@ const MAX_AMOUNT = 999999;
 const MIN_COLLECT_AMOUNT = 1;
 
 const HISTORY_TABLE_HEADERS = ['Receipt No.', 'Date', 'Student', 'Class', 'Period', 'Fee Structure', 'Collected', 'Discount', 'Late Fine', 'Recorded By', 'Action'];
+
+// FIX (requested): the outstanding/history endpoints don't support a
+// free-text search param — only classId/periodId/status/mode are real,
+// backend-recognized filters, and pagination is server-sliced on top of
+// that. So when the person types into the search box we pull a much
+// larger batch matching whatever filters are active and filter/paginate
+// that batch client-side, instead of only ever searching whatever handful
+// of rows happen to already be sitting on the currently-loaded page. See
+// fetchOutstanding / fetchHistory below.
+const SEARCH_FETCH_SIZE = 1000;
 
 // Dropdown options for discount reason (replaces free-text entry)
 const DISCOUNT_REASON_OPTIONS = [
@@ -1967,6 +1985,60 @@ const BulkCollectModal = ({ open, onClose, students, onSuccess, canCollect, canV
   );
 };
 
+// ─── Cancel Payment Modal ───
+// FIX: hard delete has no server-side reason/audit trail, so the only
+// safety net is client-side — a typed "CANCEL" confirmation, plus a clear
+// warning that this is permanent and the receipt itself will be gone.
+const CANCEL_CONFIRM_TEXT = 'CANCEL';
+
+const CancelPaymentModal = ({ open, onClose, payment, onConfirm, loading }) => {
+  const [confirmText, setConfirmText] = useState('');
+  useEffect(() => { if (open) setConfirmText(''); }, [open]);
+
+  if (!open || !payment) return null;
+  const isConfirmed = confirmText.trim().toUpperCase() === CANCEL_CONFIRM_TEXT;
+
+  return (
+      <Modal open={open} onClose={onClose}
+             title="Cancel Payment"
+             subtitle="Permanently removes this payment and restores the balance"
+             footer={
+               <>
+                 <Btn variant="secondary" onClick={onClose} className="w-full sm:w-auto">Back</Btn>
+                 <Btn variant="danger" onClick={() => onConfirm(payment)} disabled={!isConfirmed || loading} className="w-full sm:w-auto">
+                   {loading && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+                   {loading ? 'Cancelling…' : 'Cancel Payment'}
+                 </Btn>
+               </>
+             }>
+        <div className="space-y-4">
+          <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+            <AlertTriangle size={15} className="text-red-600 mt-0.5 flex-shrink-0" />
+            <div className="text-[12.5px] text-red-700">
+              This action is <strong>permanent</strong> — there's no reason log or "cancelled by" record kept.
+              The <strong>{fmt(payment.amount)}</strong> will show as outstanding again on {payment.studentName}'s
+              fee record, and receipt <strong>{payment.receiptNo}</strong> will no longer appear in Collection History.
+            </div>
+          </div>
+
+          <div className="border border-gray-200 rounded-xl p-3 bg-gray-50 space-y-1.5">
+            <div className="flex justify-between text-xs"><span className="text-gray-400">Receipt No.</span><span className="font-semibold text-gray-800">{payment.receiptNo}</span></div>
+            <div className="flex justify-between text-xs"><span className="text-gray-400">Student</span><span className="font-semibold text-gray-800">{payment.studentName}</span></div>
+            <div className="flex justify-between text-xs"><span className="text-gray-400">Date</span><span className="font-semibold text-gray-800">{fmtDate(payment.date)}</span></div>
+            <div className="flex justify-between text-xs"><span className="text-gray-400">Amount Collected</span><span className="font-bold text-emerald-700">{fmt(payment.amount)}</span></div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+              Type <span className="font-mono text-red-600">CANCEL</span> to confirm
+            </label>
+            <Inp value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="CANCEL" autoFocus />
+          </div>
+        </div>
+      </Modal>
+  );
+};
+
 // ─── Mobile/Tablet Card for Outstanding ───
 const OutstandingCard = ({ s, selected, onToggle, onCollect, canCollect, canViewTransport }) => {
   const isSel = selected;
@@ -2032,7 +2104,7 @@ const OutstandingCard = ({ s, selected, onToggle, onCollect, canCollect, canView
 };
 
 // ─── Mobile/Tablet Card for History ───
-const HistoryCard = ({ h, onView }) => (
+const HistoryCard = ({ h, onView, onCancel, canCancelPayment }) => (
     <div className="bg-white rounded-xl border border-gray-200 p-3">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0 flex-1">
@@ -2055,8 +2127,9 @@ const HistoryCard = ({ h, onView }) => (
         <span><span className="text-gray-400">Discount: </span>{fmt(h.discount)}</span>
         <span className={h.lateFine > 0 ? 'text-amber-700' : ''}><span className="text-gray-400">Fine: </span>{fmt(h.lateFine)}</span>
       </div>
-      <div className="flex justify-end pt-1 border-t border-gray-50">
+      <div className="flex justify-end gap-1.5 pt-1 border-t border-gray-50">
         <Btn variant="ghost" size="xs" onClick={onView}>{COLLECTION_HISTORY_STRINGS.BTN_VIEW_RECEIPT}</Btn>
+        {canCancelPayment && <Btn variant="danger" size="xs" onClick={onCancel}>Cancel</Btn>}
       </div>
     </div>
 );
@@ -2066,6 +2139,14 @@ const CollectionsHistory = () => {
   const { currentAcademicYear, schoolId } = useContext(UserContext);
   const academicYearId = currentAcademicYear?.id || null;
   const academicYearLabel = currentAcademicYear?.label || null;
+
+  // FIX (requested): permission gate for the new Cancel Payment action —
+  // follows the same P.<PERMISSION_NAME> + useAuth() pattern already used
+  // elsewhere in the app (e.g. CollectionsHistory permission gating via
+  // P.FEE_COLLECT, P.TRANSPORT_VIEW). Falls back to false (button hidden)
+  // if permissions haven't loaded yet, rather than showing it optimistically.
+  const { permissions } = useAuth();
+  const canCancelPayment = !!permissions?.includes(P.FEE_DELETE);
 
   const canCollect = true;
   const [canViewTransport, setCanViewTransport] = useState(true);
@@ -2096,6 +2177,31 @@ const CollectionsHistory = () => {
   const [bulkModal, setBulkModal] = useState({ open: false, students: [] });
   const [receiptModal, setReceiptModal] = useState({ open: false, receipt: null });
 
+  // FIX (requested): new state for the Cancel Payment flow — tracks which
+  // history row is currently targeted for cancellation, and whether the
+  // in-flight DELETE call is pending (used to disable the confirm button
+  // and show a spinner in CancelPaymentModal).
+  const [cancelModal, setCancelModal] = useState({ open: false, payment: null });
+  const [cancelLoading, setCancelLoading] = useState(false);
+
+  // FIX (requested): after a payment is cancelled, the affected student's
+  // row(s) should surface at the very top of the Outstanding & Overdue
+  // list on the very next fetch, regardless of which page/filter the
+  // server would otherwise have placed them on. Set right before
+  // triggering the refresh, consumed (and cleared) once inside
+  // fetchOutstanding so it doesn't keep pinning that student on later,
+  // unrelated refreshes.
+  const priorityStudentIdRef = useRef(null);
+
+  // FIX (requested): the search box needs to search across the FULL
+  // outstanding/history dataset, not just whatever page happens to be
+  // loaded (see fetchOutstanding/fetchHistory). `debouncedSearch` is what
+  // actually drives that fetch, updated a short moment after typing stops
+  // so we're not firing a new large-batch request on every keystroke. The
+  // raw `search` value is still used below for instant narrowing of
+  // whatever's already loaded.
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [totalPages, setTotalPages] = useState(1);
@@ -2110,6 +2216,18 @@ const CollectionsHistory = () => {
     setFromDate(getOneMonthAgoDate());
     setToDate(getTodayDate());
   }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Whenever the search text actually takes effect, jump back to page 1 —
+  // otherwise the person could be stuck on e.g. page 4 of a 40-row filtered
+  // result that no longer has a page 4.
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
 
   // Sync Transport Billing System Settings Configuration Drop logic safely
   useEffect(() => {
@@ -2152,32 +2270,68 @@ const CollectionsHistory = () => {
   const fetchOutstanding = useCallback(async () => {
     try {
       setLoading(true); setError(null);
-      const params = { page: page - 1, size: pageSize };
-      if (classF) params.classId = classF;
-      if (periodF) params.periodId = periodF;
-      if (statusF) params.status = statusF;
+
+      // FIX (requested): the outstanding-fees endpoint has no text-search
+      // param — only classId/periodId/status are real, backend-recognized
+      // filters. When search is active, pull a much larger batch matching
+      // those same filters and do the text match + pagination client-side
+      // instead of only ever searching whatever page the server handed
+      // back. See SEARCH_FETCH_SIZE at the top of the file.
+      const isSearching = debouncedSearch.length > 0;
+      const baseParams = {};
+      if (classF) baseParams.classId = classF;
+      if (periodF) baseParams.periodId = periodF;
+      if (statusF) baseParams.status = statusF;
+
+      const params = isSearching
+          ? { ...baseParams, page: 0, size: SEARCH_FETCH_SIZE }
+          : { ...baseParams, page: page - 1, size: pageSize };
+
       const res = await getOutstandingFees(params);
       const raw = res?.records ?? [];
       let records = Array.isArray(raw) ? raw : [];
 
+      // FIX (requested): after a cancelled payment, pull that student's
+      // own record(s) too — even if they wouldn't otherwise land on
+      // whatever page the currently active filters would return — and
+      // merge them in ahead of everything else so their row(s) surface at
+      // the very top. Mirrors the same classId/periodId/status +
+      // client-side-filter-by-studentId pattern already used by
+      // resyncBalanceForCurrentPeriod in the collect modal (the endpoint
+      // has no studentId query param of its own).
+      let priorityRecords = [];
+      const pid = priorityStudentIdRef.current ? String(priorityStudentIdRef.current) : null;
+      if (pid && !isSearching) {
+        try {
+          const priorityRes = await getOutstandingFees({ ...baseParams, page: 0, size: 500 });
+          priorityRecords = (priorityRes?.records || []).filter((r) => String(r.studentId) === pid);
+        } catch { /* fall back to whatever's already in `records` below */ }
+      }
+      const dedupeKey = (r) => `${r.studentId}-${r.feeStructureId}-${r.feePeriodId || r.periodId}`;
+      const priorityKeys = new Set(priorityRecords.map(dedupeKey));
+      const combinedRecords = [
+        ...priorityRecords,
+        ...records.filter((r) => !priorityKeys.has(dedupeKey(r))),
+      ];
+
       let transportMap = new Map();
       if (canViewTransport) {
-        const periodIds = [...new Set(records.map((r) => r.feePeriodId || r.periodId).filter(Boolean))];
+        const periodIds = [...new Set(combinedRecords.map((r) => r.feePeriodId || r.periodId).filter(Boolean))];
         const results = await Promise.all(
-            periodIds.map((pid) =>
-                getTransportBilling({ feePeriodId: pid, page: 0, size: 200 }).catch(() => ({ billing: [] }))
+            periodIds.map((pidx) =>
+                getTransportBilling({ feePeriodId: pidx, page: 0, size: 200 }).catch(() => ({ billing: [] }))
             )
         );
         results.forEach(({ billing }, i) => {
-          const pid = periodIds[i];
+          const periodId = periodIds[i];
           (billing || []).forEach((t) => {
             const due = t.outstandingAmount ?? Math.max(0, (t.finalTotal || 0) - (t.paidAmount || 0));
-            transportMap.set(`${t.studentId}-${pid}`, due);
+            transportMap.set(`${t.studentId}-${periodId}`, due);
           });
         });
       }
 
-      const mapped = records.map((r, i) => {
+      const mapRecord = (r, i) => {
         const totalFee = Number(r.totalFee) || 0;
         const balanceDue = Number(r.balanceDue) || 0;
         const paidAmount = reconcilePaidAmount(totalFee, balanceDue, r.paidAmount);
@@ -2210,27 +2364,57 @@ const CollectionsHistory = () => {
           parentName: r.parentName,
           parentPhone: r.parentMobile || r.parentPhone,
         };
-      });
+      };
 
-      setOutstanding(mapped);
-      setOutstandingTotalPages(res?.pagination?.totalPages || 1);
-      setOutstandingTotalElements(res?.pagination?.totalElements ?? records.length);
+      let mapped = combinedRecords.map(mapRecord);
+
+      // Priority rows (if any) are already first thanks to the merge
+      // above — consume the flag now so it doesn't keep pinning this
+      // student on later, unrelated refreshes.
+      if (pid) priorityStudentIdRef.current = null;
+
+      if (isSearching) {
+        const q = debouncedSearch.toLowerCase();
+        const filtered = mapped.filter((s) =>
+            (s.studentName || '').toLowerCase().includes(q) ||
+            (s.studentCode || '').toLowerCase().includes(q)
+        );
+        const start = (page - 1) * pageSize;
+        setOutstanding(filtered.slice(start, start + pageSize));
+        setOutstandingTotalPages(Math.max(1, Math.ceil(filtered.length / pageSize)));
+        setOutstandingTotalElements(filtered.length);
+      } else {
+        setOutstanding(mapped);
+        setOutstandingTotalPages(res?.pagination?.totalPages || 1);
+        setOutstandingTotalElements(res?.pagination?.totalElements ?? records.length);
+      }
     } catch (e) {
       setError(e.message || COLLECTION_HISTORY_STRINGS.ERR_LOAD_OUTSTANDING);
       setOutstanding([]);
     } finally { setLoading(false); }
-  }, [classF, periodF, statusF, page, pageSize, canViewTransport]);
+  }, [classF, periodF, statusF, page, pageSize, canViewTransport, debouncedSearch]);
 
   const fetchHistory = useCallback(async () => {
     try {
       setLoading(true); setError(null);
-      const params = { fromDate, toDate, page: page - 1, size: pageSize };
-      if (classF) params.classId = classF;
-      if (periodF) params.periodId = periodF;
-      if (modeF) params.mode = modeF;
+
+      // FIX (requested): same "no text-search param on the backend, so
+      // pull a larger batch and filter/paginate client-side" treatment as
+      // fetchOutstanding above — the collection-history endpoint only
+      // recognizes classId/periodId/mode/fromDate/toDate.
+      const isSearching = debouncedSearch.length > 0;
+      const baseParams = { fromDate, toDate };
+      if (classF) baseParams.classId = classF;
+      if (periodF) baseParams.periodId = periodF;
+      if (modeF) baseParams.mode = modeF;
+
+      const params = isSearching
+          ? { ...baseParams, page: 0, size: SEARCH_FETCH_SIZE }
+          : { ...baseParams, page: page - 1, size: pageSize };
+
       const res = await getFeeCollectionHistory(params);
       const records = res.data?.content || res.records || [];
-      setHistory(records.map((r) => ({
+      const mappedHistory = records.map((r) => ({
         id: r.id, receiptNo: r.receiptNo, date: r.paymentDate, studentName: r.studentName,
         studentId: r.studentId,
         studentCode: r.admissionNumber,
@@ -2246,14 +2430,28 @@ const CollectionsHistory = () => {
         recordedBy: r.collectedBy, status: STATUSES.COMPLETED,
         parentName: r.parentName,
         parentPhone: r.parentMobile || r.parentPhone,
-      })));
-      setTotalPages(res?.data?.totalPages || res?.pagination?.totalPages || 1);
-      setHistoryTotalElements(res?.data?.totalElements ?? res?.pagination?.totalElements ?? records.length);
+      }));
+
+      if (isSearching) {
+        const q = debouncedSearch.toLowerCase();
+        const filtered = mappedHistory.filter((h) =>
+            (h.studentName || '').toLowerCase().includes(q) ||
+            (h.receiptNo || '').toLowerCase().includes(q)
+        );
+        const start = (page - 1) * pageSize;
+        setHistory(filtered.slice(start, start + pageSize));
+        setTotalPages(Math.max(1, Math.ceil(filtered.length / pageSize)));
+        setHistoryTotalElements(filtered.length);
+      } else {
+        setHistory(mappedHistory);
+        setTotalPages(res?.data?.totalPages || res?.pagination?.totalPages || 1);
+        setHistoryTotalElements(res?.data?.totalElements ?? res?.pagination?.totalElements ?? records.length);
+      }
     } catch (e) {
       setError(e.message || COLLECTION_HISTORY_STRINGS.ERR_LOAD_HISTORY);
       setHistory([]);
     } finally { setLoading(false); }
-  }, [fromDate, toDate, classF, periodF, modeF, page, pageSize]);
+  }, [fromDate, toDate, classF, periodF, modeF, page, pageSize, debouncedSearch]);
 
   useEffect(() => {
     if (optionsLoading) return;
@@ -2272,6 +2470,12 @@ const CollectionsHistory = () => {
     );
   }
 
+  // FIX (requested): both `outstanding` and `history` are already
+  // filtered server-side-by-proxy against `debouncedSearch` (see
+  // fetchOutstanding/fetchHistory above) whenever search is active. This
+  // extra client-side pass against the live, not-yet-debounced `search`
+  // value just narrows further for the last few just-typed characters —
+  // it never has to search the full dataset itself.
   const filteredOut = outstanding.filter((s) => {
     const q = search.toLowerCase();
     const matchesSearch = !q || s.studentName.toLowerCase().includes(q) || (s.studentCode || '').toLowerCase().includes(q);
@@ -2307,6 +2511,7 @@ const CollectionsHistory = () => {
     setReceiptModal({
       open: true,
       receipt: {
+        id: data.id,
         receiptNo: data.receiptNo,
         date: data.paymentDate,
         generatedAt: generatedAt,
@@ -2369,6 +2574,7 @@ const CollectionsHistory = () => {
       setReceiptModal({
         open: true,
         receipt: {
+          id: item.id,
           receiptNo: data.receiptNo, date: data.paymentDate,
 
           generatedAt: res?.timestamp || '',
@@ -2410,6 +2616,7 @@ const CollectionsHistory = () => {
       setReceiptModal({
         open: true,
         receipt: {
+          id: item.id,
           receiptNo: item.receiptNo, date: item.date,
           studentName: item.studentName,
           admissionNumber: item.studentCode,
@@ -2433,6 +2640,41 @@ const CollectionsHistory = () => {
   const resetTab = () => {
     setSearch(''); setClassF(''); setPeriodF(''); setStatusF('');
     setModeF(''); setPage(1); setSelected([]); setError(null);
+  };
+
+  // FIX (requested): Cancel Payment handler — calls the existing
+  // deleteFeeCollection API function, then surfaces the reinstated
+  // balance right away: jumps to the Outstanding & Overdue tab, clears
+  // whatever filters/search/page were active (the same reset the tab
+  // buttons themselves already do — see resetTab above) so the student
+  // can't end up hidden behind a stale filter, and flags their studentId
+  // so the fetch this triggers sorts their row(s) to the very top instead
+  // of wherever the server would otherwise have placed them (see
+  // priorityStudentIdRef / fetchOutstanding above). History's own data is
+  // refreshed in the background too, so it's correct whenever the person
+  // switches back to it, without needing that tab to be active right now.
+  const handleCancelPayment = async (payment) => {
+    if (!payment?.id) {
+      toast.error('Cancel Failed', 'Could not identify this payment record.');
+      return;
+    }
+    try {
+      setCancelLoading(true);
+      await deleteFeeCollection(payment.id);
+      toast.success('Payment Cancelled', `Receipt ${payment.receiptNo} was cancelled — the balance is outstanding again for ${payment.studentName}.`);
+      setCancelModal({ open: false, payment: null });
+      setReceiptModal({ open: false, receipt: null });
+
+      priorityStudentIdRef.current = payment.studentId;
+      setTab('outstanding');
+      resetTab();
+
+      fetchHistory();
+    } catch (e) {
+      toast.error('Cancel Failed', e.message || 'Could not cancel this payment.');
+    } finally {
+      setCancelLoading(false);
+    }
   };
 
   return (
@@ -2500,7 +2742,7 @@ const CollectionsHistory = () => {
                 <div className="flex gap-2 xl:hidden mb-2">
                   <div className="relative flex-1">
                     <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                    <input value={search} onChange={(e) => { setSearch(e.target.value); }}
                            placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_STUDENT}
                            className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
                   </div>
@@ -2536,7 +2778,7 @@ const CollectionsHistory = () => {
                 <div className="hidden xl:flex items-center gap-2 w-full">
                   <div className="relative flex-1 min-w-[180px]">
                     <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                    <input value={search} onChange={(e) => { setSearch(e.target.value); }}
                            placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_STUDENT}
                            className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
                   </div>
@@ -2756,7 +2998,7 @@ const CollectionsHistory = () => {
               <div className="flex gap-2 xl:hidden mb-2">
                 <div className="relative flex-1">
                   <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  <input value={search} onChange={(e) => { setSearch(e.target.value); }}
                          placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_HISTORY}
                          className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
                 </div>
@@ -2789,7 +3031,7 @@ const CollectionsHistory = () => {
               <div className="hidden xl:flex items-center gap-2 w-full">
                 <div className="relative flex-1 min-w-[180px]">
                   <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  <input value={search} onChange={(e) => { setSearch(e.target.value); }}
                          placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_HISTORY}
                          className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white" />
                 </div>
@@ -2814,15 +3056,15 @@ const CollectionsHistory = () => {
                     <colgroup>
                       <col className="w-[9%]" />
                       <col className="w-[7%]" />
-                      <col className="w-[15%]" />
-                      <col className="w-[9%]" />
-                      <col className="w-[8%]" />
-                      <col className="w-[12%]" />
-                      <col className="w-[8%]" />
+                      <col className="w-[14%]" />
                       <col className="w-[8%]" />
                       <col className="w-[7%]" />
-                      <col className="w-[9%]" />
+                      <col className="w-[11%]" />
+                      <col className="w-[7%]" />
+                      <col className="w-[7%]" />
+                      <col className="w-[6%]" />
                       <col className="w-[8%]" />
+                      <col className="w-[16%]" />
                     </colgroup>
                     <thead>
                     <tr className="bg-gray-50/80 border-b border-gray-100">
@@ -2863,9 +3105,16 @@ const CollectionsHistory = () => {
                           <td className="px-2.5 py-2.5 text-xs text-amber-700 truncate">{fmt(h.lateFine)}</td>
                           <td className="px-2.5 py-2.5 text-xs text-gray-500 truncate" title={h.recordedBy || ''}>{h.recordedBy || '—'}</td>
                           <td className="px-2.5 py-2.5">
-                            <Btn variant="ghost" size="xs" onClick={() => handleViewReceipt(h)} className="w-full justify-center cursor-pointer">
-                              {COLLECTION_HISTORY_STRINGS.BTN_VIEW_RECEIPT}
-                            </Btn>
+                            <div className="flex items-center gap-1">
+                              <Btn variant="ghost" size="xs" onClick={() => handleViewReceipt(h)} className="cursor-pointer">
+                                {COLLECTION_HISTORY_STRINGS.BTN_VIEW_RECEIPT}
+                              </Btn>
+                              {canCancelPayment && (
+                                  <Btn variant="danger" size="xs" onClick={() => setCancelModal({ open: true, payment: h })} className="cursor-pointer">
+                                    Cancel
+                                  </Btn>
+                              )}
+                            </div>
                           </td>
                         </tr>
                     ))}
@@ -2895,7 +3144,13 @@ const CollectionsHistory = () => {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {filteredHist.map((h) => (
-                          <HistoryCard key={h.id} h={h} onView={() => handleViewReceipt(h)} />
+                          <HistoryCard
+                              key={h.id}
+                              h={h}
+                              onView={() => handleViewReceipt(h)}
+                              onCancel={() => setCancelModal({ open: true, payment: h })}
+                              canCancelPayment={canCancelPayment}
+                          />
                       ))}
                     </div>
                 )}
@@ -2937,6 +3192,13 @@ const CollectionsHistory = () => {
         {receiptModal.open && (
             <FeeReceiptPrint receipt={receiptModal.receipt} onClose={() => setReceiptModal({ open: false, receipt: null })} />
         )}
+        <CancelPaymentModal
+            open={cancelModal.open}
+            onClose={() => setCancelModal({ open: false, payment: null })}
+            payment={cancelModal.payment}
+            onConfirm={handleCancelPayment}
+            loading={cancelLoading}
+        />
       </div>
   );
 };
