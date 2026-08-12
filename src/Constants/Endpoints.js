@@ -157,6 +157,7 @@ export const API_ENDPOINTS = {
   FEE_COLLECTIONS_BULK: `${BASE_URL_V1}/fee/collections/bulk`,
   FEE_COLLECTIONS_HISTORY: `${BASE_URL_V1}/fee/collections/history`,
   FEE_COLLECTIONS_OUTSTANDING: `${BASE_URL_V1}/fee/collections/outstanding`,
+  DELETE_FEE_COLLECTION: (id) => `${BASE_URL_V1}/fee/collections/${id}`,
   feeReceiptById: (id) => `${BASE_URL_V1}/fee/collections/receipt/${id}`,
 
   // ─── Fee Dashboard ───
@@ -323,6 +324,13 @@ export const API_ENDPOINTS = {
   teacherSalary: (id) => `${BASE_URL_V1}/teachers/${id}/salary-structure`,
   teacherActivate: (id) => `${BASE_URL_V1}/teachers/${id}/activate`,
   teacherDeactivate: (id) => `${BASE_URL_V1}/teachers/${id}/deactivate`,
+
+  // ─── Payroll (frontend wrappers expect these; backend may implement) ───
+  PAYROLL_ADVANCES: `${BASE_URL_V1}/payroll/advances`,
+  payrollAdvanceByUser: (userId) => `${BASE_URL_V1}/payroll/advances/user/${userId}`,
+  payrollAdvanceById: (id) => `${BASE_URL_V1}/payroll/advances/${id}`,
+  payrollTeacherSalarySlip: (teacherId, month, year) => `${BASE_URL_V1}/payroll/teachers/${teacherId}/salary-slip?month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}`,
+  PAYROLL_DASHBOARD: `${BASE_URL_V1}/payroll/dashboard/summary`,
 
   teacherAssignments: (id) => `${BASE_URL_V1}/teachers/${id}/assignments`,
   teacherActiveAssignments: (id) => `${BASE_URL_V1}/teachers/${id}/assignments/active`,

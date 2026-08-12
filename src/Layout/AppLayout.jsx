@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import Sidebar from '../Components/Sidebar';
-import { getCurrUserDetails } from '../utils/getCurrUserDetails';
+import { getCurrUserDetails } from '../utils/getCurrUserDetails/GetCurrUserDetails';
 
 // ✅ Roles that require school selection before accessing dashboard
 const SCHOOL_SELECTION_ROLES = ['SUPER_ADMIN', 'GLOBAL_ADMIN'];

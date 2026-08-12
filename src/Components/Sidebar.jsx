@@ -7,6 +7,7 @@ import {
   MessageSquare, IndianRupee, Mail, Phone, Printer, CreditCard,
   Ticket, Award, Receipt, DoorOpen,
   Bike,
+  Wallet,
   UserCheck
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef, useMemo } from 'react'
@@ -104,6 +105,16 @@ const menuSections = [
           { label: 'My Leaves', route: '/leaves/myLeaves', permission: P.LEAVE_VIEW },
           { label: 'Holiday Management', route: '/leaves/manageHolidays', permission: P.LEAVE_DELETE },
           { label: 'Leave Config', route: '/leaves/leaveConfig', permission: P.LEAVE_DELETE },
+        ]
+      },
+      {
+        id: 'payroll', icon: Wallet, label: 'Payroll', route: '/payroll/myPayroll',
+        permission: P.PAYROLL_VIEW,
+        featureFlag: 'payrollEnabled',
+        subItems: [
+          { label: 'Manage Payroll', route: '/payroll', permission: P.PAYROLL_MANAGE },
+          { label: 'My Payroll', route: '/payroll/myPayroll', permission: P.PAYROLL_VIEW },
+          { label: 'Payroll Config', route: '/payroll/payrollConfig', permission: P.PAYROLL_CONFIG },
         ]
       }
     ]
@@ -203,8 +214,8 @@ const menuSections = [
           { label: 'Certificate Templates', route: '/templates/certificate', icon: Award },
           { label: 'Fee Receipt Templates', route: '/templates/feeReceipt', icon: Receipt },
           { label: 'Gate Pass Templates', route: '/templates/gatePass', icon: DoorOpen },
-          // { label: 'Visitor Pass Templates', route: '/templates/visitorPass', icon: UserCheck },
-          // { label: 'Cycle Stand Templates', route: '/templates/cycleStandPass', icon: Bike },
+          { label: 'Visitor Pass Templates', route: '/templates/visitorPass', icon: UserCheck },
+          { label: 'Cycle Stand Templates', route: '/templates/cycleStandPass', icon: Bike },
         ]
       }
     ]
