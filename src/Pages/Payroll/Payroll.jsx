@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ShieldAlert } from "lucide-react";
 import { isPayrollAdmin, isTeacher } from "../../utils/authSession";
-import { getCurrUserDetails } from "../../utils/getCurrUserDetails";
+import {getCurrUserDetails} from "../../utils/getCurrUserDetails/index.js";
 import AdminPayrollView from "./Adminpayrollview";
 import TeacherPayrollSelfView from "./TeacherPayrollselfview";
 

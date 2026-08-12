@@ -4,7 +4,8 @@ import {
     Wallet, CalendarDays, CheckCircle2, AlertCircle, Download, FileText, ShieldCheck,
     ChevronLeft, ChevronRight, XCircle, Clock, Umbrella, Info, ClipboardList,
 } from "lucide-react";
-import { getCurrUserDetails, getUserId } from "../../utils/getCurrUserDetails";
+import {getCurrUserDetails} from "../../utils/getCurrUserDetails/index.js";
+import {getUserId} from "../../utils/getCurrUserDetails/GetCurrUserDetails.js";
 import { isTeacher } from "../../utils/authSession";
 import { getTeacherById, getTeacherSalary } from "../../Api/Teachers/TeachersAPI";
 import { getUsersLeaveBalance, getUserLeaveRequest } from "../../Api/Leaves/LeavesManagementAPI.js";
