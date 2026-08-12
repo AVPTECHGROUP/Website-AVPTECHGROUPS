@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
     ClipboardList, CheckSquare, Clock, School,
-    Plus, BookOpen, ChevronDown, ChevronRight, Edit2, FileText,
+    Plus, BookOpen, ChevronDown, ChevronRight, ChevronLeft, Edit2, FileText,
     LogIn, CheckCircle, Trash2, AlertCircle, RefreshCw, Copy,
-    Download, X, Loader2
+    Download, X, Loader2, Check, Sliders, AlertTriangle
 } from "lucide-react";
 
 import ListLoader from "../../Components/CommonComp/ListLoader";
@@ -23,7 +23,7 @@ import {
     declareEventExamResult,
     getExamTypes
 } from "../../Api/Academics/Exams";
-import { getActiveClasses } from "../../Api/Teachers/TeachersAPI";
+import { getActiveClasses, getSectionSubjectsByClass, getSectionsByClass } from "../../Api/Teachers/TeachersAPI";
 import { getAcademicYears } from "../../Api/AcademicYears/AcademicYear";
 import { useDecodedUser } from "../../ContextAPI/UserContext";
 import { useAuth } from "../../hooks/useAuth";
@@ -218,13 +218,9 @@ function ClassRow({ event, exam, sections, onAction, onRemove }) {
 
                 {/* COLUMN 4: ACTION BUTTONS */}
                 <div className="flex flex-wrap items-center gap-2 min-w-0 xl:justify-end">
+                    {/* FIXED: Removed Edit/Subjects button when status is declared */}
                     {status === "declared" && (
-                        <>
-                            <ActionBtn Icon={FileText} label={EXAM_CONSTS.EXAMS.ACTIONS.REPORTS} tone="primary" onClick={() => onAction(exam, "reports")} />
-                            {hasPermission(P.EXAM_EDIT) && (
-                                <ActionBtn Icon={BookOpen} label={EXAM_CONSTS.EXAMS.ACTIONS.SUBJECTS} tone="neutral" onClick={() => onAction(exam, "subjects")} />
-                            )}
-                        </>
+                        <ActionBtn Icon={FileText} label={EXAM_CONSTS.EXAMS.ACTIONS.REPORTS} tone="primary" onClick={() => onAction(exam, "reports")} />
                     )}
                     {status === "ready" && (
                         <>
@@ -313,7 +309,8 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
                             <div className={`h-full ${meta.bar}`} style={{ width: `${pct}%` }} />
                         </div>
                     </div>
-                    {hasPermission(P.EXAM_EDIT) && (
+                    {/* FIXED: Removed Edit button when status is declared */}
+                    {hasPermission(P.EXAM_EDIT) && status !== "declared" && (
                         <ActionBtn Icon={Edit2} label={EXAM_CONSTS.EXAMS.ACTIONS.EDIT} tone="neutral" compact onClick={() => onEdit(event)} />
                     )}
                     {hasPermission(P.EXAM_CREATE) && (
@@ -344,7 +341,7 @@ function EventItem({ event, expanded, onToggle, sectionsCache, onLoadSections, o
                     ))}
                     <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-100 gap-2">
                         <span className="text-xs font-medium text-gray-400">{total} class{total !== 1 ? "es" : ""} in this event</span>
-                        {hasPermission(P.EXAM_EDIT) && (
+                        {hasPermission(P.EXAM_EDIT) && status !== "declared" && (
                             <ActionBtn Icon={Plus} label={EXAM_CONSTS.EXAMS.ACTIONS.ADD_CLASS} tone="neutral" onClick={() => onAddClass(event)} />
                         )}
                     </div>
@@ -375,74 +372,487 @@ function ModalShell({ title, icon: Icon, onClose, children, maxW = "max-w-md" })
     );
 }
 
-function AddClassModal({ event, allClasses, onSave, onCancel, loading }) {
+// ── Multi-Step Add Class & Subject Config Wizard Modal ────────────────────────
+function AddClassModal({ event, allClasses, busyClassIds = new Set(), onSave, onCancel, loading }) {
     const existingIds = new Set((event.exams || []).map(e => Number(e.schoolClassId)));
+    const [step, setStep] = useState(1);
     const [picked, setPicked] = useState([]);
+    
+    // Default Marks Configuration
+    const [defaultMarks, setDefaultMarks] = useState({
+        maxMarks: 100,
+        passingMarks: 33,
+        hasTheoryPractical: false,
+    });
 
-    const toggle = (id) => {
+    // Subject configuration state
+    const [loadingSubjects, setLoadingSubjects] = useState(false);
+    const [rows, setRows] = useState([]);
+    const [activeClassId, setActiveClassId] = useState(null);
+    const [activeSectionId, setActiveSectionId] = useState("ALL");
+    const [quickApply, setQuickApply] = useState({ maxMarks: 100, passingMarks: 33 });
+
+    const toggleClass = (id) => {
         const numericId = Number(id);
+        if (busyClassIds.has(numericId)) return; // prevent picking blocked classes
         setPicked(p => p.includes(numericId) ? p.filter(x => x !== numericId) : [...p, numericId]);
     };
 
+    // Step 1 -> Step 2: Load Sections & Subjects for chosen classes
+    const handleNextToSubjects = async () => {
+        if (picked.length === 0) return;
+        setLoadingSubjects(true);
+        try {
+            const entries = await Promise.all(
+                picked.map(async (classId) => {
+                    const [mappings, sections] = await Promise.all([
+                        getSectionSubjectsByClass(classId),
+                        getSectionsByClass(classId),
+                    ]);
+
+                    const sectionNameMap = new Map((sections || []).map(s => [s.id, s.name ?? s.sectionName]));
+                    const bySection = new Map();
+
+                    (mappings || []).forEach(m => {
+                        const sId = m.sectionId;
+                        if (sId == null) return;
+                        if (!bySection.has(sId)) {
+                            bySection.set(sId, {
+                                sectionId: sId,
+                                sectionName: m.sectionName ?? sectionNameMap.get(sId) ?? `Section ${sId}`,
+                                subjects: [],
+                            });
+                        }
+                        bySection.get(sId).subjects.push({
+                            sectionSubjectId: m.id,
+                            subjectId: m.subjectId,
+                            subjectName: m.subjectName,
+                            subjectCode: m.subjectCode ?? null,
+                        });
+                    });
+
+                    const ordered = (sections || []).map(s => bySection.get(s.id)).filter(Boolean);
+                    bySection.forEach((val, key) => {
+                        if (!ordered.some(o => o.sectionId === key)) ordered.push(val);
+                    });
+
+                    return { classId, sections: ordered };
+                })
+            );
+
+            const draftRows = [];
+            entries.forEach(({ classId, sections }) => {
+                sections.forEach(sec => {
+                    sec.subjects.forEach(sub => {
+                        draftRows.push({
+                            key: sub.sectionSubjectId,
+                            classId,
+                            sectionId: sec.sectionId,
+                            sectionName: sec.sectionName,
+                            subjectId: sub.subjectId,
+                            subjectName: sub.subjectName,
+                            subjectCode: sub.subjectCode,
+                            included: true,
+                            maxMarks: defaultMarks.maxMarks,
+                            passingMarks: defaultMarks.passingMarks,
+                            hasTheoryPractical: defaultMarks.hasTheoryPractical,
+                            maxTheoryMarks: defaultMarks.hasTheoryPractical ? Math.round(defaultMarks.maxMarks * 0.7) : 0,
+                            maxPracticalMarks: defaultMarks.hasTheoryPractical ? Math.round(defaultMarks.maxMarks * 0.3) : 0,
+                            passingTheoryMarks: defaultMarks.hasTheoryPractical ? Math.round(defaultMarks.passingMarks * 0.7) : 0,
+                            passingPracticalMarks: defaultMarks.hasTheoryPractical ? Math.round(defaultMarks.passingMarks * 0.3) : 0,
+                        });
+                    });
+                });
+            });
+
+            setRows(draftRows);
+            setQuickApply({ maxMarks: defaultMarks.maxMarks, passingMarks: defaultMarks.passingMarks });
+            if (picked[0]) setActiveClassId(picked[0]);
+            setActiveSectionId("ALL");
+            setStep(2);
+        } catch (err) {
+            toast.error("Failed to load sections and subjects for selected classes");
+        } finally {
+            setLoadingSubjects(false);
+        }
+    };
+
+    const updateRow = (key, patch) =>
+        setRows(prev => prev.map(r => (r.key === key ? { ...r, ...patch } : r)));
+
+    const applyQuickToAll = () =>
+        setRows(prev =>
+            prev.map(r => ({
+                ...r,
+                maxMarks: Number(quickApply.maxMarks) || 0,
+                passingMarks: Number(quickApply.passingMarks) || 0,
+                ...(r.hasTheoryPractical ? {
+                    maxTheoryMarks: Math.round((Number(quickApply.maxMarks) || 0) * 0.7),
+                    maxPracticalMarks: Math.round((Number(quickApply.maxMarks) || 0) * 0.3),
+                    passingTheoryMarks: Math.round((Number(quickApply.passingMarks) || 0) * 0.7),
+                    passingPracticalMarks: Math.round((Number(quickApply.passingMarks) || 0) * 0.3),
+                } : {})
+            }))
+        );
+
+    const handleSubmit = () => {
+        const activeRows = rows.filter(r => r.included);
+        const subjectConfigs = activeRows.map(r => ({
+            sectionSubjectId: r.key,
+            maxMarks: Number(r.maxMarks) || 0,
+            passingMarks: Number(r.passingMarks) || 0,
+            hasTheoryPractical: !!r.hasTheoryPractical,
+            ...(r.hasTheoryPractical ? {
+                maxTheoryMarks: Number(r.maxTheoryMarks) || 0,
+                maxPracticalMarks: Number(r.maxPracticalMarks) || 0,
+                passingTheoryMarks: Number(r.passingTheoryMarks) || 0,
+                passingPracticalMarks: Number(r.passingPracticalMarks) || 0,
+            } : {}),
+        }));
+
+        onSave(picked, subjectConfigs);
+    };
+
+    // Filter rows per Class and per Section
+    const classRows = rows.filter(r => r.classId === activeClassId);
+    
+    // Extract Section Switch Options
+    const sectionsForClass = Array.from(
+        new Map(classRows.map(r => [r.sectionId, r.sectionName])).entries()
+    ).map(([sectionId, sectionName]) => ({ sectionId, sectionName }));
+
+    const visibleRows = classRows.filter(r => activeSectionId === "ALL" || r.sectionId === activeSectionId);
+
     return (
-        <ModalShell title={`+ Add Class to Exam Event — ${event.name}`} icon={Plus} onClose={onCancel} maxW="max-w-3xl">
+        <ModalShell title={`+ Add Classes & Subject Configs — ${event.name}`} icon={Plus} onClose={onCancel} maxW="max-w-3xl">
+            {/* Step 1: Pick Classes & Default Marks */}
+            {step === 1 && (
+                <div className="space-y-4">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Step 1: Select Classes to Add</p>
+                    
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-h-60 overflow-y-auto p-1">
+                        {allClasses.map(c => {
+                            const id = Number(c.id);
+                            const isExisting = existingIds.has(id);
+                            const isBusy = busyClassIds.has(id);
+                            const isSelected = picked.includes(id);
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                {allClasses.map(c => {
-                    const id = Number(c.id);
-                    const isExisting = existingIds.has(id);
-                    const isSelected = picked.includes(id);
+                            if (isExisting) {
+                                return (
+                                    <div key={id} className="px-3 py-2.5 rounded-lg border border-gray-100 bg-gray-50 text-gray-400 text-sm font-medium flex items-center justify-between opacity-60 cursor-not-allowed select-none">
+                                        <span>{c.name}</span>
+                                        <span className="text-gray-400 font-semibold">✓</span>
+                                    </div>
+                                );
+                            }
 
-                    if (isExisting) {
-                        return (
-                            <div key={id} className="px-3 py-2.5 rounded-lg border border-gray-100 bg-gray-50 text-gray-400 text-sm font-medium flex items-center justify-between opacity-60 cursor-not-allowed select-none">
-                                <span>{c.name}</span>
-                                <span className="text-gray-400 font-semibold">✓</span>
+                            {/* FIXED: Block classes with undeclared/pending exam results */}
+                            if (isBusy) {
+                                return (
+                                    <div
+                                        key={id}
+                                        title="Exam in progress / Result pending"
+                                        className="px-3 py-2 rounded-lg border border-amber-200 bg-amber-50/60 text-amber-700 cursor-not-allowed select-none opacity-80 flex flex-col items-center justify-center text-center"
+                                    >
+                                        <span className="text-xs font-semibold line-through text-gray-500">{c.name}</span>
+                                        <span className="text-[10px] font-bold text-amber-600 flex items-center gap-1 mt-0.5">
+                                            <AlertTriangle className="w-3 h-3 shrink-0" /> Result Pending
+                                        </span>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <button
+                                    key={id}
+                                    type="button"
+                                    onClick={() => toggleClass(id)}
+                                    className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-all flex items-center gap-2.5 text-left cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${isSelected
+                                        ? "border-blue-600 bg-blue-50/50 text-blue-700 font-semibold ring-1 ring-blue-600"
+                                        : "border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                                        }`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        readOnly
+                                        className="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer pointer-events-none"
+                                    />
+                                    <span className="truncate">{c.name}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Default Marks Setting */}
+                    <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-3.5 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-blue-900 uppercase">Default Subject Marks</span>
+                            <span className="text-[11px] text-blue-600">Applied automatically to picked classes</span>
+                        </div>
+                        <div className="flex flex-wrap items-end gap-4">
+                            <div>
+                                <label className="block text-xs font-medium text-blue-800 mb-1">Max Marks</label>
+                                <input
+                                    type="number"
+                                    value={defaultMarks.maxMarks}
+                                    onChange={e => setDefaultMarks(d => ({ ...d, maxMarks: Number(e.target.value) }))}
+                                    className="w-24 border border-blue-200 bg-white rounded-lg px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
                             </div>
-                        );
-                    }
+                            <div>
+                                <label className="block text-xs font-medium text-blue-800 mb-1">Passing Marks</label>
+                                <input
+                                    type="number"
+                                    value={defaultMarks.passingMarks}
+                                    onChange={e => setDefaultMarks(d => ({ ...d, passingMarks: Number(e.target.value) }))}
+                                    className="w-24 border border-blue-200 bg-white rounded-lg px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <label className="flex items-center gap-2 text-xs font-medium text-blue-800 cursor-pointer pb-1.5">
+                                <input
+                                    type="checkbox"
+                                    checked={defaultMarks.hasTheoryPractical}
+                                    onChange={e => setDefaultMarks(d => ({ ...d, hasTheoryPractical: e.target.checked }))}
+                                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                                />
+                                Enable Theory + Practical Split
+                            </label>
+                        </div>
+                    </div>
 
-                    return (
+                    <div className="flex gap-3 justify-end pt-3 border-t border-gray-100">
                         <button
-                            key={id}
                             type="button"
-                            onClick={() => toggle(id)}
-                            className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-all flex items-center gap-2.5 text-left cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${isSelected
-                                ? "border-blue-600 bg-blue-50/50 text-blue-700 font-semibold ring-1 ring-blue-600"
-                                : "border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
-                                }`}
+                            onClick={onCancel}
+                            disabled={loading}
+                            className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 active:scale-95 transition-all cursor-pointer"
                         >
-                            <input
-                                type="checkbox"
-                                checked={isSelected}
-                                readOnly
-                                className="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer pointer-events-none"
-                            />
-                            <span className="truncate">{c.name}</span>
+                            Cancel
                         </button>
-                    );
-                })}
-            </div>
+                        <button
+                            type="button"
+                            onClick={handleNextToSubjects}
+                            disabled={loadingSubjects || picked.length === 0}
+                            className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all rounded-lg shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                        >
+                            {loadingSubjects ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
+                            {loadingSubjects ? "Loading Subjects..." : "Next: Configure Subjects"}
+                        </button>
+                    </div>
+                </div>
+            )}
 
-            <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
-                <button
-                    type="button"
-                    onClick={onCancel}
-                    disabled={loading}
-                    className="px-5 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-                >
-                    Cancel
-                </button>
-                <button
-                    type="button"
-                    onClick={() => onSave(picked)}
-                    disabled={loading || picked.length === 0}
-                    className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all rounded-lg shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                    {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                    {loading ? "Adding..." : "+ Add Classes"}
-                </button>
-            </div>
+            {/* Step 2: Configure Subjects and Marks */}
+            {step === 2 && (
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Step 2: Marks & Theory/Practical Config</p>
+                        <span className="text-xs font-bold text-blue-600">{picked.length} Class(es) Picked</span>
+                    </div>
+
+                    {/* Quick Apply Bar */}
+                    <div className="flex flex-wrap items-center gap-2.5 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+                        <span className="text-xs font-bold text-gray-700 flex items-center gap-1">
+                            <Sliders className="w-3.5 h-3.5 text-blue-500" /> Quick Apply:
+                        </span>
+                        <div className="flex items-center gap-1">
+                            <label className="text-[11px] text-gray-500">Max:</label>
+                            <input
+                                type="number"
+                                value={quickApply.maxMarks}
+                                onChange={e => setQuickApply(q => ({ ...q, maxMarks: e.target.value }))}
+                                className="w-16 border border-gray-200 bg-white rounded px-1.5 py-0.5 text-xs"
+                            />
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <label className="text-[11px] text-gray-500">Pass:</label>
+                            <input
+                                type="number"
+                                value={quickApply.passingMarks}
+                                onChange={e => setQuickApply(q => ({ ...q, passingMarks: e.target.value }))}
+                                className="w-16 border border-gray-200 bg-white rounded px-1.5 py-0.5 text-xs"
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            onClick={applyQuickToAll}
+                            className="px-2.5 py-1 text-xs font-semibold text-white bg-blue-600 rounded hover:bg-blue-700 cursor-pointer"
+                        >
+                            Apply All
+                        </button>
+                    </div>
+
+                    {/* Class Selector Tabs (if multiple classes) */}
+                    {picked.length > 1 && (
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                            {picked.map(cId => {
+                                const clsObj = allClasses.find(c => Number(c.id) === Number(cId));
+                                return (
+                                    <button
+                                        key={cId}
+                                        type="button"
+                                        onClick={() => { setActiveClassId(cId); setActiveSectionId("ALL"); }}
+                                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap cursor-pointer ${activeClassId === cId ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                                    >
+                                        {clsObj?.name ?? `Class ${cId}`}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* FIXED: Added Section Switch Tabs */}
+                    {sectionsForClass.length > 0 && (
+                        <div className="flex items-center gap-1.5 overflow-x-auto border-b border-gray-100 pb-2">
+                            <span className="text-xs font-bold text-gray-500 shrink-0">Sections:</span>
+                            <button
+                                type="button"
+                                onClick={() => setActiveSectionId("ALL")}
+                                className={`px-2.5 py-1 text-xs font-semibold rounded-lg whitespace-nowrap transition-all cursor-pointer ${
+                                    activeSectionId === "ALL"
+                                        ? "bg-indigo-600 text-white shadow-sm"
+                                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                }`}
+                            >
+                                All Sections
+                            </button>
+                            {sectionsForClass.map(sec => (
+                                <button
+                                    key={sec.sectionId}
+                                    type="button"
+                                    onClick={() => setActiveSectionId(sec.sectionId)}
+                                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg whitespace-nowrap transition-all cursor-pointer ${
+                                        activeSectionId === sec.sectionId
+                                            ? "bg-indigo-600 text-white shadow-sm"
+                                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                    }`}
+                                >
+                                    {sec.sectionName}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Editable Subjects Table */}
+                    <div className="overflow-x-auto border border-gray-100 rounded-lg max-h-72">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="text-left text-xs font-semibold text-gray-400 uppercase bg-gray-50 sticky top-0 z-10">
+                                    <th className="px-3 py-2 w-8">Include</th>
+                                    <th className="px-3 py-2">Subject / Section</th>
+                                    <th className="px-2 py-2 w-28">Max Marks</th>
+                                    <th className="px-2 py-2 w-28">Pass Marks</th>
+                                    <th className="px-2 py-2 w-40">Assessment Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {visibleRows.map(r => (
+                                    <tr key={r.key} className={`border-t border-gray-50 align-top ${!r.included ? "opacity-40 bg-gray-50/50" : ""}`}>
+                                        <td className="px-3 py-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={r.included}
+                                                onChange={e => updateRow(r.key, { included: e.target.checked })}
+                                                className="w-4 h-4 accent-blue-600 cursor-pointer"
+                                            />
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <p className="font-medium text-gray-800">{r.subjectName}</p>
+                                            <p className="text-[11px] text-gray-400">{r.sectionName}</p>
+                                        </td>
+                                        <td className="px-2 py-2">
+                                            {!r.hasTheoryPractical ? (
+                                                <input
+                                                    type="number"
+                                                    disabled={!r.included}
+                                                    value={r.maxMarks}
+                                                    onChange={e => updateRow(r.key, { maxMarks: e.target.value })}
+                                                    className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-xs"
+                                                />
+                                            ) : (
+                                                <div className="space-y-1">
+                                                    <input type="number" placeholder="Th" disabled={!r.included} value={r.maxTheoryMarks}
+                                                        onChange={e => updateRow(r.key, { maxTheoryMarks: e.target.value, maxMarks: Number(e.target.value) + Number(r.maxPracticalMarks) })}
+                                                        className="w-20 border border-gray-200 rounded px-1.5 py-0.5 text-[11px]" />
+                                                    <input type="number" placeholder="Pr" disabled={!r.included} value={r.maxPracticalMarks}
+                                                        onChange={e => updateRow(r.key, { maxPracticalMarks: e.target.value, maxMarks: Number(r.maxTheoryMarks) + Number(e.target.value) })}
+                                                        className="w-20 border border-gray-200 rounded px-1.5 py-0.5 text-[11px]" />
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="px-2 py-2">
+                                            {!r.hasTheoryPractical ? (
+                                                <input
+                                                    type="number"
+                                                    disabled={!r.included}
+                                                    value={r.passingMarks}
+                                                    onChange={e => updateRow(r.key, { passingMarks: e.target.value })}
+                                                    className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-xs"
+                                                />
+                                            ) : (
+                                                <div className="space-y-1">
+                                                    <input type="number" placeholder="Th" disabled={!r.included} value={r.passingTheoryMarks}
+                                                        onChange={e => updateRow(r.key, { passingTheoryMarks: e.target.value, passingMarks: Number(e.target.value) + Number(r.passingPracticalMarks) })}
+                                                        className="w-20 border border-gray-200 rounded px-1.5 py-0.5 text-[11px]" />
+                                                    <input type="number" placeholder="Pr" disabled={!r.included} value={r.passingPracticalMarks}
+                                                        onChange={e => updateRow(r.key, { passingPracticalMarks: e.target.value, passingMarks: Number(r.passingTheoryMarks) + Number(e.target.value) })}
+                                                        className="w-20 border border-gray-200 rounded px-1.5 py-0.5 text-[11px]" />
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="px-2 py-2">
+                                            <label className="flex items-center gap-2 cursor-pointer pt-1">
+                                                <input
+                                                    type="checkbox"
+                                                    disabled={!r.included}
+                                                    checked={!!r.hasTheoryPractical}
+                                                    onChange={e => {
+                                                        const checked = e.target.checked;
+                                                        updateRow(r.key, {
+                                                            hasTheoryPractical: checked,
+                                                            ...(checked ? {
+                                                                maxTheoryMarks: Math.round(Number(r.maxMarks) * 0.7),
+                                                                maxPracticalMarks: Math.round(Number(r.maxMarks) * 0.3),
+                                                                passingTheoryMarks: Math.round(Number(r.passingMarks) * 0.7),
+                                                                passingPracticalMarks: Math.round(Number(r.passingMarks) * 0.3),
+                                                            } : {})
+                                                        });
+                                                    }}
+                                                    className="w-3.5 h-3.5 accent-blue-600"
+                                                />
+                                                <span className={`text-xs font-medium ${r.hasTheoryPractical ? "text-blue-700 font-semibold" : "text-gray-400"}`}>
+                                                    {r.hasTheoryPractical ? "Theory + Practical" : "Theory only"}
+                                                </span>
+                                            </label>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="flex gap-3 justify-between pt-3 border-t border-gray-100">
+                        <button
+                            type="button"
+                            onClick={() => setStep(1)}
+                            disabled={loading}
+                            className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                            <ChevronLeft className="w-4 h-4" /> Back
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSubmit}
+                            disabled={loading}
+                            className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all rounded-lg shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                        >
+                            {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                            {loading ? "Saving Classes..." : "+ Save Classes & Configurations"}
+                        </button>
+                    </div>
+                </div>
+            )}
         </ModalShell>
     );
 }
@@ -568,7 +978,6 @@ function EditEventModal({ event, examTypes, academicYears, onSave, onCancel, loa
         description: event.description || "",
     });
 
-    // ── subject-config editing state ───────────────────────────
     const classTabs = event.exams || [];
     const [rows, setRows] = useState([]);
     const [loadingSubjects, setLoadingSubjects] = useState(true);
@@ -622,7 +1031,6 @@ function EditEventModal({ event, examTypes, academicYears, onSave, onCancel, loa
             }
         })();
         return () => { cancelled = true; };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [event.eventId]);
 
     const updateRow = (key, patch) =>
@@ -649,7 +1057,6 @@ function EditEventModal({ event, examTypes, academicYears, onSave, onCancel, loa
     return (
         <ModalShell title={EXAM_CONSTS.EXAMS.MODALS.EDIT_TITLE} icon={Edit2} onClose={onCancel} maxW="max-w-3xl">
             <div className="space-y-3">
-                {/* Exam Type & Academic Year (Read-only as they are immutable) */}
                 <div className="grid grid-cols-2 gap-3">
                     <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -700,7 +1107,6 @@ function EditEventModal({ event, examTypes, academicYears, onSave, onCancel, loa
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
 
-                {/* Subject configs — marks, passing marks, theory/practical per class */}
                 <div className="pt-2 border-t border-gray-100">
                     <p className="text-xs font-semibold text-gray-700 mb-2 mt-2">Subjects & Marks</p>
 
@@ -898,6 +1304,19 @@ export default function ExamEvents() {
     const [declaringExam, setDeclaringExam] = useState(false);
     const [subjectsTarget, setSubjectsTarget] = useState(null);
 
+    // Calculate busy class IDs with pending declaration status
+    const busyClassIds = useMemo(() => {
+        const busySet = new Set();
+        events.forEach(evt => {
+            (evt.exams || []).forEach(exam => {
+                if (exam.resultDeclared === false && exam.schoolClassId) {
+                    busySet.add(Number(exam.schoolClassId));
+                }
+            });
+        });
+        return busySet;
+    }, [events]);
+
     // Load filters meta data on mount
     useEffect(() => {
         (async () => {
@@ -912,7 +1331,6 @@ export default function ExamEvents() {
                 setClasses(Array.isArray(cls) ? cls : []);
                 setAcademicYears(Array.isArray(yearsList) ? yearsList : []);
 
-                // Filter only active exam types here:
                 const activeTypes = Array.isArray(types) ? types.filter(t => t.isActive === true) : [];
                 setExamTypes(activeTypes);
             } catch {
@@ -1031,14 +1449,36 @@ export default function ExamEvents() {
         } finally { setRemoveClassSaving(false); }
     };
 
-    const handleAddClass = async (classIds) => {
+    const handleAddClass = async (classIds, subjectConfigs = []) => {
         if (!addClassTarget) return;
         setAddClassSaving(true);
         try {
+            // 1. Add classes to the exam event
             const response = await addClassesToExamEvent(addClassTarget.eventId, classIds);
-            await fetchEvents();
-
             const resData = response?.data || response;
+
+            // 2. Attach subject configs for newly added classes if provided
+            if (subjectConfigs.length > 0) {
+                const existingClassIds = (addClassTarget.exams || []).map(e => Number(e.schoolClassId));
+                const allClassIds = [...new Set([...existingClassIds, ...classIds.map(Number)])];
+
+                try {
+                    await updateExamEvent(addClassTarget.eventId, {
+                        examTypeId: addClassTarget.examTypeId,
+                        academicYearId: addClassTarget.academicYearId,
+                        classIds: allClassIds,
+                        name: addClassTarget.name,
+                        startDate: addClassTarget.startDate,
+                        endDate: addClassTarget.endDate,
+                        description: addClassTarget.description,
+                        subjectConfigs: subjectConfigs
+                    });
+                } catch (subErr) {
+                    console.warn("Classes added, but updating subject configurations failed:", subErr);
+                }
+            }
+
+            await fetchEvents();
 
             if (resData && resData.skipped && resData.skipped.length > 0) {
                 const skipReasons = resData.skipped.map(item =>
@@ -1051,7 +1491,7 @@ export default function ExamEvents() {
                     toast.error(`No classes added. ${skipReasons}`);
                 }
             } else {
-                toast.success("All selected class(es) added successfully!");
+                toast.success("All selected class(es) and subject configurations added successfully!");
             }
 
             setAddClassTarget(null);
@@ -1273,7 +1713,7 @@ export default function ExamEvents() {
             )}
 
             {addClassTarget && (
-                <AddClassModal event={addClassTarget} allClasses={allClassesForAdd}
+                <AddClassModal event={addClassTarget} allClasses={allClassesForAdd} busyClassIds={busyClassIds}
                     onSave={handleAddClass} onCancel={() => setAddClassTarget(null)} loading={addClassSaving} />
             )}
 

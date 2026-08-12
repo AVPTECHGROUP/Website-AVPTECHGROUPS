@@ -13,7 +13,7 @@ const FaqListing = lazy(() => import('../../Components/Homes/Faq/FaqLisitng'));
 const Blog = lazy(() => import('../../Pages/SchoolSpineWeb/pages/Blog'));
 const FeatureDetails = lazy(() => import('../../Components/Homes/Details/Features/FeatureDetails'));
 const Support = lazy(() => import('../../Pages/SchoolSpineWeb/pages/Help_Support'));
-
+const DemoRequest = lazy(() => import('../../Pages/DemoRequest/Demorequest'));
 
 // Called as a function: SchoolSpineWebRoutes({ RootRedirect, isLoggedIn })
 export default function SchoolSpineWebRoutes({ RootRedirect, isLoggedIn }) {
@@ -28,6 +28,18 @@ export default function SchoolSpineWebRoutes({ RootRedirect, isLoggedIn }) {
         path={ROUTE_PATHS.CONTACT}
         element={isLoggedIn ? <RootRedirect /> : <LandingLayout><Contact /></LandingLayout>}
       />
+      <Route
+  path="/demo-request"
+  element={
+    isLoggedIn ? (
+      <RootRedirect />
+    ) : (
+      <LandingLayout>
+        <DemoRequest />
+      </LandingLayout>
+    )
+  }
+/>
       <Route
         path={ROUTE_PATHS.PRIVACY_POLICY}
         element={isLoggedIn ? <RootRedirect /> : <LandingLayout><PrivacyPolicy /></LandingLayout>}
