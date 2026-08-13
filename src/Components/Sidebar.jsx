@@ -13,6 +13,7 @@ import { useState, useEffect, useContext, useRef, useMemo } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
 import { PERMISSIONS as P, SYSTEM_ROLES } from '../Constants/Permission'
 import OverdueFeeNotifications from "../Pages/FeeManagement/Overduefeenotification.jsx";
+import SalarySlip from "../Pages/Payroll/Salaryslipgenerator.jsx";
 
 const SCHOOL_SWITCHER_ROLES = SYSTEM_ROLES.SCHOOL_SWITCHER;
 
@@ -209,6 +210,7 @@ const menuSections = [
                     { label: 'Certificate Templates', route: '/templates/certificate', icon: Award },
                     { label: 'Fee Receipt Templates', route: '/templates/feeReceipt', icon: Receipt },
                     { label: 'Gate Pass Templates', route: '/templates/gatePass', icon: DoorOpen },
+                    { label: 'Salary Slip Templates', route: '/templates/salarySlip', icon: Wallet },
                     // { label: 'Visitor Pass Templates', route: '/templates/visitorPass', icon: UserCheck },
                     // { label: 'Cycle Stand Templates', route: '/templates/cycleStandPass', icon: Bike },
                 ]
