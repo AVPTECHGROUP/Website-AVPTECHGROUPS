@@ -9,6 +9,7 @@ import { getFeePeriods, getAcademicYears } from '../../Api/FeeManagement/FeePeri
 import { getOutstandingFees } from '../../Api/FeeManagement/FeeCollection.js';
 import { getFeeStructures } from '../../Api/FeeManagement/FeeStructures';
 import { getActiveClasses } from '../../Api/Academics/ClassSectionAPI.js';
+import { getStudentByClass } from '../../Api/Students/StudentsApi.js';
 
 import {sendOverdueFeeNotifications} from "../../Api/FeeManagement/FeeNotification.js";
 import { UserContext } from '../../ContextAPI/UserContext';
@@ -452,6 +453,42 @@ const OverdueFeeNotifications = () => {
         setSelectedClassId('');
     }, [selectedStructureId]);
 
+    // Fetch full student profiles for the selected class so roll number,
+    // guardian name/phone, and photo can be merged into each outstanding-fee
+    // row — the outstanding-fees endpoint itself only returns studentId,
+    // studentName, admissionNumber, className, sectionName, balances and
+    // dates (confirmed from the raw response), nothing about the guardian
+    // or roll number. `getStudentByClass` was already imported but never
+    // called, which is why profileMap stayed empty and everything fell back
+    // to '—'.
+    //
+    // ASSUMPTION: `getStudentByClass(classId)` returns an array (or
+    // `{ data: [...] }`) of student profile objects shaped like
+    // `mergeStudentRecord` expects — `id`/`studentId`, `fullName`,
+    // `admissionNumber`, `rollNumber`, `className`, `sectionName`,
+    // `guardianName`/`fatherName`/`motherName`,
+    // `guardianPhone`/`fatherPhone`/`motherPhone`, `profileImageUrl`, and
+    // optionally a nested `personalDetails.mobile`. If your actual response
+    // shape differs, paste StudentsApi.js and I'll adjust the mapping.
+    useEffect(() => {
+        setProfileMap(new Map());
+        if (!selectedClassId) return;
+        (async () => {
+            try {
+                const data = await getStudentByClass(selectedClassId);
+                const list = Array.isArray(data) ? data : (data?.data || []);
+                const map = new Map();
+                list.forEach((p) => {
+                    const id = p.id ?? p.studentId;
+                    if (id != null) map.set(String(id), p);
+                });
+                setProfileMap(map);
+            } catch (err) {
+                toast.error('Failed to load student profiles', err.message);
+            }
+        })();
+    }, [selectedClassId]);
+
     const selectedPeriod = periods.find((p) => String(p.id) === selectedPeriodId);
 
     const structureOptions = useMemo(
@@ -700,7 +737,7 @@ const OverdueFeeNotifications = () => {
             {/* Students table */}
             {selectedPeriodId && (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-gray-100">
+                    <div className="flex flex-col gap-3 px-4 sm:px-5 py-4 border-b border-gray-100">
                         <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                             <span className="w-1 h-4 rounded-full bg-[#2563EB] inline-block" />
                             Students with Pending Fees
@@ -712,13 +749,13 @@ const OverdueFeeNotifications = () => {
                         </h2>
 
                         {selectedClassId && (
-                            <div className="relative">
+                            <div className="relative w-full sm:w-72">
                                 <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
                                 <input
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder="Search by name, roll no. or admission no."
-                                    className="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all w-64"
+                                    className="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all w-full text-left"
                                 />
                             </div>
                         )}
@@ -784,13 +821,12 @@ const OverdueFeeNotifications = () => {
                                                 )}
                                                 <div className="min-w-0">
                                                     <div className="font-semibold text-gray-800 truncate">{s.name}</div>
-                                                    <div className="text-[11px] text-gray-400">Roll {s.rollNumber}</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-3 py-3 text-gray-500">
                         <span className="inline-flex items-center gap-1">
-                          <Hash size={11} className="text-gray-300" />
+
                             {s.admissionNumber}
                         </span>
                                         </td>
