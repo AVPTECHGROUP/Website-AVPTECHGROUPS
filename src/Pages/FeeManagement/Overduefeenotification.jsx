@@ -3,12 +3,14 @@ import Select from '../../Components/FeeModal/Select';
 import {
     AlertCircle, AlertTriangle, CheckCircle2, Info, X,
     Clock, Bell, Users, Search, Send, Calendar, Phone, Hash,
+    ChevronLeft, ChevronRight, Layers,
 } from 'lucide-react';
 import { getFeePeriods, getAcademicYears } from '../../Api/FeeManagement/FeePeriods';
 import { getOutstandingFees } from '../../Api/FeeManagement/FeeCollection.js';
 import { getFeeStructures } from '../../Api/FeeManagement/FeeStructures';
 import { getActiveClasses } from '../../Api/Academics/ClassSectionAPI.js';
 import { getStudentByClass } from '../../Api/Students/StudentsApi.js';
+
 import {sendOverdueFeeNotifications} from "../../Api/FeeManagement/FeeNotification.js";
 import { UserContext } from '../../ContextAPI/UserContext';
 
@@ -17,17 +19,35 @@ import { UserContext } from '../../ContextAPI/UserContext';
 //    '../../Api/FeeManagement/FeeNotifications.js' and matches the function
 //    you pasted (POST /v1/fee/notifications/overdue?classId=&periodId=,
 //    empty body). Update the import path if it's actually somewhere else.
-// 2. Backend only accepts classId + periodId as query params — no
-//    studentIds, no custom message. It notifies EVERY parent with an
-//    overdue balance for that class + period, full stop.
-// 3. Per-student checkboxes have been removed entirely. Since the backend
-//    can't target individual students, the "select some rows" table UX was
-//    just noise — the Send button always targets the whole class+period,
-//    and the totals in the confirm modal now come straight from
-//    `filteredStudents` (i.e. everything currently shown, search included).
-// 4. schoolId is read from UserContext (`useContext(UserContext).schoolId`).
-// 5. Outstanding-fee record shape: same defensive normalization as before
+// 2. Per-student checkboxes are still removed — the backend notifies EVERY
+//    parent with an overdue balance for the chosen class + period (+
+//    structure, see #6 below), full stop.
+// 3. schoolId is read from UserContext (`useContext(UserContext).schoolId`).
+// 4. Outstanding-fee record shape: same defensive normalization as before
 //    in `mergeStudentRecord()` — adjust field names to your real response.
+// 5. `getOutstandingFees` accepts a `{ classId, periodId, status, page,
+//    size }` object today. This file now ALSO passes `structureId` and
+//    `search` in that same call — I don't have FeeCollection.js in this
+//    conversation, so I can't confirm/fix whether those two new params
+//    actually get forwarded into the query string. If they're silently
+//    dropped, structure-scoping and server-side search won't take effect
+//    until FeeCollection.js is updated to pass them through. Paste that
+//    file and I'll wire it up exactly.
+// 6. NEW: a fee period can have MULTIPLE fee structures (confirmed by your
+//    /v1/fee/structures?periodId=12 response — 6 structures, several of
+//    them scoped to the same class with different amounts/custom names).
+//    A Fee Structure dropdown now sits between Period and Class so the
+//    correct structure (and therefore correct amount) is unambiguous. The
+//    Class dropdown is now scoped ONLY to the selected structure's classes
+//    — not merged across every structure on the period like before.
+// 7. NEW: search is now debounced and sent to the backend as `search` on
+//    every page fetch (assumption #5 above) instead of being filtered only
+//    on the current page client-side — with ~1887 records and 10/page,
+//    client-only filtering was never going to find most of them.
+// 8. Backend needs to actually use `structureId` to scope the returned
+//    outstanding-fee amounts/rows to that specific structure — otherwise
+//    picking different structures for the same class+period will show the
+//    same (wrong) numbers.
 
 // ─── Toast (self-contained) ───────────────────────────────────────────────────
 let _dispatch = null;
@@ -86,6 +106,9 @@ const formatCurrency = (amount) => {
     return '₹' + Number(amount).toLocaleString('en-IN');
 };
 
+const titleCase = (s = '') =>
+    s.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
 // Only OPEN periods (status !== CLOSED) whose due date has already passed.
 const isOpenOverduePeriod = (period) => {
     const today = new Date().toISOString().split('T')[0];
@@ -101,8 +124,8 @@ const normalizeClass = (raw) => ({
 // A fee structure can be attached to MULTIPLE classes at once — the real
 // response shape is `structure.classes: [{ id, name, gradeLevel,
 // studentCount }, ...]`. This pulls every { id, name } pair out of a
-// structure, falling back to a single classId/className shape defensively
-// in case an older/different endpoint version is hit.
+// SINGLE structure, falling back to a single classId/className shape
+// defensively in case an older/different endpoint version is hit.
 const normalizeStructureClasses = (raw) => {
     if (Array.isArray(raw.classes) && raw.classes.length > 0) {
         return raw.classes
@@ -115,10 +138,20 @@ const normalizeStructureClasses = (raw) => {
     return [{ id, name }];
 };
 
+// Builds a human-readable label for the Fee Structure dropdown:
+// "{feePeriodName} - {custom name, or '-' when null}". A period can have
+// several structures with a null `name` (the default/standard ones) and
+// at most a couple with a custom name like "science tour fee" — the
+// amount is appended purely so same-named entries stay distinguishable
+// in the dropdown, since name + period alone can repeat.
+const buildStructureLabel = (s) => {
+    const period = s.feePeriodName || '—';
+    const customName = s.name || '-';
+    return `${period} - ${customName} · ${formatCurrency(s.totalAmount)}`;
+};
+
 const initials = (name = '') => name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('');
 
-// Merge an outstanding-fee record with the matching full student profile
-// (from getStudentByClass) so the table can show useful contact info.
 const mergeStudentRecord = (outstandingRaw, profile) => {
     const p = profile || {};
     const personal = p.personalDetails || {};
@@ -139,9 +172,9 @@ const mergeStudentRecord = (outstandingRaw, profile) => {
 
 // ─── Confirm Send Modal ────────────────────────────────────────────────────
 // No message field, no student picker: the backend notifies every parent
-// with an overdue balance for the chosen class + period, so this is a
-// straight confirmation, not a compose step.
-const ConfirmSendModal = ({ open, onClose, onConfirm, loading, className, periodName, studentCount, totalDue }) => {
+// with an overdue balance for the chosen class + period (+ structure), so
+// this is a straight confirmation, not a compose step.
+const ConfirmSendModal = ({ open, onClose, onConfirm, loading, className, periodName, structureName, studentCount, totalDue }) => {
     if (!open) return null;
 
     return (
@@ -150,7 +183,7 @@ const ConfirmSendModal = ({ open, onClose, onConfirm, loading, className, period
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <div>
                         <h3 className="text-base font-bold text-gray-900">Send Overdue Fee Reminders</h3>
-                        <p className="text-xs text-gray-400 mt-0.5">{className} · {periodName}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{className} · {periodName}{structureName ? ` · ${structureName}` : ''}</p>
                     </div>
                     <button onClick={onClose} className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
                         <X size={14} />
@@ -222,6 +255,80 @@ const OverduePeriodCard = ({ p, selected, onSelect }) => (
     </div>
 );
 
+// ─── Pagination Bar ─────────────────────────────────────────────────────────
+// Rows-per-page selector + "Showing X to Y of Z" + page-number nav with
+// ellipsis — same visual pattern used elsewhere in the app (e.g. Print
+// Templates list).
+const getPageNumbers = (currentPageZeroIdx, totalPages) => {
+    const cur = currentPageZeroIdx + 1; // 1-indexed for display
+    if (totalPages <= 7) {
+        return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pages = [1];
+    if (cur > 3) pages.push('…');
+    const start = Math.max(2, cur - 1);
+    const end = Math.min(totalPages - 1, cur + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (cur < totalPages - 2) pages.push('…');
+    pages.push(totalPages);
+    return pages;
+};
+
+const PaginationBar = ({ currentPage, totalPages, totalElements, pageSize, pageSizeOptions, onPageChange, onPageSizeChange }) => {
+    if (totalElements === 0) return null;
+    const from = currentPage * pageSize + 1;
+    const to = Math.min((currentPage + 1) * pageSize, totalElements);
+    const pageNumbers = getPageNumbers(currentPage, totalPages);
+
+    return (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 sm:px-5 py-3.5 border-t border-gray-100 bg-gray-50/50 text-xs text-gray-500">
+            <span>Showing {from} to {to} of {totalElements}</span>
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                    Rows per page:
+                    <select
+                        value={pageSize}
+                        onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                        className="border border-gray-200 rounded-md px-2 py-1 text-xs outline-none cursor-pointer"
+                    >
+                        {pageSizeOptions.map((n) => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <button
+                        onClick={() => onPageChange(Math.max(0, currentPage - 1))}
+                        disabled={currentPage <= 0}
+                        className="w-7 h-7 rounded-md border border-gray-200 flex items-center justify-center disabled:opacity-40 hover:bg-white transition-colors"
+                    >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    {pageNumbers.map((n, i) =>
+                        n === '…' ? (
+                            <span key={`ellipsis-${i}`} className="w-7 h-7 flex items-center justify-center text-gray-400">…</span>
+                        ) : (
+                            <button
+                                key={n}
+                                onClick={() => onPageChange(n - 1)}
+                                className={`w-7 h-7 rounded-md border flex items-center justify-center font-semibold transition-colors
+                                    ${n - 1 === currentPage ? 'border-[#2563EB] bg-[#2563EB] text-white' : 'border-gray-200 hover:bg-white text-gray-600'}`}
+                            >
+                                {n}
+                            </button>
+                        )
+                    )}
+                    <button
+                        onClick={() => onPageChange(Math.min(totalPages - 1, currentPage + 1))}
+                        disabled={currentPage >= totalPages - 1}
+                        className="w-7 h-7 rounded-md border border-gray-200 flex items-center justify-center disabled:opacity-40 hover:bg-white transition-colors"
+                    >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ─── Component ─────────────────────────────────────────────────────────────
 const OverdueFeeNotifications = () => {
     const { schoolId } = useContext(UserContext);
@@ -236,25 +343,28 @@ const OverdueFeeNotifications = () => {
     const [periodsLoading, setPeriodsLoading] = useState(false);
     const [selectedPeriodId, setSelectedPeriodId] = useState('');
 
-    // All active classes (used only to resolve a class name if a fee
-    // structure doesn't carry one) + classes restricted to this period.
+    // Fee structures for the selected period — a period can have MULTIPLE
+    // structures (see assumption #6), so the user must pick one explicitly
+    // before a class list (scoped to that structure) becomes available.
     const [allClasses, setAllClasses] = useState([]);
     const [structures, setStructures] = useState([]);
     const [structuresLoading, setStructuresLoading] = useState(false);
+    const [selectedStructureId, setSelectedStructureId] = useState('');
     const [selectedClassId, setSelectedClassId] = useState('');
 
     // Students — server-side paginated via getOutstandingFees. No
-    // selection state anymore: the backend only accepts classId + periodId,
-    // so every row shown (subject to the search filter) is what gets
-    // notified — there's nothing per-row left to toggle.
+    // selection state anymore: the backend only accepts classId + periodId
+    // (+ structureId), so every row returned for the current page/search is
+    // what gets notified — there's nothing per-row left to toggle.
     const [students, setStudents] = useState([]);
     const [studentsLoading, setStudentsLoading] = useState(false);
     const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [profileMap, setProfileMap] = useState(new Map());
 
     // Pagination
-    const PAGE_SIZE_OPTIONS = [15, 25, 50];
-    const [pageSize, setPageSize] = useState(15);
+    const PAGE_SIZE_OPTIONS = [10, 25, 50];
+    const [pageSize, setPageSize] = useState(10);
     const [currentPage, setCurrentPage] = useState(0); // 0-indexed
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
@@ -315,10 +425,11 @@ const OverdueFeeNotifications = () => {
         })();
     }, [selectedAcademicYearId]);
 
-    // Once a period is picked, fetch ITS fee structures — the classes
-    // dropdown is restricted to only the classes that actually have a
-    // structure attached to this period.
+    // Once a period is picked, fetch ALL its fee structures — the user then
+    // explicitly picks ONE structure below (a period can have several, see
+    // assumption #6), and the class dropdown is scoped to that structure.
     useEffect(() => {
+        setSelectedStructureId('');
         setSelectedClassId('');
         setStructures([]);
         if (!selectedPeriodId) return;
@@ -336,51 +447,88 @@ const OverdueFeeNotifications = () => {
         })();
     }, [selectedPeriodId]);
 
-    const selectedPeriod = periods.find((p) => String(p.id) === selectedPeriodId);
-
-    // Distinct classes that have a fee structure on the selected period.
-    // Prefer the structure's own className; fall back to the school's class
-    // list if the structure only carries a classId.
-    const classOptions = useMemo(() => {
-        const byId = new Map();
-        structures.forEach((s) => {
-            normalizeStructureClasses(s).forEach((c) => {
-                const fallbackName = allClasses.find((ac) => String(ac.id) === String(c.id))?.name;
-                byId.set(String(c.id), c.name || fallbackName || `Class ${c.id}`);
-            });
-        });
-        return Array.from(byId.entries()).map(([id, name]) => ({ value: id, label: name }));
-    }, [structures, allClasses]);
-
-    const selectedClass = classOptions.find((c) => c.value === selectedClassId);
-
-    // Fetch each student's full profile once per class (not paginated — the
-    // roster is small) so photo/admission no./guardian contact are available
-    // regardless of which page of overdue records is showing.
+    // Reset the class selection whenever the structure changes — classes are
+    // scoped per-structure now, not merged across the whole period.
     useEffect(() => {
-        if (!selectedClassId) {
-            setProfileMap(new Map());
-            return;
-        }
+        setSelectedClassId('');
+    }, [selectedStructureId]);
+
+    // Fetch full student profiles for the selected class so roll number,
+    // guardian name/phone, and photo can be merged into each outstanding-fee
+    // row — the outstanding-fees endpoint itself only returns studentId,
+    // studentName, admissionNumber, className, sectionName, balances and
+    // dates (confirmed from the raw response), nothing about the guardian
+    // or roll number. `getStudentByClass` was already imported but never
+    // called, which is why profileMap stayed empty and everything fell back
+    // to '—'.
+    //
+    // ASSUMPTION: `getStudentByClass(classId)` returns an array (or
+    // `{ data: [...] }`) of student profile objects shaped like
+    // `mergeStudentRecord` expects — `id`/`studentId`, `fullName`,
+    // `admissionNumber`, `rollNumber`, `className`, `sectionName`,
+    // `guardianName`/`fatherName`/`motherName`,
+    // `guardianPhone`/`fatherPhone`/`motherPhone`, `profileImageUrl`, and
+    // optionally a nested `personalDetails.mobile`. If your actual response
+    // shape differs, paste StudentsApi.js and I'll adjust the mapping.
+    useEffect(() => {
+        setProfileMap(new Map());
+        if (!selectedClassId) return;
         (async () => {
             try {
-                const profiles = await getStudentByClass(selectedClassId);
-                setProfileMap(new Map((profiles || []).map((p) => [String(p.id), p])));
-            } catch {
-                setProfileMap(new Map());
+                const data = await getStudentByClass(selectedClassId);
+                const list = Array.isArray(data) ? data : (data?.data || []);
+                const map = new Map();
+                list.forEach((p) => {
+                    const id = p.id ?? p.studentId;
+                    if (id != null) map.set(String(id), p);
+                });
+                setProfileMap(map);
+            } catch (err) {
+                toast.error('Failed to load student profiles', err.message);
             }
         })();
     }, [selectedClassId]);
 
-    // Reset to page 1 whenever the period, class, or page size changes.
+    const selectedPeriod = periods.find((p) => String(p.id) === selectedPeriodId);
+
+    const structureOptions = useMemo(
+        () => structures.map((s) => ({ value: String(s.id), label: buildStructureLabel(s) })),
+        [structures]
+    );
+
+    const selectedStructure = structures.find((s) => String(s.id) === selectedStructureId);
+
+    // Classes available for the SELECTED STRUCTURE ONLY — prefer the
+    // structure's own className; fall back to the school's class list if
+    // the structure only carries a classId.
+    const classOptions = useMemo(() => {
+        if (!selectedStructure) return [];
+        return normalizeStructureClasses(selectedStructure).map((c) => ({
+            value: String(c.id),
+            label: c.name || allClasses.find((ac) => String(ac.id) === String(c.id))?.name || `Class ${c.id}`,
+        }));
+    }, [selectedStructure, allClasses]);
+
+    const selectedClass = classOptions.find((c) => c.value === selectedClassId);
+
+    // Debounce the search box before it hits the server.
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
+        return () => clearTimeout(t);
+    }, [search]);
+
+    // Reset to page 1 whenever any filter (period, structure, class, page
+    // size, or search) changes.
     useEffect(() => {
         setCurrentPage(0);
-    }, [selectedPeriodId, selectedClassId, pageSize]);
+    }, [selectedPeriodId, selectedStructureId, selectedClassId, pageSize, debouncedSearch]);
 
-    // Fetch the current page of overdue students once a period + class are
-    // both picked.
+    // Fetch the current page of overdue students once a period, structure,
+    // and class are all picked. `structureId` and `search` are passed
+    // through to the backend — see assumption #5 for the FeeCollection.js
+    // dependency this relies on.
     useEffect(() => {
-        if (!selectedPeriodId || !selectedClassId) {
+        if (!selectedPeriodId || !selectedStructureId || !selectedClassId) {
             setStudents([]);
             setTotalPages(0);
             setTotalElements(0);
@@ -392,7 +540,9 @@ const OverdueFeeNotifications = () => {
                 const { records, pagination } = await getOutstandingFees({
                     classId: selectedClassId,
                     periodId: selectedPeriodId,
+                    structureId: selectedStructureId,
                     status: 'OVERDUE',
+                    search: debouncedSearch || undefined,
                     page: currentPage,
                     size: pageSize,
                 });
@@ -408,29 +558,24 @@ const OverdueFeeNotifications = () => {
                 setStudentsLoading(false);
             }
         })();
-    }, [selectedPeriodId, selectedClassId, currentPage, pageSize]);
+    }, [selectedPeriodId, selectedStructureId, selectedClassId, currentPage, pageSize, debouncedSearch]);
 
     // Merge the current page's raw overdue records with each student's full
     // profile for a richer table (photo, admission no., guardian contact).
-    const mergedStudents = useMemo(
+    // Search now happens server-side (see fetch effect above), so this is
+    // no longer filtered again client-side — `students` already reflects
+    // exactly what should be shown/sent for the current page.
+    const filteredStudents = useMemo(
         () => students.map((r) => mergeStudentRecord(r, profileMap.get(String(r.studentId ?? r.id)))),
         [students, profileMap]
     );
 
-    const filteredStudents = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        if (!q) return mergedStudents;
-        return mergedStudents.filter((s) =>
-            s.name.toLowerCase().includes(q) ||
-            String(s.rollNumber).toLowerCase().includes(q) ||
-            String(s.admissionNumber).toLowerCase().includes(q)
-        );
-    }, [mergedStudents, search]);
-
     // Totals shown in the confirm modal reflect what's currently shown on
     // this page (search-filtered), as a preview — the actual send always
-    // covers the whole class+period regardless of pagination/search, since
-    // the backend can't be scoped to a subset of students.
+    // covers the whole class+period+structure regardless of pagination,
+    // since the backend can't be scoped to a subset of students. If your
+    // backend can return a true aggregate (e.g. `pagination.totalDueAmount`),
+    // swap this for that value — it'll be more accurate than a page-local sum.
     const totalDueAll = useMemo(
         () => filteredStudents.reduce((sum, s) => sum + (s.dueAmount || 0), 0),
         [filteredStudents]
@@ -440,11 +585,14 @@ const OverdueFeeNotifications = () => {
         setSending(true);
         try {
             // TODO: if the backend ever adds studentIds / message support,
-            // pass them here. Today it only accepts classId + periodId and
-            // notifies every overdue parent in that scope.
+            // pass them here. Today it accepts classId + periodId and
+            // notifies every overdue parent in that scope — structureId is
+            // included defensively in case the endpoint is updated to use
+            // it for scoping too; harmless to send if it's ignored.
             const result = await sendOverdueFeeNotifications({
                 classId: selectedClassId,
                 periodId: selectedPeriodId,
+                structureId: selectedStructureId,
             });
             const { studentsNotified, parentsReached, deviceTokensReached, message } = result?.data || {};
             toast.success(
@@ -488,7 +636,7 @@ const OverdueFeeNotifications = () => {
             {/* Info banner */}
             <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-sm text-blue-700">
                 <Info size={15} className="flex-shrink-0 mt-0.5 text-blue-500" />
-                <span>Only open fee periods whose due date has already passed are shown below. The class list is restricted to classes that actually have a fee structure attached to the period you pick.</span>
+                <span>Only open fee periods whose due date has already passed are shown below. Each period can have multiple fee structures — pick the exact structure so amounts and class lists stay accurate.</span>
             </div>
 
             {/* Overdue periods */}
@@ -536,27 +684,52 @@ const OverdueFeeNotifications = () => {
                 )}
             </div>
 
-            {/* Class filter — restricted to classes with a fee structure on this period */}
+            {/* Fee Structure + Class filters — structure narrows the class list */}
             {selectedPeriodId && (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
-                    <div className="max-w-xs">
-                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                            Class <span className="text-red-500">*</span>
-                        </label>
-                        {structuresLoading ? (
-                            <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-400">Loading classes…</div>
-                        ) : classOptions.length === 0 ? (
-                            <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-400">
-                                No fee structures attached to this period yet
-                            </div>
-                        ) : (
-                            <Select
-                                value={selectedClassId}
-                                onChange={setSelectedClassId}
-                                options={classOptions}
-                                placeholder="Select a class"
-                            />
-                        )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                                <Layers size={12} className="text-gray-400" />
+                                Fee Structure <span className="text-red-500">*</span>
+                            </label>
+                            {structuresLoading ? (
+                                <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-400">Loading structures…</div>
+                            ) : structureOptions.length === 0 ? (
+                                <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-400">
+                                    No fee structures for this period
+                                </div>
+                            ) : (
+                                <Select
+                                    value={selectedStructureId}
+                                    onChange={setSelectedStructureId}
+                                    options={structureOptions}
+                                    placeholder="Select a fee structure"
+                                />
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                                Class <span className="text-red-500">*</span>
+                            </label>
+                            {!selectedStructureId ? (
+                                <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-400">
+                                    Select a fee structure first
+                                </div>
+                            ) : classOptions.length === 0 ? (
+                                <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-400">
+                                    No classes attached to this structure
+                                </div>
+                            ) : (
+                                <Select
+                                    value={selectedClassId}
+                                    onChange={setSelectedClassId}
+                                    options={classOptions}
+                                    placeholder="Select a class"
+                                />
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
@@ -564,31 +737,39 @@ const OverdueFeeNotifications = () => {
             {/* Students table */}
             {selectedPeriodId && (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-gray-100">
+                    <div className="flex flex-col gap-3 px-4 sm:px-5 py-4 border-b border-gray-100">
                         <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                             <span className="w-1 h-4 rounded-full bg-[#2563EB] inline-block" />
                             Students with Pending Fees
-                            {students.length > 0 && (
+                            {totalElements > 0 && (
                                 <span className="ml-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[11px] font-bold rounded-full border border-blue-100">
-                  {students.length}
+                  {totalElements}
                 </span>
                             )}
                         </h2>
 
-                        {students.length > 0 && (
-                            <div className="relative">
+                        {selectedClassId && (
+                            <div className="relative w-full sm:w-72">
                                 <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
                                 <input
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder="Search by name, roll no. or admission no."
-                                    className="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all w-64"
+                                    className="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all w-full text-left"
                                 />
                             </div>
                         )}
                     </div>
 
-                    {!selectedClassId ? (
+                    {!selectedStructureId ? (
+                        <div className="text-center py-16 px-4">
+                            <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                <Layers size={20} className="text-gray-400" />
+                            </div>
+                            <div className="text-sm font-semibold text-gray-500">Select a fee structure</div>
+                            <div className="text-xs text-gray-400 mt-1">Pick the exact fee structure for this period first.</div>
+                        </div>
+                    ) : !selectedClassId ? (
                         <div className="text-center py-16 px-4">
                             <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
                                 <Users size={20} className="text-gray-400" />
@@ -609,7 +790,7 @@ const OverdueFeeNotifications = () => {
                                 <CheckCircle2 size={20} className="text-emerald-500" />
                             </div>
                             <div className="text-sm font-semibold text-gray-500">No pending fees</div>
-                            <div className="text-xs text-gray-400 mt-1">Everyone in this class has cleared dues for this period.</div>
+                            <div className="text-xs text-gray-400 mt-1">Everyone in this class has cleared dues for this period and structure.</div>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
@@ -640,13 +821,12 @@ const OverdueFeeNotifications = () => {
                                                 )}
                                                 <div className="min-w-0">
                                                     <div className="font-semibold text-gray-800 truncate">{s.name}</div>
-                                                    <div className="text-[11px] text-gray-400">Roll {s.rollNumber}</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-3 py-3 text-gray-500">
                         <span className="inline-flex items-center gap-1">
-                          <Hash size={11} className="text-gray-300" />
+
                             {s.admissionNumber}
                         </span>
                                         </td>
@@ -671,10 +851,22 @@ const OverdueFeeNotifications = () => {
                     )}
 
                     {filteredStudents.length > 0 && (
-                        <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-3.5 border-t border-gray-100 bg-gray-50/50">
+                        <PaginationBar
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            totalElements={totalElements}
+                            pageSize={pageSize}
+                            pageSizeOptions={PAGE_SIZE_OPTIONS}
+                            onPageChange={setCurrentPage}
+                            onPageSizeChange={setPageSize}
+                        />
+                    )}
+
+                    {filteredStudents.length > 0 && (
+                        <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-3.5 border-t border-gray-100">
                             <p className="text-xs text-gray-500">
-                                <span className="font-semibold text-gray-700">{filteredStudents.length}</span> student(s) shown
-                                <span className="ml-2 text-gray-400">· {formatCurrency(totalDueAll)} total due</span>
+                                <span className="font-semibold text-gray-700">{filteredStudents.length}</span> student(s) on this page
+                                <span className="ml-2 text-gray-400">· {formatCurrency(totalDueAll)} due (this page)</span>
                             </p>
                             <button
                                 onClick={() => setModalOpen(true)}
@@ -695,6 +887,7 @@ const OverdueFeeNotifications = () => {
                 loading={sending}
                 className={selectedClass?.label || '—'}
                 periodName={selectedPeriod?.name || '—'}
+                structureName={selectedStructure ? buildStructureLabel(selectedStructure) : ''}
                 studentCount={filteredStudents.length}
                 totalDue={totalDueAll}
             />
