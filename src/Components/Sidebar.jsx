@@ -7,7 +7,8 @@ import {
   MessageSquare, IndianRupee, Mail, Phone, Printer, CreditCard,
   Ticket, Award, Receipt, DoorOpen,
   Bike,
-  Wallet
+  Wallet,
+  UserCheck
 } from 'lucide-react'
 import { useState, useEffect, useContext, useRef, useMemo } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
@@ -19,217 +20,221 @@ const SCHOOL_SWITCHER_ROLES = SYSTEM_ROLES.SCHOOL_SWITCHER;
 
 // ── Restructured Menu Definition with Category Sections ─────────────────────────
 const menuSections = [
-    {
-        section: 'MAIN',
-        items: [
-            {
-                id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', route: '/dashboard',
-                permission: P.DASHBOARD_VIEW,
-            }
+  {
+    section: 'MAIN',
+    items: [
+      {
+        id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', route: '/dashboard',
+        permission: P.DASHBOARD_VIEW,
+      }
+    ]
+  },
+  {
+    section: 'PEOPLE',
+    items: [
+      {
+        id: 'manageUsers', icon: UserCog, label: 'Staff Management', route: '/manageUsers',
+        permission: P.USER_VIEW,
+      },
+      {
+        id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers',
+        permission: P.TEACHER_VIEW,
+      },
+      {
+        id: 'students', icon: Users, label: 'Students', route: '/students',
+        permission: P.STUDENT_VIEW,
+      },
+    ]
+  },
+  {
+    section: 'ACADEMICS',
+    items: [
+      {
+        id: 'academics', icon: GraduationCap, label: 'Academics', route: '/subjectMaster',
+        subItems: [
+          { label: 'Subjects', route: '/subjectMaster', permission: P.ACADEMIC_VIEW },
+          { label: 'Class & Sections', route: '/academics/classSections', permission: P.ACADEMIC_YEAR_MANAGE },
+          { label: 'Student Promotion', route: '/academics/studentPromotion', permission: P.STUDENT_PROMOTE },
+          { label: 'Homework', route: '/homework', permission: P.HOMEWORK_VIEW, featureFlag: 'homeworkEnabled' },
+          { label: 'Time Table', route: '/schedule', permission: P.TIMETABLE_VIEW, featureFlag: 'timetableEnabled' },
+          {
+            id: 'exams',
+            label: 'Exams',
+            route: '/exams',
+            featureFlag: 'examEnabled',
+            permissions: [P.EXAM_VIEW, P.EXAM_MARKS_VIEW_CLASS, P.EXAM_MARKS_ENTER],
+            childItems: [
+              { label: 'Exam Overview', route: '/exams', permissions: [P.EXAM_VIEW, P.EXAM_MARKS_VIEW_CLASS, P.EXAM_MARKS_ENTER] },
+              { label: 'Marks Entry', route: '/exams/marksEntry', permission: P.EXAM_MARKS_ENTER },
+              { label: 'Report Cards', route: '/exams/reportCard', permission: P.EXAM_MARKS_VIEW_CLASS },
+              { label: 'Analytics', route: '/exams/analytics', permission: P.EXAM_APPROVE },
+              { label: 'Exam Configuration', route: '/exams/examConfig', permission: P.EXAM_CREATE },
+            ]
+          },
         ]
-    },
-    {
-        section: 'PEOPLE',
-        items: [
-            {
-                id: 'manageUsers', icon: UserCog, label: 'Staff Management', route: '/manageUsers',
-                permission: P.USER_VIEW,
-            },
-            {
-                id: 'teachers', icon: Users, label: 'Teachers', route: '/teachers',
-                permission: P.TEACHER_VIEW,
-            },
-            {
-                id: 'students', icon: Users, label: 'Students', route: '/students',
-                permission: P.STUDENT_VIEW,
-            },
+      },
+      {
+        id: 'academicYear', icon: BookOpenText, label: 'Academic Years', route: '/academicYear',
+        permission: P.ACADEMIC_YEAR_MANAGE,
+      }
+    ]
+  },
+  {
+    section: 'ATTENDANCE & LEAVES',
+    items: [
+      {
+        id: 'attendance', icon: Calendar, label: 'Attendance', route: '/attendance',
+        subItems: [
+          {
+            label: 'Attendance Overview',
+            route: '/attendance',
+            permission: P.ATTENDANCE_VIEW,
+            showIf: (perms, features) => (features?.staffAttendanceEnabled || features?.studentAttendanceEnabled)
+          },
+          { label: 'Staff Enrollment', route: '/attendance/staffImgReg', permission: P.ATTENDANCE_APPROVE, featureFlag: 'staffAttendanceEnabled' },
+          { label: 'Staff Attendance', route: '/attendance/markUserAttendance', permission: P.ATTENDANCE_CREATE, featureFlag: 'staffAttendanceEnabled' },
+          { label: 'Student Enrollment', route: '/attendance/studentImgReg', permission: P.ATTENDANCE_APPROVE, featureFlag: 'studentAttendanceEnabled' },
+          { label: 'Student Attendance', route: '/attendance/studentAttendance', permission: P.ATTENDANCE_CREATE, featureFlag: 'studentAttendanceEnabled' },
         ]
-    },
-    {
-        section: 'ACADEMICS',
-        items: [
-            {
-                id: 'academics', icon: GraduationCap, label: 'Academics', route: '/subjectMaster',
-                subItems: [
-                    { label: 'Subjects', route: '/subjectMaster', permission: P.ACADEMIC_VIEW },
-                    { label: 'Class & Sections', route: '/academics/classSections', permission: P.ACADEMIC_YEAR_MANAGE },
-                    { label: 'Student Promotion', route: '/academics/studentPromotion', permission: P.STUDENT_PROMOTE },
-                    { label: 'Homework', route: '/homework', permission: P.HOMEWORK_VIEW, featureFlag: 'homeworkEnabled' },
-                    { label: 'Time Table', route: '/schedule', permission: P.TIMETABLE_VIEW, featureFlag: 'timetableEnabled' },
-                    {
-                        id: 'exams',
-                        label: 'Exams',
-                        route: '/exams',
-                        featureFlag: 'examEnabled',
-                        permissions: [P.EXAM_VIEW, P.EXAM_MARKS_VIEW_CLASS, P.EXAM_MARKS_ENTER],
-                        childItems: [
-                            { label: 'Exam Overview', route: '/exams', permissions: [P.EXAM_VIEW, P.EXAM_MARKS_VIEW_CLASS, P.EXAM_MARKS_ENTER] },
-                            { label: 'Marks Entry', route: '/exams/marksEntry', permission: P.EXAM_MARKS_ENTER },
-                            { label: 'Report Cards', route: '/exams/reportCard', permission: P.EXAM_MARKS_VIEW_CLASS },
-                            { label: 'Analytics', route: '/exams/analytics', permission: P.EXAM_APPROVE },
-                            { label: 'Exam Configuration', route: '/exams/examConfig', permission: P.EXAM_CREATE },
-                        ]
-                    },
-                ]
-            },
-            {
-                id: 'academicYear', icon: BookOpenText, label: 'Academic Years', route: '/academicYear',
-                permission: P.ACADEMIC_YEAR_MANAGE,
-            }
+      },
+      {
+        id: 'leaves', icon: FileText, label: 'Leaves', route: '/leaves/applyLeaves',
+        permission: P.LEAVE_VIEW,
+        featureFlag: 'leaveEnabled',
+        subItems: [
+          { label: 'Manage Leave', route: '/leaves', permission: P.LEAVE_APPROVE },
+          { label: 'My Leaves', route: '/leaves/myLeaves', permission: P.LEAVE_VIEW },
+          { label: 'Holiday Management', route: '/leaves/manageHolidays', permission: P.LEAVE_DELETE },
+          { label: 'Leave Config', route: '/leaves/leaveConfig', permission: P.LEAVE_DELETE },
         ]
-    },
-    {
-        section: 'ATTENDANCE & LEAVES',
-        items: [
-            {
-                id: 'attendance', icon: Calendar, label: 'Attendance', route: '/attendance',
-                subItems: [
-                    {
-                        label: 'Attendance Overview',
-                        route: '/attendance',
-                        permission: P.ATTENDANCE_VIEW,
-                        showIf: (perms, features) => (features?.staffAttendanceEnabled || features?.studentAttendanceEnabled)
-                    },
-                    { label: 'Staff Enrollment', route: '/attendance/staffImgReg', permission: P.ATTENDANCE_APPROVE, featureFlag: 'staffAttendanceEnabled' },
-                    { label: 'Staff Attendance', route: '/attendance/markUserAttendance', permission: P.ATTENDANCE_CREATE, featureFlag: 'staffAttendanceEnabled' },
-                    { label: 'Student Enrollment', route: '/attendance/studentImgReg', permission: P.ATTENDANCE_APPROVE, featureFlag: 'studentAttendanceEnabled' },
-                    { label: 'Student Attendance', route: '/attendance/studentAttendance', permission: P.ATTENDANCE_CREATE, featureFlag: 'studentAttendanceEnabled' },
-                ]
-            },
-            {
-                id: 'leaves', icon: FileText, label: 'Leaves', route: '/leaves/applyLeaves',
-                permission: P.LEAVE_VIEW,
-                featureFlag: 'leaveEnabled',
-                subItems: [
-                    { label: 'Manage Leave', route: '/leaves', permission: P.LEAVE_APPROVE },
-                    { label: 'My Leaves', route: '/leaves/myLeaves', permission: P.LEAVE_VIEW },
-                    { label: 'Holiday Management', route: '/leaves/manageHolidays', permission: P.LEAVE_DELETE },
-                    { label: 'Leave Config', route: '/leaves/leaveConfig', permission: P.LEAVE_DELETE },
-                ]
-            },
-            {
-                id: 'payroll', icon: Wallet, label: 'Payroll', route: '/payroll/myPayroll',
-                permission: P.PAYROLL_VIEW,
-                featureFlag: 'payrollEnabled',
-                subItems: [
-                    { label: 'Manage Payroll', route: '/payroll', permission: P.PAYROLL_MANAGE },
-                    { label: 'My Payroll', route: '/payroll/myPayroll', permission: P.PAYROLL_VIEW },
-                    { label: 'Payroll Config', route: '/payroll/payrollConfig', permission: P.PAYROLL_CONFIG },
-                ]
-            }
+      },
+      {
+        id: 'payroll', icon: Wallet, label: 'Payroll', route: '/payroll/myPayroll',
+        permission: P.PAYROLL_VIEW,
+        featureFlag: 'payrollEnabled',
+        subItems: [
+          { label: 'Manage Payroll', route: '/payroll', permission: P.PAYROLL_MANAGE },
+          { label: 'My Payroll', route: '/payroll/myPayroll', permission: P.PAYROLL_VIEW },
+          { label: 'Payroll Config', route: '/payroll/payrollConfig', permission: P.PAYROLL_CONFIG },
         ]
-    },
-    {
-        section: 'COMMUNICATION',
-        items: [
-            {
-                id: 'communication',
-                icon: MessageSquare,
-                label: 'Communication',
-                route: '/communication/circulars',
-                subItems: [
-                    {
-                        label: 'Circulars',
-                        route: '/communication/circulars',
-                        permissions: [P.CIRCULAR_CREATE, P.CIRCULAR_APPROVE, P.CIRCULAR_DELETE],
-                    },
-                    {
-                        label: 'School Events',
-                        route: '/communication/events',
-                        permissions: [P.EVENT_CREATE, P.EVENT_APPROVE, P.EVENT_DELETE],
-                    },
-                    {
-                        label: 'Approval Queue',
-                        route: '/communication/approval',
-                        permissions: [P.CIRCULAR_APPROVE, P.EVENT_APPROVE],
-                        badge: 3,
-                    },
-                    {
-                        label: 'Notifications',
-                        route: '/communication/notifications',
-                        permission: P.NOTICE_VIEW,
-                        badge: 7,
-                    },
-                ],
-            }
+      }
+    ]
+  },
+  {
+    section: 'COMMUNICATION',
+    items: [
+      {
+        id: 'communication',
+        icon: MessageSquare,
+        label: 'Communication',
+        route: '/communication/circulars',
+        subItems: [
+          {
+            label: 'Circulars',
+            route: '/communication/circulars',
+            permissions: [P.CIRCULAR_CREATE, P.CIRCULAR_APPROVE, P.CIRCULAR_DELETE],
+          },
+          {
+            label: 'School Events',
+            route: '/communication/events',
+            permissions: [P.EVENT_CREATE, P.EVENT_APPROVE, P.EVENT_DELETE],
+          },
+          {
+            label: 'Approval Queue',
+            route: '/communication/approval',
+            permissions: [P.CIRCULAR_APPROVE, P.EVENT_APPROVE],
+            badge: 3,
+          },
+          {
+            label: 'Notifications',
+            route: '/communication/notifications',
+            permission: P.NOTICE_VIEW,
+            badge: 7,
+          },
+        ],
+      }
+    ]
+  },
+  {
+    section: 'OPERATIONS',
+    items: [
+      // {
+      //   id: 'passManagement', icon: CreditCard, label: 'Pass & ID Management', route: '/passManagement',
+      //   permission: P.STUDENT_VIEW,
+      // },
+      {
+        id: 'stock', icon: Package, label: 'Stock', route: '/stock',
+        permission: P.STOCK_OVERVIEW,
+        subItems: [
+          { label: 'Stores', route: '/stock/stores', permission: P.STORE_VIEW },
+          { label: 'Items', route: '/stock/items', permission: P.STOCK_ITEM_VIEW },
+          { label: 'Transactions', route: '/stock/transactions', permissions: [P.STOCK_INWARD, P.STOCK_OUTWARD, P.STOCK_TRANSFER] },
+          { label: 'Class Config', route: '/stock/classConfig', permission: P.CLASS_ITEM_CONFIG_VIEW },
+          { label: 'Student Orders', route: '/stock/studentOrders', permission: P.STUDENT_ORDER_VIEW },
+          { label: 'Movement History', route: '/stock/movementHistory', permission: P.STOCK_MOVEMENT_VIEW },
         ]
-    },
-    {
-        section: 'OPERATIONS',
-        items: [
-            {
-                id: 'stock', icon: Package, label: 'Stock', route: '/stock',
-                permission: P.STOCK_OVERVIEW,
-                subItems: [
-                    { label: 'Stores', route: '/stock/stores', permission: P.STORE_VIEW },
-                    { label: 'Items', route: '/stock/items', permission: P.STOCK_ITEM_VIEW },
-                    { label: 'Transactions', route: '/stock/transactions', permissions: [P.STOCK_INWARD, P.STOCK_OUTWARD, P.STOCK_TRANSFER] },
-                    { label: 'Class Config', route: '/stock/classConfig', permission: P.CLASS_ITEM_CONFIG_VIEW },
-                    { label: 'Student Orders', route: '/stock/studentOrders', permission: P.STUDENT_ORDER_VIEW },
-                    { label: 'Movement History', route: '/stock/movementHistory', permission: P.STOCK_MOVEMENT_VIEW },
-                ]
-            },
-            {
-                id: 'studentOrders', icon: Package, label: 'Student Orders', route: '/stock/studentOrders',
-                showIf: (perms) => perms.includes(P.STUDENT_ORDER_VIEW) && !perms.includes(P.STOCK_OVERVIEW),
-            },
-            {
-                id: 'transport', icon: Bus, label: 'Transport', route: '/route',
-                permission: P.TRANSPORT_VIEW,
-                featureFlag: 'transportEnabled',
-                subItems: [
-                    { label: 'Vehicles', route: '/route/vehicles', permission: P.TRANSPORT_VIEW },
-                    { label: 'Driver & Attendants', route: '/route/Driver&Attendants', permission: P.TRANSPORT_VIEW },
-                    { label: 'Routes', route: '/route/routes_management', permission: P.TRANSPORT_VIEW },
-                    { label: 'Student Allocations', route: '/route/studentAllocations', permission: P.TRANSPORT_EDIT },
-                    { label: 'Fee Plans', route: '/route/feePlans', permission: P.TRANSPORT_EDIT },
-                    { label: 'Reports', route: '/route/reports', permission: P.TRANSPORT_VIEW },
-                ]
-            },
-            {
-                id: 'FeeManagement', icon: IndianRupee, label: 'Fee Management', route: '/feeManagement',
-                permission: P.FEE_VIEW,
-                subItems: [
-                    { label: 'Fee Config', route: '/feeManagement/config', permission: P.FEE_STRUCTURE_MANAGE },
-                    { label: 'Collection and History', route: '/feeManagement/collections', permission: P.FEE_COLLECT },
-                    {label: 'Overdue Fee Notifications', route: 'overduefeenotifications', permission: P.FEE_COLLECT}
-                ]
-            }
+      },
+      {
+        id: 'studentOrders', icon: Package, label: 'Student Orders', route: '/stock/studentOrders',
+        showIf: (perms) => perms.includes(P.STUDENT_ORDER_VIEW) && !perms.includes(P.STOCK_OVERVIEW),
+      },
+      {
+        id: 'transport', icon: Bus, label: 'Transport', route: '/route',
+        permission: P.TRANSPORT_VIEW,
+        featureFlag: 'transportEnabled',
+        subItems: [
+          { label: 'Vehicles', route: '/route/vehicles', permission: P.TRANSPORT_VIEW },
+          { label: 'Driver & Attendants', route: '/route/Driver&Attendants', permission: P.TRANSPORT_VIEW },
+          { label: 'Routes', route: '/route/routes_management', permission: P.TRANSPORT_VIEW },
+          { label: 'Student Allocations', route: '/route/studentAllocations', permission: P.TRANSPORT_EDIT },
+          { label: 'Fee Plans', route: '/route/feePlans', permission: P.TRANSPORT_EDIT },
+          { label: 'Reports', route: '/route/reports', permission: P.TRANSPORT_VIEW },
         ]
-    },
-    {
-        section: 'PRINT & TEMPLATES',
-        items: [
-            {
-                id: 'templates', icon: Printer, label: 'Templates', route: '/templates/reportCard',
-                systemRole: true, // 👈 Added System Role Protection
-                subItems: [
-                    { label: 'Report Card Templates', route: '/templates/reportCard', icon: FileText },
-                    { label: 'ID Card Templates', route: '/templates/idCard', icon: CreditCard },
-                    { label: 'Admit Card Templates', route: '/templates/admitCard', icon: Ticket },
-                    { label: 'Certificate Templates', route: '/templates/certificate', icon: Award },
-                    { label: 'Fee Receipt Templates', route: '/templates/feeReceipt', icon: Receipt },
-                    { label: 'Gate Pass Templates', route: '/templates/gatePass', icon: DoorOpen },
-                    { label: 'Salary Slip Templates', route: '/templates/salarySlip', icon: Wallet },
-                    // { label: 'Visitor Pass Templates', route: '/templates/visitorPass', icon: UserCheck },
-                    // { label: 'Cycle Stand Templates', route: '/templates/cycleStandPass', icon: Bike },
-                ]
-            }
+      },
+      {
+        id: 'FeeManagement', icon: IndianRupee, label: 'Fee Management', route: '/feeManagement',
+        permission: P.FEE_VIEW,
+        subItems: [
+          { label: 'Fee Config', route: '/feeManagement/config', permission: P.FEE_STRUCTURE_MANAGE },
+          { label: 'Collection and History', route: '/feeManagement/collections', permission: P.FEE_COLLECT },
+          { label: 'Overdue Fee Notifications', route: 'overduefeenotifications', permission: P.FEE_COLLECT }
         ]
-    },
-    {
-        section: 'SYSTEM CONTROLS',
-        items: [
-            {
-                id: 'Permission', icon: Shield, label: 'Permissions', route: '/rolesPermissions',
-                systemRole: true,
-            },
-            {
-                id: 'schoolConfig', icon: SchoolIcon, label: 'School Config', route: '/schoolConfig',
-                systemRole: true,
-            }
+      }
+    ]
+  },
+  {
+    section: 'PRINT & TEMPLATES',
+    items: [
+      {
+        id: 'templates', icon: Printer, label: 'Templates', route: '/templates/reportCard',
+        systemRole: true,
+        subItems: [
+          { label: 'Report Card Templates', route: '/templates/reportCard', icon: FileText },
+          { label: 'ID Card Templates', route: '/templates/idCard', icon: CreditCard },
+          { label: 'Admit Card Templates', route: '/templates/admitCard', icon: Ticket },
+          { label: 'Certificate Templates', route: '/templates/certificate', icon: Award },
+          { label: 'Fee Receipt Templates', route: '/templates/feeReceipt', icon: Receipt },
+          { label: 'Gate Pass Templates', route: '/templates/gatePass', icon: DoorOpen },
+          { label: 'Visitor Pass Templates', route: '/templates/visitorPass', icon: UserCheck },
+          { label: 'Cycle Stand Templates', route: '/templates/cycleStandPass', icon: Bike },
+          { label: 'Salary Slip Templates', route: '/templates/salarySlip', icon: Wallet },
         ]
-    }
+      }
+    ]
+  },
+  {
+    section: 'SYSTEM CONTROLS',
+    items: [
+      {
+        id: 'Permission', icon: Shield, label: 'Permissions', route: '/rolesPermissions',
+        systemRole: true,
+      },
+      {
+        id: 'schoolConfig', icon: SchoolIcon, label: 'School Config', route: '/schoolConfig',
+        systemRole: true,
+      }
+    ]
+  }
 ]
 
 const roleBadgeStyles = {

@@ -411,6 +411,29 @@ export const updateTransportMonthOverride = async (
   return await res.json();
 };
 
+export const bulkUpdateTransportMonthOverride = async (payload) => {
+  const res = await authFetch(
+    API_ENDPOINTS.transportBillingBulkMonthOverride,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+
+    throw new Error(
+      errorData.message || "Failed to update bulk month override"
+    );
+  }
+
+  return await res.json();
+};
+
 export const payTransportBilling = async (
   billingId,
   paymentData

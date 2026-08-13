@@ -380,6 +380,9 @@ export const API_ENDPOINTS = {
   transportBillingMonthOverride: (billingId) =>
     `${BASE_URL_V1}/fee/transport-billing/${billingId}/month-override`,
 
+  transportBillingBulkMonthOverride:
+    `${BASE_URL_V1}/fee/transport-billing/bulk-month-override`,
+
   transportBillingPay: (billingId) =>
     `${BASE_URL_V1}/fee/transport-billing/${billingId}/pay`,
 
