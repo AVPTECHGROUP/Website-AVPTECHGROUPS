@@ -387,6 +387,11 @@ export const API_ENDPOINTS = {
   transportBillingPay: (billingId) =>
     `${BASE_URL_V1}/fee/transport-billing/${billingId}/pay`,
 
+
+  // Demo leads
+  LEAD_STATS: `${BASE_URL_V1}/leads/stats`,
+  LEADS: `${BASE_URL_V1}/leads`,
+
   // ─── User Management ───
   USERS: `${BASE_URL_V1}/users`,
   USERS_STATS: `${BASE_URL_V1}/users/statistics`,

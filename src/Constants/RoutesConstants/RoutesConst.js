@@ -95,7 +95,7 @@ export const ROUTE_PATHS = {
   MANAGE_USERS_EDIT: '/manageUsers/editUser/:id',
   MANAGE_USERS_DETAIL: '/manageUsers/:id',
   MANAGE_USERS: '/manageUsers',
-  
+
   // Teachers
   TEACHERS: '/teachers',
   TEACHERS_ADD: '/teachers/addTeacher',
@@ -111,7 +111,7 @@ export const ROUTE_PATHS = {
 
   // Academics
   ACADEMICS_CLASS_SECTIONS: '/academics/classSections',
-  
+
   // Subject Management
   SUBJECTS_MASTER: '/subjectMaster',
   SECTION_SUBJECT_ASSIGNMENT: '/sectionSubjectAssignment',
@@ -129,15 +129,15 @@ export const ROUTE_PATHS = {
   EXAMS_REPORT_CARD: '/exams/reportCard/:examId?',
   EXAMS_ANALYTICS: '/exams/analytics',
   EXAMS_CONFIG: '/exams/examConfig',
-  
+
   // Fee Management
   FEE_MANAGEMENT: '/feeManagement',
   FEE_MANAGEMENT_CONFIG: '/feeManagement/config',
   FEE_MANAGEMENT_PERIOD: '/feeManagement/period',
   FEE_MANAGEMENT_STRUCTURES: '/feeManagement/structures',
   FEE_MANAGEMENT_COLLECTIONS: '/feeManagement/collections',
-  
-  
+
+
   // Attendance
   ATTENDANCE_MARK_USER: '/attendance/markUserAttendance',
   ATTENDANCE: '/attendance',
@@ -191,6 +191,9 @@ export const ROUTE_PATHS = {
   TRANSPORT_STUDENT_ALLOCATIONS: '/route/studentAllocations',
   TRANSPORT_FEE_PLANS: '/route/feePlans',
   TRANSPORT_REPORTS: '/route/reports',
+
+  // Lead Management (internal CRM — GLOBAL_ADMIN only)
+  LEAD_MANAGEMENT: '/leadManagement',
 
   // Fallback redirect targets
   STOCK_STUDENT_ORDERS_REDIRECT: '/stock/studentOrders',
