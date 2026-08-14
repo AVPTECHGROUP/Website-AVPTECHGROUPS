@@ -30,6 +30,7 @@ import TransportRoutes from './Transport/TransportRoutes';
 import TemplatesRoutes from './Templates/TemplatesRoutes';
 
 import { ROLE_GROUPS, ROUTE_PATHS, ROUTES_UI_STRINGS } from '../Constants/RoutesConstants/RoutesConst';
+import LeadRoutes from "./DemoLeads/LeadsRoutes.jsx";
 
 // Lazy-loaded standalone pages[cite: 2]
 const Login = lazy(() => import('../Pages/Login_2'));
@@ -142,6 +143,8 @@ const CreateEventPage = lazy(() => import('../Pages/Communication/Events/CreateE
 const ApprovalQueuePage = lazy(() => import('../Pages/Communication/ApprovalQueue/ApprovalQueuePage'));
 const NotificationsPage = lazy(() => import('../Pages/Communication/Notifications/NotificationsPage'));
 const DemoRequest = lazy(() => import('../../src/Pages/DemoRequest/Demorequest'));
+const LeadManagementPage = lazy(() => import('../Pages/LeadManagement/LeadManagementPage'));
+
 
 // Suspense fallback[cite: 2]
 const PageLoader = () => (
@@ -216,6 +219,8 @@ const MainRoutes = () => {
             {PayrollRoutes()}
             {TransportRoutes()}
             {TemplatesRoutes()}
+            {LeadRoutes()}
+
 
             {/* Fallback */}
             <Route path="*" element={<RootRedirect />} />
