@@ -15,12 +15,7 @@ export default function DefaultPreviewModal({ open, loading, template, typeMeta,
             <h3 className="text-sm sm:text-base font-bold text-gray-900 truncate">
               {template ? `Default ${typeMeta?.shortLabel} Template` : 'No Default Template Set'}
             </h3>
-            <div className="text-[10.5px] sm:text-xs text-gray-500 font-mono mt-0.5 flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <span className="truncate">GET /v1/print-templates/default?type={typeMeta?.key}</span>
-              <span className="inline-flex items-center gap-1 text-gray-400 border border-gray-200 px-1.5 py-0.5 rounded-full font-sans text-[10px]">
-                <Database className="w-2.5 h-2.5" /> cached
-              </span>
-            </div>
+
           </div>
           <button onClick={onClose} className="w-8 h-8 shrink-0 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center">
             <X className="w-4 h-4" />

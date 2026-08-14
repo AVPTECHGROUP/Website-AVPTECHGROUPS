@@ -14,8 +14,7 @@ export default function ViewTemplateModal({ open, template, typeMeta, busy, onCl
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-gray-200 sticky top-0 bg-white z-10 shrink-0">
           <div className="min-w-0">
             <h3 className="text-sm sm:text-base font-bold text-gray-900 truncate">{template.templateName}</h3>
-            <div className="text-[11px] sm:text-xs text-gray-500 font-mono mt-0.5">GET /v1/print-templates/{template.id}</div>
-          </div>
+            </div>
           <button onClick={onClose} className="w-8 h-8 shrink-0 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center">
             <X className="w-4 h-4" />
           </button>
@@ -23,7 +22,7 @@ export default function ViewTemplateModal({ open, template, typeMeta, busy, onCl
 
         {/* Body */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3 mb-5">
+          {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3 mb-5">
             <MetaItem label="Type" value={typeMeta?.shortLabel} pillClass="bg-gray-100 text-gray-600" />
             <MetaItem
               label="Status"
@@ -38,7 +37,7 @@ export default function ViewTemplateModal({ open, template, typeMeta, busy, onCl
             <MetaItem label="Last Updated" value={`${fmtDate(template.updatedAt)} · ${template.updatedBy || '—'}`} />
             <MetaItem label="Created By" value={template.createdBy || '—'} />
             <MetaItem label="Created At" value={fmtDate(template.createdAt)} />
-          </div>
+          </div> */}
 
           <label className="block text-xs font-bold text-gray-800 mb-1.5">Rendered Preview</label>
           <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50 h-[280px] sm:h-[340px]">

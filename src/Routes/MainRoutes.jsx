@@ -4,6 +4,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 // Layout & Protection[cite: 2]
 import AppLayout from '../Layout/AppLayout';
 import ProtectedRoutes from '../utils/Protectedroutes';
+import RoleProtectedRoute from '../utils/RoleProtectedRoute';
 import ScrollToTop from '../Components/CommonComp/ScrollToTop';
 
 // Route Modules[cite: 2]
@@ -63,6 +64,7 @@ const UserView = lazy(() => import('../Pages/SuperAdmin/UserView'));
 const ApplyLeaves = lazy(() => import('../Pages/Leaves/ApplyLeaves'));
 const MyLeaves = lazy(() => import('../Pages/Leaves/MyLeaves'));
 const SuperAdminSchools = lazy(() => import('../Pages/SuperAdmin/SuperAdminSchools'));
+const ManageSchools = lazy(() => import('../Pages/SuperAdmin/ManageSchools'));
 
 // Students[cite: 2]
 const Student = lazy(() => import('../Pages/Students/Students'));
@@ -181,6 +183,11 @@ const MainRoutes = () => {
         <Route element={<ProtectedRoutes />}>
           {/* School picker */}
           {superAdminSchoolPickerRoute()}
+
+          {/* Manage Schools — GLOBAL_ADMIN only, standalone (no sidebar), same tier as school picker */}
+          <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN']} />}>
+            <Route path="/super-admin/manage-schools" element={<ManageSchools />} />
+          </Route>
 
           {/* Main App Routes inside AppLayout */}
           <Route element={<AppLayout />}>
