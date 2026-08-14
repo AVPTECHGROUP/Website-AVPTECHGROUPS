@@ -28,6 +28,8 @@ function fieldInputClasses({ hasError, isDark }) {
   return `${base} ${surface} ${border}`;
 }
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function DemoRequestForm() {
   const { theme } = useContext(UserContext);
   const isDark = theme === "dark";
@@ -45,6 +47,9 @@ export default function DemoRequestForm() {
     const nextErrors = {};
     if (!form.fullName.trim() || form.fullName.trim().length < 2) {
       nextErrors.fullName = "Please enter your full name.";
+    }
+    if (!EMAIL_PATTERN.test(form.email.trim())) {
+      nextErrors.email = "Please enter a valid email address.";
     }
     if (!form.schoolName.trim() || form.schoolName.trim().length < 2) {
       nextErrors.schoolName = "Please enter your school's name.";
@@ -71,6 +76,7 @@ export default function DemoRequestForm() {
 
     const payload = {
       fullName: form.fullName.trim(),
+      email: form.email.trim(),
       schoolName: form.schoolName.trim(),
       phoneNumber: form.countryCode + form.phoneNumber.replace(/\D/g, ""),
       studentStrength: form.studentStrength,
@@ -105,8 +111,6 @@ export default function DemoRequestForm() {
         isDark ? "bg-[#0B1410] text-[#F1EFE6]" : "bg-[#F6F4EC] text-[#12261F]"
       }`}
     >
-  
-
       <nav
         className={`flex items-center justify-between px-[6vw] py-6 border-b transition-colors duration-300 ${
           isDark ? "border-white/10" : "border-[#D8D3C2]"
@@ -189,6 +193,24 @@ export default function DemoRequestForm() {
               />
               {errors.fullName && (
                 <span className="text-[0.78rem] text-[#B3452C]">{errors.fullName}</span>
+              )}
+            </div>
+
+            <div className="mb-[18px] flex flex-col gap-[7px]">
+              <label htmlFor="email" className={labelClasses}>
+                Email address <span className="text-[#D6A34C]">*</span>
+              </label>
+              <input
+                type="email"
+                id="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={form.email}
+                onChange={(e) => updateField("email", e.target.value)}
+                className={fieldInputClasses({ hasError: Boolean(errors.email), isDark })}
+              />
+              {errors.email && (
+                <span className="text-[0.78rem] text-[#B3452C]">{errors.email}</span>
               )}
             </div>
 

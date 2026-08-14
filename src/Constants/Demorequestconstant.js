@@ -36,8 +36,13 @@ export const DEFAULT_COUNTRY_CODE = COUNTRY_CODES[0].value;
 // magic number (10) inline in Demorequest.jsx's validate() function.
 export const MIN_PHONE_DIGITS = 10;
 
+// Minimum trimmed length for the "full name" and "school name" fields.
+// Was previously hardcoded as a magic number (2) inline.
+export const MIN_NAME_LENGTH = 2;
+
 export const initialForm = {
   fullName: "",
+  email: "",
   schoolName: "",
   countryCode: DEFAULT_COUNTRY_CODE,
   phoneNumber: "",
