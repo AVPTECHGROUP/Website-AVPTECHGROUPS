@@ -10,6 +10,10 @@ import {
 // and ELIGIBILITY_CERTIFICATE are NEW keys — the backend `templateType`
 // enum + validation on POST/PUT /v1/print-templates must be updated to
 // accept these 4 values, same as it already accepts CERTIFICATE.
+//
+// NOTE: SALARY_SLIP is also a NEW key — backend `templateType` enum +
+// validation on POST/PUT /v1/print-templates must be updated to accept
+// this value too, same as above.
 export const TEMPLATE_TYPES = {
   REPORT_CARD: {
     key: 'REPORT_CARD',
@@ -1182,6 +1186,170 @@ export const TEMPLATE_TYPES = {
     </div>
     <div class="fr2-note">This is a computer-generated receipt and does not require a signature.</div>
   </div>
+
+</div>
+</body>
+</html>`,
+  },
+
+  SALARY_SLIP: {
+    key: 'SALARY_SLIP',
+    label: 'Salary Slip Templates',
+    shortLabel: 'Salary Slip',
+    icon: Receipt,
+    // Fully data-driven, same convention as FEE_RECEIPT / REPORT_CARD —
+    // every value below is a {{mergeField}} resolved from the payroll
+    // API response for a single teacher + salary month. Backend needs a
+    // buildSalarySlipMergeData() (mirroring buildFeeReceiptMergeData())
+    // that pre-formats all amounts (e.g. "₹30,000.00") server-side, so
+    // the template stays purely presentational.
+    //
+    // Repeating sections (engine has no {{#if}}, so single/multi-item
+    // arrays double as both "list" and "conditional row"):
+    //   {{#earnings}}    → one row per earning component (Basic, HRA,
+    //                      Conveyance, Academic Allowance, Other, etc.)
+    //   {{#deductions}}  → one row per deduction component (Unpaid Leave,
+    //                      Unauthorized Absence, Late Mark Penalty, PF,
+    //                      Professional Tax, TDS, Loan, Other, etc.)
+    // Both arrays are entirely backend-driven — add/remove a salary
+    // component on the backend and this table updates automatically,
+    // no template edit needed (same pattern as subjectMarks/components).
+    stub: `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Salary Slip</title></head>
+<body style="margin:0;padding:14px;background:#eef2f7;">
+<div class="ss-wrap">
+<style>
+  .ss-wrap { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; max-width: 720px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 12px 32px rgba(15,23,42,0.12); color: #1f2937; border: 1px solid #e5e7eb; }
+
+  .ss-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: linear-gradient(135deg,#1e293b,#334155); color: #fff; padding: 18px 22px; }
+  .ss-header-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .ss-logo { width: 46px; height: 46px; border-radius: 10px; background: rgba(255,255,255,.18); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; font-weight: 800; font-size: 15px; border: 1.5px solid rgba(255,255,255,.5); }
+  .ss-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .ss-school-name { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -.1px; }
+  .ss-school-meta { margin: 2px 0 0; font-size: 10px; opacity: .85; line-height: 1.5; }
+  .ss-badge-box { flex-shrink: 0; text-align: right; }
+  .ss-badge { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+  .ss-badge-sub { font-size: 9.5px; opacity: .8; margin-top: 2px; }
+
+  .ss-band { background: #1e293b; color: #fff; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 7px 22px; }
+
+  .ss-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-bottom: 1px solid #e5e7eb; }
+  .ss-info-col { padding: 12px 22px; }
+  .ss-info-col:first-child { border-right: 1px solid #e5e7eb; }
+  .ss-kv-row { display: flex; gap: 6px; font-size: 11.5px; margin-bottom: 5px; }
+  .ss-kv-row .ss-k { font-weight: 700; min-width: 110px; color: #6b7280; flex-shrink: 0; }
+  .ss-kv-row .ss-v { color: #111827; font-weight: 600; }
+
+  .ss-attendance { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: #e5e7eb; }
+  .ss-att-cell { background: #f8fafc; padding: 10px 8px; text-align: center; }
+  .ss-att-label { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #64748b; margin-bottom: 2px; }
+  .ss-att-value { font-size: 15px; font-weight: 800; color: #111827; }
+  .ss-att-status { grid-column: span 4; background: #eef2ff; padding: 7px; text-align: center; font-size: 10.5px; font-weight: 700; color: #4338ca; }
+
+  table.ss-items { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  table.ss-items td { padding: 7px 22px; border-bottom: 1px solid #f1f2f6; }
+  table.ss-items td:last-child { text-align: right; font-weight: 600; }
+  table.ss-items tr.ss-total-row td { font-weight: 800; border-top: 2px solid #1e293b; border-bottom: none; padding-top: 10px; }
+  .ss-earn-amt { color: #15803d; }
+  .ss-ded-amt { color: #b91c1c; }
+
+  .ss-net-band { display: flex; justify-content: space-between; align-items: center; background: #1e293b; color: #fff; padding: 14px 22px; margin-top: 4px; }
+  .ss-net-label { font-size: 13px; font-weight: 800; }
+  .ss-net-value { font-size: 19px; font-weight: 800; }
+  .ss-net-words { padding: 10px 22px; font-size: 10.5px; font-style: italic; color: #4b5563; border-bottom: 1px solid #e5e7eb; }
+
+  .ss-signatures { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; padding: 18px 22px; }
+  .ss-sign-box { border-top: 1px solid #9ca3af; text-align: center; padding-top: 6px; font-size: 10px; color: #4b5563; }
+  .ss-sign-box b { display: block; font-size: 10.5px; color: #111827; margin-top: 2px; }
+
+  .ss-footer { text-align: center; font-size: 9.5px; color: #9ca3af; background: #fafafa; border-top: 1px solid #f1f2f6; padding: 8px 22px; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .ss-wrap { box-shadow: none; border: 1px solid #ccc; }
+  }
+</style>
+
+  <!-- ══ Header ══ -->
+  <div class="ss-header">
+    <div class="ss-header-left">
+      <div class="ss-logo"><img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.src='{{schoolLogoFallback}}'"></div>
+      <div>
+        <h1 class="ss-school-name">{{schoolName}}</h1>
+        <div class="ss-school-meta">{{schoolAddress}}</div>
+        <div class="ss-school-meta">{{schoolPhone}} &middot; {{schoolEmail}}</div>
+      </div>
+    </div>
+    <div class="ss-badge-box">
+      <div class="ss-badge">Salary Slip</div>
+      <div class="ss-badge-sub">{{salaryMonth}}</div>
+    </div>
+  </div>
+
+  <!-- ══ Employee Details ══ -->
+  <div class="ss-band">Employee Details</div>
+  <div class="ss-info-grid">
+    <div class="ss-info-col">
+      <div class="ss-kv-row"><span class="ss-k">Employee Name</span><span class="ss-v">{{employeeName}}</span></div>
+      <div class="ss-kv-row"><span class="ss-k">Employee ID</span><span class="ss-v">{{employeeId}}</span></div>
+      <div class="ss-kv-row"><span class="ss-k">Designation</span><span class="ss-v">{{designation}}</span></div>
+      <div class="ss-kv-row"><span class="ss-k">Department</span><span class="ss-v">{{department}}</span></div>
+    </div>
+    <div class="ss-info-col">
+      <div class="ss-kv-row"><span class="ss-k">Date of Joining</span><span class="ss-v">{{dateOfJoining}}</span></div>
+      <div class="ss-kv-row"><span class="ss-k">Salary Month</span><span class="ss-v">{{salaryMonth}}</span></div>
+      <div class="ss-kv-row"><span class="ss-k">Payment Date</span><span class="ss-v">{{paymentDate}}</span></div>
+      <div class="ss-kv-row"><span class="ss-k">Payment Mode</span><span class="ss-v">{{paymentMode}}</span></div>
+    </div>
+  </div>
+
+  <!-- ══ Attendance Summary ══ -->
+  <div class="ss-band">Attendance Summary</div>
+  <div class="ss-attendance">
+    <div class="ss-att-cell"><div class="ss-att-label">Working Days</div><div class="ss-att-value">{{workingDays}}</div></div>
+    <div class="ss-att-cell"><div class="ss-att-label">Present Days</div><div class="ss-att-value">{{presentDays}}</div></div>
+    <div class="ss-att-cell"><div class="ss-att-label">Paid Leave</div><div class="ss-att-value">{{paidLeaveDays}}</div></div>
+    <div class="ss-att-cell"><div class="ss-att-label">Unpaid Leave</div><div class="ss-att-value">{{unpaidLeaveDays}}</div></div>
+    <div class="ss-att-cell"><div class="ss-att-label">Unauthorized Absence</div><div class="ss-att-value">{{unauthorizedAbsenceDays}}</div></div>
+    <div class="ss-att-cell"><div class="ss-att-label">Half Day</div><div class="ss-att-value">{{halfDayCount}}</div></div>
+    <div class="ss-att-cell"><div class="ss-att-label">Late Marks</div><div class="ss-att-value">{{lateMarksCount}}</div></div>
+    <div class="ss-att-cell"><div class="ss-att-label">Status</div><div class="ss-att-value" style="font-size:11px;">{{attendanceStatus}}</div></div>
+  </div>
+
+  <!-- ══ Earnings ══ -->
+  <div class="ss-band">Earnings</div>
+  <table class="ss-items">
+    {{#earnings}}
+    <tr><td>{{label}}</td><td class="ss-earn-amt">{{amountFormatted}}</td></tr>
+    {{/earnings}}
+    <tr class="ss-total-row"><td>Gross Salary</td><td class="ss-earn-amt">{{grossSalaryFormatted}}</td></tr>
+  </table>
+
+  <!-- ══ Deductions ══ -->
+  <div class="ss-band">Deductions</div>
+  <table class="ss-items">
+    {{#deductions}}
+    <tr><td>{{label}}</td><td class="ss-ded-amt">{{amountFormatted}}</td></tr>
+    {{/deductions}}
+    <tr class="ss-total-row"><td>Total Deductions</td><td class="ss-ded-amt">{{totalDeductionsFormatted}}</td></tr>
+  </table>
+
+  <!-- ══ Net Pay ══ -->
+  <div class="ss-net-band">
+    <span class="ss-net-label">Net Salary Payable</span>
+    <span class="ss-net-value">{{netSalaryFormatted}}</span>
+  </div>
+  <div class="ss-net-words">Net Salary in Words: {{netSalaryInWords}}</div>
+
+  <!-- ══ Signatures ══ -->
+  <div class="ss-signatures">
+    <div class="ss-sign-box">Prepared By<b>HR / Accounts</b></div>
+    <div class="ss-sign-box">Verified By<b>School Administration</b></div>
+    <div class="ss-sign-box">Authorized By<b>Principal</b></div>
+  </div>
+
+  <div class="ss-footer">Payroll Status: {{payrollStatus}} &middot; Generated On: {{generatedAt}} &middot; This is a computer-generated salary slip.</div>
 
 </div>
 </body>
