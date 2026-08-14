@@ -409,8 +409,6 @@ export const TEMPLATE_TYPES = {
       <div class="gp-school-tagline">{{schoolTagline}}</div>
       <div class="gp-school-meta">
         <span>📍 {{schoolAddress}}</span>
-        <span>📞 {{schoolPhone}}</span>
-        <span>🌐 {{schoolWebsite}}</span>
         <span>✉ {{schoolEmail}}</span>
       </div>
     </div>
@@ -495,101 +493,200 @@ export const TEMPLATE_TYPES = {
     label: 'Cycle Stand Pass Templates',
     shortLabel: 'Cycle Stand Pass',
     icon: Bike,
-    // Green-themed print-and-fill pass, same convention as GATE_PASS —
-    // Student + Validity fields are merge-driven, Terms & Conditions and
-    // both signature boxes stay blank for manual fill/sign at issue time.
-    stub: `<div class="cs-premium">
+    stub: `<div class="cyc-card">
 <style>
-  .cs-premium { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; max-width: 700px; margin: 0 auto; border: 2px solid #14532d; border-radius: 14px; overflow: hidden; background: #ffffff; color: #1f2937; box-shadow: 0 12px 32px rgba(20,83,45,0.14); }
+  .cyc-card {
+    font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+    max-width: 460px;
+    margin: 0 auto;
+    border-radius: 20px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(2, 132, 199, 0.12);
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
+  }
 
-  .cs-header { display: flex; align-items: center; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid #e5e7eb; }
-  .cs-logo { width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg,#14532d,#166534); color: #fbbf24; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; border: 2px solid #fbbf24; overflow: hidden; }
-  .cs-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-  .cs-school-block { flex: 1; min-width: 0; }
-  .cs-school-name { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.2px; color: #14532d; text-transform: uppercase; }
-  .cs-school-meta { font-size: 10px; color: #4b5563; display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; }
+  /* ══ Blue Gradient Header ══ */
+  .cyc-header {
+    background: linear-gradient(90deg, #0284c7 0%, #0f766e 100%);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #ffffff;
+  }
+  .cyc-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .cyc-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 800;
+    color: #ffffff;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+  }
+  .cyc-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .cyc-school-name {
+    font-size: 17px;
+    font-weight: 800;
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: -0.2px;
+  }
+  .cyc-subtitle {
+    font-size: 11.5px;
+    opacity: 0.9;
+    margin: 2px 0 0 0;
+    font-weight: 500;
+  }
+  .cyc-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 6px 13px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
 
-  .cs-pass-box { flex-shrink: 0; border: 1.5px solid #14532d; border-radius: 10px; padding: 8px 14px; text-align: center; min-width: 118px; }
-  .cs-pass-box .cs-pb-label { font-size: 8px; font-weight: 800; letter-spacing: .06em; color: #6b7280; }
-  .cs-pass-box .cs-pb-value { font-size: 12px; font-weight: 800; color: #14532d; margin: 1px 0 0; }
+  /* ══ Card Body ══ */
+  .cyc-body {
+    padding: 18px 20px;
+    display: flex;
+    gap: 18px;
+    align-items: center;
+  }
+  .cyc-photo {
+    width: 95px;
+    height: 105px;
+    border-radius: 16px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .cyc-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .cyc-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .cyc-student-name {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 6px 0;
+    line-height: 1.25;
+  }
+  .cyc-detail {
+    font-size: 13px;
+    color: #334155;
+    margin: 3px 0;
+  }
+  .cyc-detail strong {
+    color: #0f172a;
+  }
+  .cyc-code-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 4px 12px;
+    background: #dcfce7;
+    border-radius: 999px;
+    color: #15803d;
+    font-weight: 800;
+    font-size: 12.5px;
+    letter-spacing: 0.5px;
+  }
 
-  .cs-title-banner { text-align: center; background: #14532d; color: #fff; font-size: 17px; font-weight: 800; letter-spacing: .15em; padding: 9px; margin: 16px 22px 0; border-radius: 8px; }
-
-  .cs-band { background: #14532d; color: #fff; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 7px; margin: 18px 0 0; }
-
-  .cs-section { padding: 16px 22px 0; }
-  .cs-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #e5e7eb; }
-  .cs-row:last-child { border-bottom: none; }
-  .cs-num { flex-shrink: 0; width: 20px; height: 20px; border-radius: 5px; background: #14532d; color: #fff; font-size: 10.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-  .cs-row-label { flex-shrink: 0; width: 140px; font-size: 12px; font-weight: 700; color: #374151; }
-  .cs-row-value { flex: 1; font-size: 12.5px; font-weight: 700; color: #111827; border-bottom: 1px solid #d1d5db; padding-bottom: 3px; }
-
-  .cs-terms { padding: 14px 22px 4px; font-size: 11.5px; color: #374151; }
-  .cs-terms ul { margin: 6px 0 0; padding-left: 16px; line-height: 1.9; }
-
-  .cs-signatures { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; padding: 16px 22px 6px; }
-  .cs-sign-box { border: 1px solid #d1d5db; border-radius: 8px; padding: 20px 8px 8px; text-align: center; position: relative; min-height: 66px; }
-  .cs-sign-box .cs-sign-title { position: absolute; top: 7px; left: 8px; right: 8px; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: #6b7280; text-align: left; }
-  .cs-sign-line { border-top: 1px solid #9ca3af; font-size: 9px; color: #6b7280; padding-top: 3px; }
-
-  .cs-footer { text-align: center; background: #14532d; color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; padding: 10px; margin-top: 18px; }
+  /* ══ Card Footer ══ */
+  .cyc-footer {
+    border-top: 1px dashed #cbd5e1;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    font-size: 12.5px;
+  }
+  .cyc-session {
+    font-weight: 700;
+    color: #0284c7;
+  }
+  .cyc-manual-stand {
+    font-weight: 700;
+    color: #0284c7;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cyc-blank-line {
+    display: inline-block;
+    width: 100px;
+    border-bottom: 1.5px solid #0284c7;
+    height: 14px;
+  }
 </style>
 
-  <!-- ══ Header ══ -->
-  <div class="cs-header">
-    <div class="cs-logo"><img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.parentElement.textContent='{{schoolInitials}}'"></div>
-    <div class="cs-school-block">
-      <h1 class="cs-school-name">{{schoolName}}</h1>
-      <div class="cs-school-meta">
-        <span>📍 {{schoolAddress}}</span>
-        <span>📞 {{schoolPhone}}</span>
+  <!-- Header -->
+  <div class="cyc-header">
+    <div class="cyc-header-left">
+      <div class="cyc-logo">
+        <img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.parentElement.textContent='{{schoolInitials}}'">
+      </div>
+      <div>
+        <h1 class="cyc-school-name">{{schoolName}}</h1>
+        <div class="cyc-subtitle">Bicycle Parking Pass</div>
       </div>
     </div>
-    <div class="cs-pass-box">
-      <div class="cs-pb-label">PASS NO.</div>
-      <div class="cs-pb-value">{{passNo}}</div>
+    <div class="cyc-badge">CYCLE PASS</div>
+  </div>
+
+  <!-- Body -->
+  <div class="cyc-body">
+    <div class="cyc-photo">
+      <img src="{{studentPhoto}}" alt="{{studentName}}" onerror="this.style.display='none'">
+    </div>
+    <div class="cyc-info">
+      <h2 class="cyc-student-name">{{studentName}}</h2>
+      <div class="cyc-detail"><strong>Roll No:</strong> {{rollNo}}</div>
+      <div class="cyc-detail"><strong>Class:</strong> {{className}} - {{sectionName}}</div>
+      <div class="cyc-code-pill">
+        <span>🚲</span>
+        <span>{{passNo}}</span>
+      </div>
     </div>
   </div>
 
-  <div class="cs-title-banner">CYCLE STAND PASS</div>
-
-  <!-- ══ Student Details ══ -->
-  <div class="cs-band">Student Details</div>
-  <div class="cs-section">
-    <div class="cs-row"><span class="cs-num">1</span><span class="cs-row-label">Student Name</span><span class="cs-row-value">{{studentName}}</span></div>
-    <div class="cs-row"><span class="cs-num">2</span><span class="cs-row-label">Class / Section</span><span class="cs-row-value">{{className}} - {{sectionName}}</span></div>
-    <div class="cs-row"><span class="cs-num">3</span><span class="cs-row-label">Roll Number</span><span class="cs-row-value">{{rollNo}}</span></div>
-    <div class="cs-row"><span class="cs-num">4</span><span class="cs-row-label">Admission / ID No.</span><span class="cs-row-value">{{admissionNumber}}</span></div>
+  <!-- Footer -->
+  <div class="cyc-footer">
+    <div class="cyc-session">Session {{academicSession}}</div>
+    <div class="cyc-manual-stand">
+      <span>Stand Name / No:</span>
+      <span class="cyc-blank-line"></span>
+    </div>
   </div>
-
-  <!-- ══ Validity Details ══ -->
-  <div class="cs-band">Validity Details</div>
-  <div class="cs-section">
-    <div class="cs-row"><span class="cs-num">1</span><span class="cs-row-label">Date of Issue</span><span class="cs-row-value">{{issueDate}}</span></div>
-    <div class="cs-row"><span class="cs-num">2</span><span class="cs-row-label">Valid From</span><span class="cs-row-value">{{validFrom}}</span></div>
-    <div class="cs-row"><span class="cs-num">3</span><span class="cs-row-label">Valid Until</span><span class="cs-row-value">{{validUntil}}</span></div>
-  </div>
-
-  <!-- ══ Terms & Conditions ══ -->
-  <div class="cs-band">Terms &amp; Conditions</div>
-  <div class="cs-terms">
-    <ul>
-      <li>This pass is non-transferable.</li>
-      <li>Park your cycle only in the designated cycle stand area.</li>
-      <li>School is not responsible for any loss or damage to the cycle.</li>
-      <li>Show this pass when required.</li>
-    </ul>
-  </div>
-
-  <!-- ══ Authorization ══ -->
-  <div class="cs-band">Authorization</div>
-  <div class="cs-signatures">
-    <div class="cs-sign-box"><span class="cs-sign-title">Authorized By</span><div class="cs-sign-line">Signature</div></div>
-    <div class="cs-sign-box"><span class="cs-sign-title">Issuing Authority / Sign</span><div class="cs-sign-line">Signature</div></div>
-  </div>
-
-  <div class="cs-footer">🛡 KEEP YOUR CAMPUS CLEAN AND PARK IN THE DESIGNATED AREA 🛡</div>
-
 </div>`,
   },
   VISITOR_PASS: {
@@ -644,10 +741,6 @@ export const TEMPLATE_TYPES = {
     <div class="vp-logo"><img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.parentElement.textContent='{{schoolInitials}}'"></div>
     <div class="vp-school-block">
       <h1 class="vp-school-name">{{schoolName}}</h1>
-      <div class="vp-school-meta">
-        <span>📍 {{schoolAddress}}</span>
-        <span>📞 {{schoolPhone}}</span>
-      </div>
     </div>
     <div class="vp-pass-box">
       <div class="vp-pb-label">PASS NO.</div>

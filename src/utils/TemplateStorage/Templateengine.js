@@ -1,30 +1,16 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Tiny mustache-style merge engine for print templates.
-//
-// Supports:
-//   {{fieldName}}            -> scalar value substitution
-//   {{nested.field}}         -> dot-path lookup
-//   {{#subjectMarks}}...{{/subjectMarks}}
-//                             -> repeats the block once per array item,
-//                                with {{field}} inside resolved against
-//                                each item in the array
-//
-// This intentionally stays dependency-free (no handlebars/mustache lib)
-// so templates can be safely rendered client-side from raw HTML strings
-// saved by the Template editor.
+// Mustache-style merge engine for print templates.
 // ─────────────────────────────────────────────────────────────────────────
 
 function getPath(obj, path) {
     return path.split('.').reduce((acc, key) => (acc == null ? undefined : acc[key]), obj)
 }
 
-// ₹ formatted with 2 decimals + Indian grouping, e.g. 1300 -> "₹1,300.00"
 function formatCurrency(amount) {
     const n = Number(amount) || 0
     return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-// "TUITION_FEE" -> "Tuition Fee"
 function formatComponentLabel(type) {
     if (!type) return '—'
     return String(type)
@@ -33,17 +19,11 @@ function formatComponentLabel(type) {
         .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-// JS Date only reliably parses up to 3 fractional-second digits; backend
-// timestamps like "2026-07-21T15:02:29.199059362" carry 9, which some
-// browsers silently fail to parse as Invalid Date. Truncate first.
 function normalizeTimestamp(val) {
     if (typeof val !== 'string') return val
     return val.replace(/(\.\d{3})\d+/, '$1')
 }
 
-// Reference-number field label varies by payment mode, same mapping used
-// on the Collections screen's collect modal — keeps the printed receipt
-// consistent with how the payment was actually recorded.
 const REFERENCE_LABEL_BY_MODE = {
     ONLINE: 'Transaction ID',
     CHEQUE: 'Cheque Number',
@@ -51,37 +31,162 @@ const REFERENCE_LABEL_BY_MODE = {
 }
 
 /**
- * Maps a fee-collection / receipt API response (see POST /v1/fees/collect
- * or GET /v1/fees/receipts/{id}) + school info into the flat data object
- * the merge engine expects for the FEE_RECEIPT template. Mirrors
- * buildReportCardMergeData below — keep field names aligned with the raw
- * API response so template authors can reference the same names.
- *
- * Accepts either the raw API receipt shape directly:
- *   { receiptNo, studentName, admissionNumber, className, sectionName,
- *     feePeriodName, amountPaid, transportAmount, discount, discountReason,
- *     lateFine, totalDue, balanceAfter, paymentMode, paymentDate,
- *     referenceNo, remarks, collectedBy, parentName, parentMobile,
- *     components: [{ componentType, customName, amount, displayOrder }] }
- * ...or the pre-normalized shape some screens already build locally
- * (class/section/period/parentPhone/recordedBy/rollNo/generatedAt/
- * academicComponents/transportComponents etc.) — same fallback pattern
- * FeeReceiptPrint.jsx already used before this template migration.
+ * Maps student ID card details + school details into the data object expected
+ * by the ID_CARD template merge engine (Front + Back side support)[cite: 3, 10].
  */
+export function buildIdCardMergeData(student = {}, school = {}) {
+    const schoolName = school?.name || school?.schoolName || 'School Name';
+
+    const emergencyContact = student.emergencyContact || student.contact || '';
+    const transportRoute = student.transportRoute || student.route || '';
+    const houseName = student.houseName || student.house || '';
+
+    return {
+        // Front Side Details
+        schoolName,
+        schoolLogo: school?.logoUrl || school?.logo || school?.schoolLogo || '',
+        schoolLogoFallback: school?.logoFallback || school?.schoolLogo || '',
+        schoolInitials: schoolName.split(' ').map((w) => w[0]).join('').slice(0, 3).toUpperCase(),
+
+        studentPhoto: student.profileImageUrl || '',
+        studentName: student.name || '—',
+        admissionNumber: student.admissionNumber || `ADM-${1000 + (student.id || 1)}`,
+        className: student.className || '—',
+        sectionName: student.sectionName || '—',
+        rollNo: student.roll || '—',
+        dateOfBirth: student.dateOfBirth || student.dob || '01-01-2015',
+        bloodGroup: student.bloodGroup || 'O+',
+        academicSession: student.academicSession || '2026-27',
+        sessionEndDate: student.sessionEndDate || '31 Mar 2027',
+
+        // Back Side Details
+        parentName: student.father || student.parentName || '—',
+        parentMobile: student.contact || student.parentMobile || '—',
+        studentAddress: student.address || school?.address || 'Lucknow, Uttar Pradesh',
+
+        emergencyContactRows: emergencyContact ? [{ emergencyContact }] : [],
+        transportRows: transportRoute ? [{ transportRoute }] : [],
+        houseRows: houseName ? [{ houseName }] : [],
+
+        qrCodeUrl: student.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(student.roll || student.name || 'STUDENT')}`,
+        schoolAddress: school?.address || school?.schoolAddress || '',
+        schoolPhone: school?.phone || school?.schoolPhone || school?.mobile || '',
+    };
+}
+
+/**
+ * Maps gate pass record + school details into the data object expected
+ * by the GATE_PASS template merge engine[cite: 3, 10].
+ */
+export function buildGatePassMergeData(student = {}, school = {}) {
+    const schoolName = school?.name || school?.schoolName || 'School Name';
+
+    return {
+        // School Details
+        schoolName,
+        schoolTagline: school?.tagline || 'Excellence in Education',
+        schoolAddress: school?.address || school?.schoolAddress || '',
+        schoolPhone: school?.phone || school?.schoolPhone || school?.mobile || '',
+        schoolWebsite: school?.website || '',
+        schoolEmail: school?.email || school?.schoolEmail || '',
+        schoolLogo: school?.logoUrl || school?.logo || school?.schoolLogo || '',
+        schoolInitials: schoolName.split(' ').map((w) => w[0]).join('').slice(0, 3).toUpperCase(),
+
+        // Pass Metadata
+        gatePassNo: student.gatePassNo || `GP-${2000 + (student.id || 1)}`,
+        issueDate: student.issueDate || new Date().toISOString().split('T')[0],
+
+        // Student Details
+        studentName: student.name || '—',
+        className: student.className || '—',
+        sectionName: student.sectionName || '—',
+        rollNo: student.roll || '—',
+        parentMobile: student.contact || student.parentMobile || '—',
+        parentName: student.father || student.parentName || '—',
+
+        // Leaving Details
+        leavingDate: student.leavingDate || new Date().toISOString().split('T')[0],
+        leavingTime: student.leavingTime || new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        reasonDetails: student.reasonDetails || 'Early Departure / Personal Reason',
+
+        // Pickup Details
+        pickupPersonName: student.pickupPersonName || student.father || '—',
+        pickupRelation: student.pickupRelation || 'Father / Guardian',
+        pickupContact: student.pickupContact || student.contact || '—',
+        pickupIdProof: student.pickupIdProof || 'Government ID Card',
+    };
+}
+
+/**
+ * Maps student cycle pass record + school details into the data object expected
+ * by the CYCLE_STAND_PASS template merge engine[cite: 3, 10].
+ */
+export function buildCyclePassMergeData(student = {}, school = {}) {
+    const schoolName = school?.name || school?.schoolName || 'School Name';
+
+    return {
+        schoolName,
+        schoolAddress: school?.address || school?.schoolAddress || '',
+        schoolPhone: school?.phone || school?.schoolPhone || school?.mobile || '',
+        schoolEmail: school?.email || school?.schoolEmail || '',
+        schoolLogo: school?.logoUrl || school?.logo || school?.schoolLogo || '',
+        schoolLogoFallback: school?.logoFallback || school?.schoolLogo || '',
+        schoolInitials: schoolName.split(' ').map((w) => w[0]).join('').slice(0, 3).toUpperCase(),
+
+        studentName: student.name || '—',
+        rollNo: student.roll || '—',
+        className: student.className || '—',
+        sectionName: student.sectionName || '—',
+        studentPhoto: student.profileImageUrl || '',
+
+        passNo: student.cycleReg || `CYC-${1000 + (student.id || 1)}`,
+        academicSession: student.academicSession || '2026-27',
+    };
+}
+
+/**
+ * Maps visitor record + school details into the data object expected
+ * by the VISITOR_PASS template merge engine[cite: 3, 10].
+ */
+export function buildVisitorPassMergeData(visitor = {}, school = {}) {
+    const schoolName = school?.name || school?.schoolName || 'School Name';
+
+    return {
+        schoolName,
+        schoolAddress: school?.address || school?.schoolAddress || '',
+        schoolPhone: school?.phone || school?.schoolPhone || school?.mobile || '',
+        schoolEmail: school?.email || school?.schoolEmail || '',
+        schoolLogo: school?.logoUrl || school?.logo || school?.schoolLogo || '',
+        schoolLogoFallback: school?.logoFallback || school?.schoolLogo || '',
+        schoolInitials: schoolName.split(' ').map((w) => w[0]).join('').slice(0, 3).toUpperCase(),
+
+        passNo: visitor.passNo || `VP-${1000 + (visitor.id || 1)}`,
+
+        visitorName: visitor.name || '—',
+        visitorMobile: visitor.mobile || '—',
+        idProofType: visitor.idType || '—',
+        idProofNumber: visitor.idNum || '—',
+
+        purposeOfVisit: visitor.purpose || '—',
+        personToMeet: visitor.personMeet || '—',
+        studentOrEmployeeName: visitor.personMeet || '—',
+        classSectionDept: visitor.classSecOrDept || '—',
+        vehicleNumber: visitor.vehicle || '—',
+        remarks: visitor.remarks || '—',
+
+        dateOfVisit: visitor.date || new Date().toISOString().split('T')[0],
+        entryTime: visitor.entry || '—',
+        expectedExitTime: visitor.exit || '—',
+    };
+}
+
 export function buildFeeReceiptMergeData(receipt = {}, school = {}) {
     const schoolName = school?.name || school?.schoolName || 'School Name'
-
-    const components =
-        (receipt.components?.length ? receipt.components : receipt.academicComponents) || []
+    const components = (receipt.components?.length ? receipt.components : receipt.academicComponents) || []
 
     const discount = Number(receipt.discount) || 0
     const lateFine = Number(receipt.lateFine) || 0
     const transportAmount = Number(receipt.transportAmount ?? receipt.transportCollected) || 0
-    // TODO: confirm with backend whether `amountPaid` already folds in
-    // transportAmount/lateFine or is academic-only. Assuming here it's the
-    // academic collection (matches the sample response, where a single
-    // TUITION_FEE component of 1300 == amountPaid of 1300) and transport is
-    // collected as a separate additional amount on top of it.
     const amountPaid = Number(receipt.amountPaid ?? receipt.academicCollected) || 0
     const grandTotal = amountPaid + transportAmount
 
@@ -96,8 +201,6 @@ export function buildFeeReceiptMergeData(receipt = {}, school = {}) {
             const d = new Date(normalizeTimestamp(paymentDateRaw))
             if (!isNaN(d.getTime())) {
                 const datePart = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                // Only append a time portion if the raw value actually carried one
-                // (plain "2026-07-27" date-only strings shouldn't show "12:00 AM").
                 const hasTime = /T\d{2}:\d{2}/.test(String(paymentDateRaw))
                 const timePart = hasTime ? d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''
                 paymentDateLine = timePart ? `${datePart}, ${timePart}` : datePart
@@ -108,20 +211,14 @@ export function buildFeeReceiptMergeData(receipt = {}, school = {}) {
     }
 
     return {
-        // School
         schoolName,
         schoolAddress: school?.address || school?.schoolAddress || '',
         schoolPhone: school?.phone || school?.schoolPhone || '',
         schoolEmail: school?.email || school?.schoolEmail || '',
         schoolLogo: school?.logoUrl || school?.schoolLogo || '',
-        // Falls back to a real placeholder logo image (passed in by the caller,
-        // same default asset Sidebar.jsx uses) if the school has no logo set
-        // or the logo URL 404s at print time — so the receipt always shows an
-        // actual image, never just text initials.
         schoolLogoFallback: school?.logoFallback || school?.schoolLogo || '',
         schoolInitials: schoolName.split(' ').map((w) => w[0]).join('').slice(0, 3).toUpperCase(),
 
-        // Student
         admissionNumber: receipt.admissionNumber || receipt.studentCode || '—',
         rollNo: receipt.rollNo || receipt.studentId || '—',
         studentName: receipt.studentName || '—',
@@ -130,7 +227,6 @@ export function buildFeeReceiptMergeData(receipt = {}, school = {}) {
         parentName: receipt.parentName || '—',
         parentMobile: receipt.parentMobile || receipt.parentPhone || '—',
 
-        // Receipt meta
         receiptNo: receipt.receiptNo || '—',
         feePeriodName: receipt.feePeriodName || receipt.period || '—',
         paymentDateLine,
@@ -140,7 +236,6 @@ export function buildFeeReceiptMergeData(receipt = {}, school = {}) {
         collectedBy: receipt.collectedBy || receipt.recordedBy || 'Admin',
         remarks: receipt.remarks || '',
 
-        // Amounts
         amountPaidFormatted: formatCurrency(grandTotal),
         transportAmountFormatted: formatCurrency(transportAmount),
         discountFormatted: formatCurrency(discount),
@@ -150,14 +245,11 @@ export function buildFeeReceiptMergeData(receipt = {}, school = {}) {
         totalDueFormatted: formatCurrency(receipt.totalDue),
         balanceAfterFormatted: formatCurrency(receipt.balanceAfter),
 
-        // Loop data — {{#components}}...{{/components}}
         components: components.map((c) => ({
             label: c.customName || c.name || formatComponentLabel(c.componentType),
             amountFormatted: formatCurrency(c.amount),
         })),
 
-        // Conditional single-item arrays — see stub comments in
-        // templateTypesMeta.js for why these are arrays and not booleans.
         transportRows: transportAmount > 0 ? [{ transportAmountFormatted: formatCurrency(transportAmount) }] : [],
         discountRows: discount > 0 ? [{ discountFormatted: formatCurrency(discount), discountReasonSuffix: receipt.discountReason ? ` (${receipt.discountReason})` : '' }] : [],
         lateFineRows: lateFine > 0 ? [{ lateFineFormatted: formatCurrency(lateFine) }] : [],
@@ -175,7 +267,6 @@ export function renderTemplate(html, data = {}) {
     if (!html) return ''
     let out = html
 
-    // 1) Repeating sections: {{#key}} ... {{/key}}
     out = out.replace(/{{#(\w+)}}([\s\S]*?){{\/\1}}/g, (_match, key, inner) => {
         const list = data[key]
         if (!Array.isArray(list) || list.length === 0) return ''
@@ -186,18 +277,11 @@ export function renderTemplate(html, data = {}) {
             .join('')
     })
 
-    // 2) Scalar fields: {{key}} or {{a.b}}
     out = out.replace(/{{\s*([\w.]+)\s*}}/g, (_match, path) => escapeForDisplay(getPath(data, path)))
 
     return out
 }
 
-/**
- * Maps a report-card API response (see getStudentReportCard) + school info
- * + live remarks-edit state into the flat data object the merge engine
- * expects. Keep field names aligned with the raw API response so template
- * authors can reference the same names they see in the API docs.
- */
 export function buildReportCardMergeData(student, school, remarksOverride = {}) {
     const subjects = student?.subjectMarks ?? []
     const pct = student?.percentage
@@ -206,13 +290,11 @@ export function buildReportCardMergeData(student, school, remarksOverride = {}) 
     const schoolName = school?.name || 'School Name'
 
     return {
-        // School
         schoolName,
         schoolAddress: school?.address || '',
         schoolBoard: school?.board || '',
         schoolInitials: schoolName.split(' ').map((w) => w[0]).join('').slice(0, 3).toUpperCase(),
 
-        // Student / exam
         studentName: student?.studentName ?? '—',
         className: student?.className ?? '—',
         sectionName: student?.sectionName ?? '—',
@@ -224,7 +306,6 @@ export function buildReportCardMergeData(student, school, remarksOverride = {}) 
         academicYear: student?.academicYear ?? '',
         dob: student?.dob ?? '',
 
-        // Results
         totalMarksObtained: student?.totalMarksObtained ?? '—',
         totalMaxMarks: student?.totalMaxMarks ?? '—',
         percentage: pct != null ? Number(pct).toFixed(1) : '—',
@@ -233,7 +314,6 @@ export function buildReportCardMergeData(student, school, remarksOverride = {}) 
         sectionRank: student?.sectionRank ?? '—',
         resultStatus: student?.isPassed ? 'PASSED' : 'FAILED',
 
-        // Remarks
         teacherRemarks,
         principalRemarks,
         remarks: teacherRemarks || principalRemarks || '',
@@ -242,7 +322,6 @@ export function buildReportCardMergeData(student, school, remarksOverride = {}) 
             ? new Date(student.generatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
             : '',
 
-        // Loop data — use as {{#subjectMarks}} ... {{/subjectMarks}} in the template
         subjectMarks: subjects.map((s) => {
             const max = s.maxMarks || 0
             const scored = Number(s.totalMarks) || 0

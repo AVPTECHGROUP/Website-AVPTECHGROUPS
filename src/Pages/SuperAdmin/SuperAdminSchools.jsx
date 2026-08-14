@@ -4,11 +4,11 @@ import {
   Search, Users, MapPin, ChevronLeft, ChevronRight,
   CheckCircle, LogOut, ArrowRight, GraduationCap,
   School, TrendingUp, AlertTriangle, ServerCrash,
-  Sun, Moon,
+  Sun, Moon, Settings2,
 } from "lucide-react";
 import SchoolSelectedCard from "../../Components/SuperAdmin/SchoolSelectedCard";
 import { getMySchools, getMySchoolStats } from "../../Api/SchoolConfiguration/Schools";
-import dpis from "../../assets/Images/dpis.jpg";
+import dpis from "../../assets/Images/SS_logo_3.png";
 import { UserContext } from "../../ContextAPI/UserContext";
 
 const boardBadge = (board) => {
@@ -331,7 +331,7 @@ export default function SuperAdminSchools() {
             {/* Right: User info + sign out */}
             <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
               <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-theme-card border border-theme-border">
-                <div className="w-6.5 h-6.5 rounded-full bg-gradient-to-tr from-[#00C9B1] to-[#F5A623] flex items-center justify-center text-[10px] font-black text-[#05111D] shrink-0">
+                <div className="w-6.5 h-6.5 rounded-full bg-linear-to-tr from-teal to-gold flex items-center justify-center text-[10px] font-black text-[#05111D] shrink-0">
                   {initials}
                 </div>
                 <span className="hidden sm:inline text-xs font-semibold text-theme-subtext max-w-fit text-nowrap">{displayName}</span>
@@ -367,9 +367,20 @@ export default function SuperAdminSchools() {
               </h1>
               <p className="text-xs sm:text-sm text-theme-subtext mt-1">
                 Select a school to operate. Logged in as{" "}
-                <span className="text-[#00C9B1] font-semibold">{roleMeta.roleTag}</span>.
+                <span className="text-teal font-semibold">{roleMeta.roleTag}</span>.
               </p>
             </div>
+
+            {/* Manage Schools — GLOBAL_ADMIN only */}
+            {userRole === "GLOBAL_ADMIN" && (
+              <button
+                onClick={() => navigate("/super-admin/manage-schools")}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#00C9B1] to-[#F5A623] hover:from-[#00E5D4] hover:to-[#FFD166] text-[#05111D] font-bold text-xs sm:text-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer transition-all duration-200 shadow-md shadow-cyan-900/35 shrink-0"
+              >
+                <Settings2 size={15} />
+                Manage Schools
+              </button>
+            )}
           </div>
 
           {/* ── Stat Cards ── */}

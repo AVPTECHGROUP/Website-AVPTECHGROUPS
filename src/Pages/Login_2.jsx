@@ -5,10 +5,10 @@ import Worker_3 from '../assets/Images/Worker_3.jpeg'
 import { Link, useNavigate } from 'react-router-dom'
 import { loginAPI } from '../Api/Authentication/AuthApi'
 import { UserContext } from '../ContextAPI/UserContext'
-import SS_logo from "../assets/Images/ss_logo.png"
+import SS_logo from "../assets/Images/loginimageschool3.png"
 import cstech from "../assets/Images/cstech.png"
 import { motion } from 'framer-motion'
-import SS_logo_3 from "../assets/Images/loginimageschool.png"
+import SS_logo_3 from "../assets/Images/loginimageschool3.png"
 import { getSchoolById } from '../Api/SchoolConfiguration/schoolconfig'
 import { getCurrentAcademicYear } from '../Api/AcademicYears/AcademicYear'
 import LOGIN_CONSTANTS from '../Constants/StringConstants/LoginConstants'
@@ -89,18 +89,20 @@ const floatingItems = [
 function FloatingSchoolBg() {
     return (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {/* Top Left School Logo - Hidden on mobile, sized compact for tablet & laptop */}
             <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="absolute hidden md:block top-3 left-4 lg:top-3 lg:left-6 z-10"
+                className="absolute hidden md:block top-3 left-3 lg:top-4 lg:left-5 z-20 pointer-events-auto"
             >
                 <img
                     src={SS_logo_3}
                     alt="School Logo"
-                    className="w-[130px] h-[130px] lg:w-[170px] lg:h-[170px] xl:w-[210px] xl:h-[210px] object-contain filter drop-shadow-md hover:scale-102 transition-transform duration-300"
+                    className="w-14 h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 xl:w-28 xl:h-28 object-contain filter drop-shadow-md hover:scale-105 transition-transform duration-300"
                 />
             </motion.div>
+
             {floatingItems.map(({ key, top, left, size, delay, duration }) => (
                 <motion.div
                     key={key}
@@ -172,8 +174,8 @@ function ShinyButton({ children, disabled, isLoading }) {
           font-bold text-white text-sm tracking-widest uppercase
           transition-all duration-300 ease-out
           ${disabled
-                    ? 'opacity-60 cursor-not-allowed'
-                    : `bg-gradient-to-r from-[#00C9B1] via-[#00DEC5] to-[#F5A623]
+                        ? 'opacity-60 cursor-not-allowed'
+                        : `bg-gradient-to-r from-[#00C9B1] via-[#00DEC5] to-[#F5A623]
                hover:from-[#00B89F] hover:via-[#00C9B1] hover:to-[#E8961A]
                hover:shadow-[0_8px_28px_rgba(0,201,177,0.5),0_4px_12px_rgba(245,166,35,0.3)]
                hover:scale-[1.015] active:scale-[0.975] cursor-pointer`
@@ -186,13 +188,13 @@ function ShinyButton({ children, disabled, isLoading }) {
             >
                 {isLoading ? (
                     <span className="flex items-center justify-center gap-2">
-            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            Verifying Credentials...
-          </span>
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Verifying Credentials...
+                    </span>
                 ) : (
                     <span className="flex items-center justify-center gap-1.5">
-            {children}
-          </span>
+                        {children}
+                    </span>
                 )}
             </button>
         </>
@@ -209,14 +211,8 @@ const Login_2 = ({ onLoginSuccess }) => {
     const [loginError, setLoginError] = useState('')
     const navigate = useNavigate()
 
-    // ── Pull saveToken + saveCurrentAcademicYear in addition to existing context values ──
     const { setUser, saveProfile, saveSchool, saveToken, saveCurrentAcademicYear } = useContext(UserContext)
 
-    // ✅ FIX: strip leading AND trailing whitespace live, on every keystroke —
-    // not just on blur. Blur-only trimming still let a trailing space sit in
-    // the field (and reach onSubmitHandler) for as long as the field stayed
-    // focused, e.g. submitting via Enter right after typing a trailing space.
-    // Internal/middle spaces are left untouched, only the two ends are trimmed.
     const stripEdgeSpaces = (value) => value.replace(/^\s+/, '').replace(/\s+$/, '')
 
     const handleEmailChange = (e) => {
@@ -229,15 +225,11 @@ const Login_2 = ({ onLoginSuccess }) => {
         setLoginError('')
     }
 
-    // Kept as a final safety net in case any edge case (e.g. programmatic
-    // autofill) bypasses onChange.
     const handleEmailBlur = () => setemail(prev => prev.trim())
     const handlePasswordBlur = () => setpassword(prev => prev.trim())
 
     const validateForm = () => {
         const allErrors = {}
-        // ✅ FIX: validate against trimmed values so leading/trailing spaces can
-        // never satisfy "required" checks or slip past validation.
         const trimmedEmail = email.trim()
         const trimmedPassword = password.trim()
 
@@ -257,9 +249,6 @@ const Login_2 = ({ onLoginSuccess }) => {
 
     const onSubmitHandler = async (e) => {
         e.preventDefault()
-        // ✅ FIX: normalize state to trimmed values before validating/submitting,
-        // so the API call itself never sees leading/trailing spaces even if a
-        // space was pasted in and the field wasn't blurred first.
         const trimmedEmail = email.trim()
         const trimmedPassword = password.trim()
         setemail(trimmedEmail)
@@ -277,12 +266,7 @@ const Login_2 = ({ onLoginSuccess }) => {
 
             if (!token) throw new Error(LOGIN_CONSTANTS.SERVER_ERROR)
 
-            // ── 1. Save token via saveToken (not localStorage directly) ──────────
-            //    saveToken does localStorage.setItem + setToken(token) which
-            //    triggers useEffect([token]) in UserContext → re-decodes JWT →
-            //    user.schoolId / userType are correct for FCM + academic year fetch
             saveToken(token)
-
             localStorage.setItem('requireSchoolSelection', requiresSchoolSelection)
 
             if (user) {
@@ -299,14 +283,9 @@ const Login_2 = ({ onLoginSuccess }) => {
 
             if (onLoginSuccess) onLoginSuccess(token)
 
-            // ── 2. Route based on school selection requirement ────────────────────
             if (requiresSchoolSelection) {
-                // SUPER_ADMIN / GLOBAL_ADMIN — let them pick a school
                 navigate('/superAdmin')
             } else {
-                // ADMIN / PRINCIPAL / TEACHER etc.
-                // Use schoolId from login response to fetch & save school details
-                // so sidebar shows correct school info immediately on dashboard
                 const schoolId = user?.schoolId
                 if (schoolId) {
                     try {
@@ -325,17 +304,14 @@ const Login_2 = ({ onLoginSuccess }) => {
                             })
                         }
                     } catch (schoolErr) {
-                        // Non-fatal — sidebar will show a fallback name
                         console.warn('Could not fetch school details after login:', schoolErr)
                     }
 
-                    // ── Fetch & save current academic year (mirrors school fetch above) ──
                     try {
                         const ayRes = await getCurrentAcademicYear(schoolId)
                         const ay = ayRes?.data
                         if (ay) saveCurrentAcademicYear(ay)
                     } catch (ayErr) {
-                        // Non-fatal — academic year can be refreshed later if missing
                         console.warn('Could not fetch current academic year after login:', ayErr)
                     }
                 }
@@ -403,7 +379,7 @@ const Login_2 = ({ onLoginSuccess }) => {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="relative z-10 hidden sm:flex flex-col items-center mb-5 md:mb-6 gap-2"
+                className="relative z-10 hidden sm:flex flex-col items-center mb-4 md:mb-5 gap-2"
             >
                 <h1 className="text-center font-bold text-gray-800 text-lg md:text-xl lg:text-3xl tracking-wide">
                     {LOGIN_CONSTANTS.PORTAL_TITLE}
@@ -414,7 +390,7 @@ const Login_2 = ({ onLoginSuccess }) => {
                 initial={{ opacity: 0, y: 30, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.65, delay: 0.1 }}
-                className="relative z-10 flex flex-col sm:flex-row w-full max-w-xs sm:max-w-xl md:max-w-2xl lg:max-w-3xl overflow-hidden rounded-3xl"
+                className="relative z-10 flex flex-col sm:flex-row w-full max-w-xs sm:max-w-md md:max-w-xl lg:max-w-2xl xl:max-w-3xl overflow-hidden rounded-3xl"
                 style={{
                     background: 'rgba(255, 255, 255, 0.45)',
                     backdropFilter: 'blur(20px)',
@@ -430,7 +406,6 @@ const Login_2 = ({ onLoginSuccess }) => {
                         className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-105"
                         style={{ minHeight: '100%' }}
                     />
-                    {/* Brand-themed gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/20 via-indigo-600/10 to-transparent mix-blend-multiply pointer-events-none" />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent pointer-events-none" />
                     <div className="absolute top-0 left-0 w-24 h-1 bg-gradient-to-r from-blue-500 to-indigo-500" />
