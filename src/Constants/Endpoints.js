@@ -159,6 +159,7 @@ export const API_ENDPOINTS = {
   FEE_COLLECTIONS_OUTSTANDING: `${BASE_URL_V1}/fee/collections/outstanding`,
   DELETE_FEE_COLLECTION: (id) => `${BASE_URL_V1}/fee/collections/${id}`,
   feeReceiptById: (id) => `${BASE_URL_V1}/fee/collections/receipt/${id}`,
+  FEE_COLLECTIONS_CANCELLED: `${BASE_URL_V1}/fee/collections/cancelled`,
 
   // ─── Fee Dashboard ───
   FEE_DASHBOARD_PERIODS: `${BASE_URL_V1}/fee/dashboard/active-periods`,
