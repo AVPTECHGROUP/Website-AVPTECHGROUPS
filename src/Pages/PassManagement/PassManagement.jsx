@@ -14,7 +14,7 @@ import {
     buildCyclePassMergeData,
     buildGatePassMergeData,
     buildIdCardMergeData
-} from '../../utils/TemplateStorage/TemplateEngine';
+} from '../../utils/TemplateStorage/Templateengine';
 import { getDefaultPrintTemplate } from '../../Api/PrintTemplate/PrintTemplatesApi';
 
 // Import Child Modular Tabs
