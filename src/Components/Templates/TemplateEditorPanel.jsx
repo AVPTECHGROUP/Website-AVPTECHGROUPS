@@ -40,9 +40,6 @@ export default function TemplateEditorPanel({ open, mode, typeMeta, initialData,
           <h3 className="text-base sm:text-lg font-bold text-gray-900 truncate">
             {mode === 'create' ? 'Create Template' : 'Edit Template'}
           </h3>
-          <div className="text-[11px] sm:text-xs text-gray-500 font-mono mt-0.5">
-            {mode === 'create' ? 'POST /v1/print-templates' : `PUT /v1/print-templates/${initialData?.id ?? ''}`}
-          </div>
         </div>
         <button
           onClick={onClose}
