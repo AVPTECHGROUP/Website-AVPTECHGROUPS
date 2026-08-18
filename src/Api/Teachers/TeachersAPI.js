@@ -1,5 +1,5 @@
 import { authFetch } from "../../Authfetch/Authfetch";
-import { getCurrUserDetails } from "../../utils/getCurrUserDetails";
+import { getCurrUserDetails } from "../../utils/getCurrUserDetails/GetCurrUserDetails";
 import { API_ENDPOINTS } from "../../Constants/Endpoints";
 
 // ==================== TEACHER CORE OPERATIONS ====================
