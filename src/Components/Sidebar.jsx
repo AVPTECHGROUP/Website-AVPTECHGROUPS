@@ -232,6 +232,10 @@ const menuSections = [
       {
         id: 'schoolConfig', icon: SchoolIcon, label: 'School Config', route: '/schoolConfig',
         systemRole: true,
+      },
+      {
+        id: 'leadManagement', icon: Phone, label: 'Demo Leads', route: '/leadManagement',
+        systemRole: true,
       }
     ]
   }
@@ -258,6 +262,7 @@ const checkAccess = (item, userPermissions, userRole, features) => {
       Permission: SYSTEM_ROLES.ROLE_MANAGE,
       schoolConfig: SYSTEM_ROLES.SCHOOL_CONFIG_MANAGE,
       templates: SYSTEM_ROLES.GLOBAL_ADMIN_ONLY || ['GLOBAL_ADMIN'],
+      leadManagement: SYSTEM_ROLES.GLOBAL_ADMIN_ONLY || ['GLOBAL_ADMIN'],
     }
     return (map[item.id] || []).includes(userRole)
   }
@@ -350,24 +355,24 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   // Filter sections dynamically based on permissions & active feature flags
   const filteredSections = useMemo(() => {
     return menuSections
-      .map(section => {
-        const items = section.items
-          .filter(item => checkAccess(item, userPermissions, userRole, features))
-          .map(item => ({
-            ...item,
-            route: item.id === 'leaves' && !userPermissions.includes(P.LEAVE_APPROVE) ? '/leaves/myLeaves' : item.route,
-            subItems: item.subItems
-              ? item.subItems
-                .filter(sub => checkAccess(sub, userPermissions, userRole, features))
-                .map(sub => ({
-                  ...sub,
-                  childItems: sub.childItems ? sub.childItems.filter(child => checkAccess(child, userPermissions, userRole, features)) : undefined
-                }))
-              : undefined
-          }));
-        return { ...section, items };
-      })
-      .filter(section => section.items.length > 0);
+        .map(section => {
+          const items = section.items
+              .filter(item => checkAccess(item, userPermissions, userRole, features))
+              .map(item => ({
+                ...item,
+                route: item.id === 'leaves' && !userPermissions.includes(P.LEAVE_APPROVE) ? '/leaves/myLeaves' : item.route,
+                subItems: item.subItems
+                    ? item.subItems
+                        .filter(sub => checkAccess(sub, userPermissions, userRole, features))
+                        .map(sub => ({
+                          ...sub,
+                          childItems: sub.childItems ? sub.childItems.filter(child => checkAccess(child, userPermissions, userRole, features)) : undefined
+                        }))
+                    : undefined
+              }));
+          return { ...section, items };
+        })
+        .filter(section => section.items.length > 0);
   }, [userPermissions, userRole, features]);
 
   const onLogout = () => {
@@ -459,268 +464,268 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   const canSwitchSchool = SCHOOL_SWITCHER_ROLES.includes(userRole)
 
   return (
-    <div className={`bg-[#F8FAFC] border-r border-gray-200/80 flex flex-col transition-all duration-300 h-full ${sidebarOpen ? 'w-64' : 'w-20'}`}>
+      <div className={`bg-[#F8FAFC] border-r border-gray-200/80 flex flex-col transition-all duration-300 h-full ${sidebarOpen ? 'w-64' : 'w-20'}`}>
 
-      {/* ── Logo Heading Section ── */}
-      <div className="p-5 border-b border-gray-100 shrink-0">
-        <div className="flex items-center gap-3">
-          <button onClick={handleLogoClick} className="shrink-0">
-            <img
-              src={schoolLogoUrl}
-              className="w-11 h-11 cursor-pointer object-contain rounded-lg bg-white border border-gray-100/70 shadow-2xs"
-              alt="School Logo"
-              onError={(e) => { e.currentTarget.src = dpis }}
-            />
-          </button>
+        {/* ── Logo Heading Section ── */}
+        <div className="p-5 border-b border-gray-100 shrink-0">
+          <div className="flex items-center gap-3">
+            <button onClick={handleLogoClick} className="shrink-0">
+              <img
+                  src={schoolLogoUrl}
+                  className="w-11 h-11 cursor-pointer object-contain rounded-lg bg-white border border-gray-100/70 shadow-2xs"
+                  alt="School Logo"
+                  onError={(e) => { e.currentTarget.src = dpis }}
+              />
+            </button>
 
-          {sidebarOpen && (
-            <div className="min-w-0 flex-1">
-              <h2 className="font-bold text-slate-800 text-sm leading-tight truncate">
-                {schoolDisplayName}
-              </h2>
-              <p className="text-[11px] font-medium text-gray-400 mt-0.5">
-                {schoolDisplayCode ? `${schoolDisplayCode} · ` : ''}Management System
-              </p>
-              {canSwitchSchool && (
-                <button
-                  onClick={handleSidebarSchool}
-                  className="flex items-center gap-1 cursor-pointer text-[10px] font-bold text-purple-600 mt-1
+            {sidebarOpen && (
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-bold text-slate-800 text-sm leading-tight truncate">
+                    {schoolDisplayName}
+                  </h2>
+                  <p className="text-[11px] font-medium text-gray-400 mt-0.5">
+                    {schoolDisplayCode ? `${schoolDisplayCode} · ` : ''}Management System
+                  </p>
+                  {canSwitchSchool && (
+                      <button
+                          onClick={handleSidebarSchool}
+                          className="flex items-center gap-1 cursor-pointer text-[10px] font-bold text-purple-600 mt-1
                     bg-purple-50 hover:bg-purple-100/80 border border-purple-100
                     px-2 py-0.5 rounded-full transition-all"
-                >
-                  <ArrowLeftRight size={10} /> Switch School
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Navigation Items Menu ── */}
-      <nav className="flex-1 p-3 overflow-y-auto sidebar-scroll space-y-4">
-        {filteredSections.map((section) => (
-          <div key={section.section}>
-            {sidebarOpen && (
-              <div className="px-3.5 py-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase select-none">
-                {section.section}
-              </div>
+                      >
+                        <ArrowLeftRight size={10} /> Switch School
+                      </button>
+                  )}
+                </div>
             )}
-            <div className="space-y-0.5 mt-1">
-              {section.items.map((item) => {
-                const Icon = item.icon
-                const isActive = isRouteActive(item)
-                const hasSubItems = item.subItems && item.subItems.length > 0
-                const isOpen = openDropdowns[item.id]
+          </div>
+        </div>
 
-                let calculatedHeight = item.subItems ? item.subItems.length * 40 : 0
-                if (hasSubItems && isOpen) {
-                  item.subItems.forEach(sub => {
-                    if (sub.childItems && openSubDropdowns[sub.id]) {
-                      calculatedHeight += sub.childItems.length * 36
+        {/* ── Navigation Items Menu ── */}
+        <nav className="flex-1 p-3 overflow-y-auto sidebar-scroll space-y-4">
+          {filteredSections.map((section) => (
+              <div key={section.section}>
+                {sidebarOpen && (
+                    <div className="px-3.5 py-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase select-none">
+                      {section.section}
+                    </div>
+                )}
+                <div className="space-y-0.5 mt-1">
+                  {section.items.map((item) => {
+                    const Icon = item.icon
+                    const isActive = isRouteActive(item)
+                    const hasSubItems = item.subItems && item.subItems.length > 0
+                    const isOpen = openDropdowns[item.id]
+
+                    let calculatedHeight = item.subItems ? item.subItems.length * 40 : 0
+                    if (hasSubItems && isOpen) {
+                      item.subItems.forEach(sub => {
+                        if (sub.childItems && openSubDropdowns[sub.id]) {
+                          calculatedHeight += sub.childItems.length * 36
+                        }
+                      })
                     }
-                  })
-                }
 
-                return (
-                  <div key={item.id} className="mb-0.5">
-                    <button
-                      onClick={() => handleMenuClick(item)}
-                      title={!sidebarOpen ? item.label : ''}
-                      className={`w-full flex items-center gap-3 px-3.5 py-2 rounded-xl
+                    return (
+                        <div key={item.id} className="mb-0.5">
+                          <button
+                              onClick={() => handleMenuClick(item)}
+                              title={!sidebarOpen ? item.label : ''}
+                              className={`w-full flex items-center gap-3 px-3.5 py-2 rounded-xl
                         transition-all duration-150 select-none cursor-pointer
                         ${isActive ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-gray-100/80 hover:text-slate-900'}
                         ${!sidebarOpen ? 'justify-center' : 'justify-between'}`}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                        {sidebarOpen && <span className="font-semibold text-[13px] truncate">{item.label}</span>}
-                      </div>
-                      {sidebarOpen && hasSubItems && (
-                        <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <Icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                              {sidebarOpen && <span className="font-semibold text-[13px] truncate">{item.label}</span>}
+                            </div>
+                            {sidebarOpen && hasSubItems && (
+                                <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200
                           ${isActive ? 'text-blue-100' : 'text-gray-400'}
                           ${isOpen ? 'rotate-180' : 'rotate-0'}`}
-                        />
-                      )}
-                    </button>
+                                />
+                            )}
+                          </button>
 
-                    {/* Sub items render block */}
-                    {sidebarOpen && hasSubItems && (
-                      <div
-                        style={{ maxHeight: isOpen ? `${calculatedHeight}px` : '0px' }}
-                        className="overflow-hidden transition-[max-height] duration-200 ease-in-out"
-                      >
-                        <div className="mt-0.5 ml-4.5 pl-3 border-l border-gray-200/70 space-y-0.5 pb-1">
-                          {item.subItems.map((subItem, index) => {
-                            const hasChildItems = subItem.childItems && subItem.childItems.length > 0
-                            const isSubOpen = openSubDropdowns[subItem.id]
-                            const isSubActive = location.pathname === subItem.route ||
-                              (!['/exams', '/attendance', '/leaves'].includes(subItem.route) && location.pathname.startsWith(subItem.route + '/')) ||
-                              (subItem.childItems && subItem.childItems.some(child => location.pathname === child.route || location.pathname.startsWith(child.route + '/')))
+                          {/* Sub items render block */}
+                          {sidebarOpen && hasSubItems && (
+                              <div
+                                  style={{ maxHeight: isOpen ? `${calculatedHeight}px` : '0px' }}
+                                  className="overflow-hidden transition-[max-height] duration-200 ease-in-out"
+                              >
+                                <div className="mt-0.5 ml-4.5 pl-3 border-l border-gray-200/70 space-y-0.5 pb-1">
+                                  {item.subItems.map((subItem, index) => {
+                                    const hasChildItems = subItem.childItems && subItem.childItems.length > 0
+                                    const isSubOpen = openSubDropdowns[subItem.id]
+                                    const isSubActive = location.pathname === subItem.route ||
+                                        (!['/exams', '/attendance', '/leaves'].includes(subItem.route) && location.pathname.startsWith(subItem.route + '/')) ||
+                                        (subItem.childItems && subItem.childItems.some(child => location.pathname === child.route || location.pathname.startsWith(child.route + '/')))
 
-                            return (
-                              <div key={index} className="w-full">
-                                <button
-                                  onClick={() => handleSubItemClick(subItem)}
-                                  className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg
+                                    return (
+                                        <div key={index} className="w-full">
+                                          <button
+                                              onClick={() => handleSubItemClick(subItem)}
+                                              className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg
                                     text-[12.5px] transition-all duration-150 text-left select-none cursor-pointer
                                     ${isSubActive ? 'bg-blue-50/60 text-blue-600 font-bold' : 'text-slate-500 hover:bg-gray-50 hover:text-slate-800'}`}
-                                >
-                                  <div className="flex items-center gap-2 min-w-0">
+                                          >
+                                            <div className="flex items-center gap-2 min-w-0">
                                     <span className={`w-1 h-1 rounded-full shrink-0 transition-all duration-150
                                       ${isSubActive ? 'bg-blue-500 scale-125' : 'bg-gray-300'}`}
                                     />
-                                    <span className="truncate">{subItem.label}</span>
-                                  </div>
-                                  {hasChildItems && (
-                                    <ChevronDown className={`w-3 h-3 shrink-0 transition-transform duration-200 text-gray-400
+                                              <span className="truncate">{subItem.label}</span>
+                                            </div>
+                                            {hasChildItems && (
+                                                <ChevronDown className={`w-3 h-3 shrink-0 transition-transform duration-200 text-gray-400
                                       ${isSubOpen ? 'rotate-180' : 'rotate-0'}`}
-                                    />
-                                  )}
-                                </button>
+                                                />
+                                            )}
+                                          </button>
 
-                                {hasChildItems && (
-                                  <div
-                                    style={{ maxHeight: isSubOpen ? `${subItem.childItems.length * 36}px` : '0px' }}
-                                    className="overflow-hidden transition-[max-height] duration-200 ease-in-out ml-2 pl-2.5 border-l border-gray-200 space-y-0.5 mt-0.5"
-                                  >
-                                    {subItem.childItems.map((childItem, childIndex) => {
-                                      const isChildActive = location.pathname === childItem.route || location.pathname.startsWith(childItem.route + '/')
-                                      return (
-                                        <button
-                                          key={childIndex}
-                                          onClick={() => {
-                                            navigate(childItem.route)
-                                            if (window.innerWidth < 1024) setMobileSidebarOpen(false)
-                                          }}
-                                          className={`w-full flex items-center gap-2 px-2.5 py-1 rounded-md text-[11.5px] transition-all duration-150 text-left truncate cursor-pointer
+                                          {hasChildItems && (
+                                              <div
+                                                  style={{ maxHeight: isSubOpen ? `${subItem.childItems.length * 36}px` : '0px' }}
+                                                  className="overflow-hidden transition-[max-height] duration-200 ease-in-out ml-2 pl-2.5 border-l border-gray-200 space-y-0.5 mt-0.5"
+                                              >
+                                                {subItem.childItems.map((childItem, childIndex) => {
+                                                  const isChildActive = location.pathname === childItem.route || location.pathname.startsWith(childItem.route + '/')
+                                                  return (
+                                                      <button
+                                                          key={childIndex}
+                                                          onClick={() => {
+                                                            navigate(childItem.route)
+                                                            if (window.innerWidth < 1024) setMobileSidebarOpen(false)
+                                                          }}
+                                                          className={`w-full flex items-center gap-2 px-2.5 py-1 rounded-md text-[11.5px] transition-all duration-150 text-left truncate cursor-pointer
                                             ${isChildActive ? 'text-blue-600 font-semibold bg-blue-50/40' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-50/50'}`}
-                                        >
-                                          <span className="opacity-50">•</span>
-                                          <span className="truncate">{childItem.label}</span>
-                                        </button>
-                                      )
-                                    })}
-                                  </div>
-                                )}
+                                                      >
+                                                        <span className="opacity-50">•</span>
+                                                        <span className="truncate">{childItem.label}</span>
+                                                      </button>
+                                                  )
+                                                })}
+                                              </div>
+                                          )}
+                                        </div>
+                                    )
+                                  })}
+                                </div>
                               </div>
-                            )
-                          })}
+                          )}
                         </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        ))}
-      </nav>
+                    )
+                  })}
+                </div>
+              </div>
+          ))}
+        </nav>
 
-      {/* ── Bottom Profile Section ── */}
-      <div className="p-3 border-t border-gray-100 shrink-0" ref={profileRef}>
-        <div className="relative">
-          <button
-            onClick={() => setProfileOpen(prev => !prev)}
-            className={`w-full flex items-center cursor-pointer gap-3 px-3 py-2 rounded-xl
+        {/* ── Bottom Profile Section ── */}
+        <div className="p-3 border-t border-gray-100 shrink-0" ref={profileRef}>
+          <div className="relative">
+            <button
+                onClick={() => setProfileOpen(prev => !prev)}
+                className={`w-full flex items-center cursor-pointer gap-3 px-3 py-2 rounded-xl
               transition-all duration-200 hover:bg-blue-50 border border-transparent hover:border-blue-100/50
               ${profileOpen ? 'bg-blue-50 border-blue-100/50' : ''}
               ${!sidebarOpen ? 'justify-center' : ''}`}
-            title={!sidebarOpen ? displayName : ''}
-          >
-            <div className="shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600
-              flex items-center justify-center text-white font-bold text-xs shadow-xs">
-              {initials}
-            </div>
-            {sidebarOpen && (
-              <>
-                <div className="flex-1 text-left min-w-0">
-                  <p className="text-[12.5px] font-bold text-slate-800 truncate leading-snug">{displayName}</p>
-                  <p className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-md inline-block ${badgeClass}`}>
-                    {formatRoleLabel(userRole)}
-                  </p>
-                </div>
-                <ChevronUp className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 shrink-0
-                  ${profileOpen ? 'rotate-0' : 'rotate-180'}`}
-                />
-              </>
-            )}
-          </button>
-
-          {profileOpen && (
-            <div
-              className={`absolute bottom-full mb-2 bg-white rounded-2xl shadow-xl border border-gray-100
-                overflow-hidden z-50 ${sidebarOpen ? 'left-0 right-0' : 'left-0 w-64'}`}
-              style={{ animation: 'slideUp 0.18s ease-out' }}
+                title={!sidebarOpen ? displayName : ''}
             >
-              <div className="h-12 bg-gradient-to-r from-blue-600 to-blue-500 relative">
-                <div className="absolute -bottom-5 left-4">
-                  <div className="w-10 h-10 rounded-full bg-white p-0.5 shadow-md">
-                    <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-blue-600
+              <div className="shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600
+              flex items-center justify-center text-white font-bold text-xs shadow-xs">
+                {initials}
+              </div>
+              {sidebarOpen && (
+                  <>
+                    <div className="flex-1 text-left min-w-0">
+                      <p className="text-[12.5px] font-bold text-slate-800 truncate leading-snug">{displayName}</p>
+                      <p className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-md inline-block ${badgeClass}`}>
+                        {formatRoleLabel(userRole)}
+                      </p>
+                    </div>
+                    <ChevronUp className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 shrink-0
+                  ${profileOpen ? 'rotate-0' : 'rotate-180'}`}
+                    />
+                  </>
+              )}
+            </button>
+
+            {profileOpen && (
+                <div
+                    className={`absolute bottom-full mb-2 bg-white rounded-2xl shadow-xl border border-gray-100
+                overflow-hidden z-50 ${sidebarOpen ? 'left-0 right-0' : 'left-0 w-64'}`}
+                    style={{ animation: 'slideUp 0.18s ease-out' }}
+                >
+                  <div className="h-12 bg-gradient-to-r from-blue-600 to-blue-500 relative">
+                    <div className="absolute -bottom-5 left-4">
+                      <div className="w-10 h-10 rounded-full bg-white p-0.5 shadow-md">
+                        <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-blue-600
                       flex items-center justify-center text-white font-bold text-sm">
-                      {initials}
+                          {initials}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="pt-7 px-4 pb-3 border-b border-gray-100">
-                <p className="font-bold text-gray-900 text-sm">{displayName}</p>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mt-1 ${badgeClass}`}>
+                  <div className="pt-7 px-4 pb-3 border-b border-gray-100">
+                    <p className="font-bold text-gray-900 text-sm">{displayName}</p>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mt-1 ${badgeClass}`}>
                   {formatRoleLabel(userRole)}
                 </span>
-              </div>
+                  </div>
 
-              <div className="px-4 py-3 space-y-2.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                    <Mail className="w-3.5 h-3.5 text-blue-500" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Email</p>
-                    <p className="text-xs text-gray-700 font-medium truncate">{user?.email || 'Not provided'}</p>
-                  </div>
-                </div>
+                  <div className="px-4 py-3 space-y-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                        <Mail className="w-3.5 h-3.5 text-blue-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Email</p>
+                        <p className="text-xs text-gray-700 font-medium truncate">{user?.email || 'Not provided'}</p>
+                      </div>
+                    </div>
 
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
-                    <Phone className="w-3.5 h-3.5 text-green-500" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Phone</p>
-                    <p className="text-xs text-gray-700 font-medium">{userPhone || 'Not provided'}</p>
-                  </div>
-                </div>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
+                        <Phone className="w-3.5 h-3.5 text-green-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Phone</p>
+                        <p className="text-xs text-gray-700 font-medium">{userPhone || 'Not provided'}</p>
+                      </div>
+                    </div>
 
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
-                    <Shield className="w-3.5 h-3.5 text-emerald-500" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Status</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                      <p className="text-xs text-emerald-600 font-semibold">{userStatus}</p>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                        <Shield className="w-3.5 h-3.5 text-emerald-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Status</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                          <p className="text-xs text-emerald-600 font-semibold">{userStatus}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="px-3 pb-3">
-                <button
-                  onClick={onLogout}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl
+                  <div className="px-3 pb-3">
+                    <button
+                        onClick={onLogout}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl
                     bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs cursor-pointer
                     transition-colors duration-150 border border-red-100 hover:border-red-200"
-                >
-                  <LogOut className="w-3.5 h-3.5" /> Sign Out
-                </button>
-              </div>
-            </div>
-          )}
+                    >
+                      <LogOut className="w-3.5 h-3.5" /> Sign Out
+                    </button>
+                  </div>
+                </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      <style>{`
+        <style>{`
         @keyframes slideUp {
           from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -728,7 +733,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
         .sidebar-scroll::-webkit-scrollbar { display: none; }
         .sidebar-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
-    </div>
+      </div>
   )
 }
 
