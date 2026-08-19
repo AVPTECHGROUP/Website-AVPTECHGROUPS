@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Download, Eye, Printer, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { Search, Download, Eye, Printer, ChevronLeft, ChevronRight, ChevronDown, X, Bike } from 'lucide-react';
 
 const AVATAR_COLORS = ['#0F6E6E', '#C9781F', '#6A4FC9', '#C6433E', '#1F8A55', '#0F2A2E'];
 
-const getInitials = (name) => name ? name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() : 'ST';
+const getInitials = (name) => (name ? name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() : 'ST');
 const getColorForId = (id) => AVATAR_COLORS[(id || 0) % AVATAR_COLORS.length];
 
 const formatClassDisplay = (cName, sName) => {
@@ -45,6 +45,13 @@ export default function CyclePassTab({
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [cycleSelected, setCycleSelected] = useState(new Set());
 
+    // Sirf wahi numbers store honge jo popup me fill karke CSV download ki gayi ho
+    const [cycleRegMap, setCycleRegMap] = useState({});
+
+    // Modal states
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [tempRegMap, setTempRegMap] = useState({});
+
     useEffect(() => {
         setCurrentPage(1);
     }, [selectedClassId, selectedSectionId, searchQuery, itemsPerPage]);
@@ -81,18 +88,44 @@ export default function CyclePassTab({
         }
     };
 
-    const generateCsv = () => {
-        const rows = students.filter((s) => cycleSelected.has(s.id));
-        if (rows.length === 0) {
+    // Open popup modal on CSV button tap
+    const handleOpenModal = () => {
+        if (cycleSelected.size === 0) {
             showToast('Select at least one student to generate cycle passes.', true);
             return;
         }
+
+        // Selected students ke liye initial inputs setup (agar pehle bhara tha toh wo show hoga, warna empty)
+        const initialInputs = {};
+        students.forEach((s) => {
+            if (cycleSelected.has(s.id)) {
+                initialInputs[s.id] = cycleRegMap[s.id] || '';
+            }
+        });
+        setTempRegMap(initialInputs);
+        setIsModalOpen(true);
+    };
+
+    // Form submit -> State update -> CSV Download
+    const handleSaveAndGenerateCsv = (e) => {
+        if (e) e.preventDefault();
+
+        // 1. Table state update karein
+        setCycleRegMap((prev) => ({
+            ...prev,
+            ...tempRegMap
+        }));
+
+        // 2. CSV generate karein
+        const selectedList = students.filter((s) => cycleSelected.has(s.id));
         const header = ['Student Name', 'Roll No.', 'Class', 'Section', 'Cycle Reg. No.'];
-        const lines = rows.map((s) =>
-            [s.name, s.roll, s.className, s.sectionName, s.cycleReg]
-                .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-                .join(',')
-        );
+        const lines = selectedList.map((s) => {
+            const regNo = tempRegMap[s.id]?.trim() || 'No Cycle';
+            return [s.name, s.roll, s.className, s.sectionName, regNo]
+                .map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`)
+                .join(',');
+        });
+
         const csvContent = [header.map((v) => `"${v}"`).join(','), ...lines].join('\n');
         const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -103,7 +136,9 @@ export default function CyclePassTab({
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        showToast(`cycle_passes_batch.csv downloaded (${rows.length} records).`);
+
+        setIsModalOpen(false);
+        showToast(`cycle_passes_batch.csv downloaded (${selectedList.length} records).`);
     };
 
     const AvatarCell = ({ student, size = 'md' }) => {
@@ -116,6 +151,10 @@ export default function CyclePassTab({
             </div>
         );
     };
+
+    const selectedStudentsList = useMemo(() => {
+        return students.filter((s) => cycleSelected.has(s.id));
+    }, [students, cycleSelected]);
 
     return (
         <>
@@ -150,7 +189,11 @@ export default function CyclePassTab({
                 </div>
 
                 <div className="flex items-center gap-2 w-full lg:w-auto lg:shrink-0">
-                    <button disabled={cycleSelected.size === 0} onClick={generateCsv} className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-semibold text-xs bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 transition-all cursor-pointer shadow-2xs">
+                    <button
+                        disabled={cycleSelected.size === 0}
+                        onClick={handleOpenModal}
+                        className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-semibold text-xs bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 transition-all cursor-pointer shadow-2xs"
+                    >
                         <Download className="w-3.5 h-3.5" /> Cycle CSV
                     </button>
                 </div>
@@ -161,7 +204,12 @@ export default function CyclePassTab({
                 <div className="flex-1 overflow-auto">
                     <table className="w-full table-fixed text-xs">
                         <colgroup>
-                            <col style={{ width: '5%' }} /><col style={{ width: '25%' }} /><col style={{ width: '15%' }} /><col style={{ width: '22%' }} /><col style={{ width: '18%' }} /><col style={{ width: '15%' }} />
+                            <col style={{ width: '5%' }} />
+                            <col style={{ width: '25%' }} />
+                            <col style={{ width: '15%' }} />
+                            <col style={{ width: '20%' }} />
+                            <col style={{ width: '20%' }} />
+                            <col style={{ width: '15%' }} />
                         </colgroup>
                         <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                             <tr>
@@ -181,6 +229,9 @@ export default function CyclePassTab({
                             ) : (
                                 paginatedStudents.map((s) => {
                                     const isChecked = cycleSelected.has(s.id);
+                                    // Number sirf tab show hoga jab modal se enter ho chuka ho
+                                    const assignedRegNo = cycleRegMap[s.id];
+
                                     return (
                                         <tr key={s.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="px-3 py-2">
@@ -197,18 +248,32 @@ export default function CyclePassTab({
                                             </td>
                                             <td className="px-3 py-2 font-mono font-semibold text-slate-800">{s.roll}</td>
                                             <td className="px-3 py-2">
-                                                <span className="px-2 py-0.5 rounded-full bg-green-50 text-blue-600 font-bold text-[10.5px]">
+                                                <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold text-[10.5px]">
                                                     {formatClassDisplay(s.className, s.sectionName)}
                                                 </span>
                                             </td>
-                                            <td className="px-3 py-2 font-mono font-bold text-slate-700">{s.cycleReg}</td>
+                                            <td className="px-3 py-2">
+                                                {assignedRegNo ? (
+                                                    <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                                        {assignedRegNo}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-slate-400 font-normal italic">No Cycle</span>
+                                                )}
+                                            </td>
                                             <td className="px-3 py-2 text-right">
                                                 {isChecked ? (
                                                     <div className="flex items-center justify-end gap-1.5">
-                                                        <button onClick={() => onPreview(s, 'cycle')} className="px-2 py-1 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-[11px] inline-flex items-center gap-1 cursor-pointer">
+                                                        <button
+                                                            onClick={() => onPreview({ ...s, cycleReg: assignedRegNo || 'No Cycle' }, 'cycle')}
+                                                            className="px-2 py-1 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-[11px] inline-flex items-center gap-1 cursor-pointer"
+                                                        >
                                                             <Eye className="w-3 h-3 text-blue-600" /> View
                                                         </button>
-                                                        <button onClick={() => onPrint(s, 'cycle')} className="px-2 py-1 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-[11px] inline-flex items-center gap-1 cursor-pointer">
+                                                        <button
+                                                            onClick={() => onPrint({ ...s, cycleReg: assignedRegNo || 'No Cycle' }, 'cycle')}
+                                                            className="px-2 py-1 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-[11px] inline-flex items-center gap-1 cursor-pointer"
+                                                        >
                                                             <Printer className="w-3 h-3 text-slate-600" /> Print
                                                         </button>
                                                     </div>
@@ -242,6 +307,76 @@ export default function CyclePassTab({
                     </div>
                 </div>
             </div>
+
+            {/* Cycle Reg. No. Popup Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
+                        {/* Header */}
+                        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                                    <Bike className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-slate-900">Enter Cycle Registration Details</h3>
+                                    <p className="text-xs text-slate-500">{selectedStudentsList.length} student(s) selected for CSV generation</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* Student Inputs List */}
+                        <form onSubmit={handleSaveAndGenerateCsv} className="flex-1 flex flex-col min-h-0">
+                            <div className="flex-1 overflow-y-auto px-5 py-3 divide-y divide-slate-100">
+                                {selectedStudentsList.map((s) => (
+                                    <div key={s.id} className="py-2.5 flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                            <AvatarCell student={s} size="sm" />
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-semibold text-slate-900 truncate">{s.name}</p>
+                                                <p className="text-[10px] text-slate-400 font-mono">Roll: {s.roll}</p>
+                                            </div>
+                                        </div>
+                                        <div className="w-44 shrink-0">
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="e.g. CYC-101"
+                                                value={tempRegMap[s.id] || ''}
+                                                onChange={(e) => setTempRegMap({ ...tempRegMap, [s.id]: e.target.value })}
+                                                className="w-full px-2.5 py-1.5 text-xs font-mono rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-500 transition-all placeholder:text-slate-400 font-medium text-slate-800"
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-2 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200/70 rounded-lg transition-all cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                                >
+                                    <Download className="w-3.5 h-3.5" /> Save & Download CSV
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

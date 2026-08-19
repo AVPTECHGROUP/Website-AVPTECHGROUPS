@@ -20,6 +20,8 @@ import { UserContext } from "../../../ContextAPI/UserContext";
 
 import ContactImg from "../../../assets/Images/Contact/Contact.png";
 
+// ⚠️ ADJUST THESE TWO PATHS to match where your Api/demorequestApi.js and
+// Constants/Demorequestconstant.js actually live relative to this Contact.jsx file.
 import { submitDemoRequest } from "../../../Api/DemorequestApi";
 import {
     STUDENT_STRENGTH_OPTIONS,
@@ -132,7 +134,7 @@ const Contact = () => {
 
         // ── Path 1: "Book a Free Demo" → calls the real /v1/public/demo-request API ──
         if (isDemoInquiry) {
-            if (!form.name || !form.phone || !form.schoolName || !form.studentStrength) {
+            if (!form.name || !form.email || !form.phone || !form.schoolName || !form.studentStrength) {
                 setErrorMsg("Please fill all required demo fields.");
                 return;
             }
@@ -145,6 +147,7 @@ const Contact = () => {
 
             const payload = {
                 fullName: form.name.trim(),
+                email: form.email.trim(),
                 schoolName: form.schoolName.trim(),
                 phoneNumber: `${form.countryCode}${digitsOnly}`,
                 studentStrength: form.studentStrength,
@@ -192,7 +195,7 @@ const Contact = () => {
     const labelClasses = `text-xs font-semibold uppercase tracking-wide mb-2 block ${isDark ? "text-slate-400" : "text-slate-500"
         }`;
 
-    return (    
+    return (
         <div
             className={`relative min-h-screen overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030712] text-slate-100" : "bg-slate-50 text-slate-900"
                 }`}
@@ -365,20 +368,18 @@ const Contact = () => {
                                             required
                                         />
                                     </div>
-                                    {!isDemoInquiry && (
-                                        <div>
-                                            <label className={labelClasses}>Email Address *</label>
-                                            <input
-                                                type="email"
-                                                name="email"
-                                                value={form.email}
-                                                onChange={handleChange}
-                                                placeholder="you@example.com"
-                                                className={inputClasses}
-                                                required
-                                            />
-                                        </div>
-                                    )}
+                                    <div>
+                                        <label className={labelClasses}>Email Address *</label>
+                                        <input
+                                            type="email"
+                                            name="email"
+                                            value={form.email}
+                                            onChange={handleChange}
+                                            placeholder="you@example.com"
+                                            className={inputClasses}
+                                            required
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
