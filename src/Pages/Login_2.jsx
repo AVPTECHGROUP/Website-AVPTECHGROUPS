@@ -174,8 +174,8 @@ function ShinyButton({ children, disabled, isLoading }) {
           font-bold text-white text-sm tracking-widest uppercase
           transition-all duration-300 ease-out
           ${disabled
-                        ? 'opacity-60 cursor-not-allowed'
-                        : `bg-gradient-to-r from-[#00C9B1] via-[#00DEC5] to-[#F5A623]
+                    ? 'opacity-60 cursor-not-allowed'
+                    : `bg-gradient-to-r from-[#00C9B1] via-[#00DEC5] to-[#F5A623]
                hover:from-[#00B89F] hover:via-[#00C9B1] hover:to-[#E8961A]
                hover:shadow-[0_8px_28px_rgba(0,201,177,0.5),0_4px_12px_rgba(245,166,35,0.3)]
                hover:scale-[1.015] active:scale-[0.975] cursor-pointer`
@@ -247,6 +247,13 @@ const Login_2 = ({ onLoginSuccess }) => {
         return Object.keys(allErrors).length === 0
     }
 
+    // Roles that never have dashboard/school access — regardless of what the
+    // backend's requiresSchoolSelection flag says, or whether a stray
+    // schoolId is attached to their account (e.g. because the role was
+    // originally created from within a specific school's user-management
+    // screen). These roles always land on the Select School / console page.
+    const NO_DASHBOARD_ROLES = ['GLOBAL_SALES_SUPPORT']
+
     const onSubmitHandler = async (e) => {
         e.preventDefault()
         const trimmedEmail = email.trim()
@@ -269,11 +276,13 @@ const Login_2 = ({ onLoginSuccess }) => {
             saveToken(token)
             localStorage.setItem('requireSchoolSelection', requiresSchoolSelection)
 
+            const role = user?.roles?.[0]
+
             if (user) {
                 localStorage.setItem('user', JSON.stringify(user))
                 setUser({
                     id: user.id,
-                    userType: user.roles?.[0],
+                    userType: role,
                     email: user.email,
                     permissions: user.permissions,
                     schoolId: user.schoolId ?? null,
@@ -283,7 +292,19 @@ const Login_2 = ({ onLoginSuccess }) => {
 
             if (onLoginSuccess) onLoginSuccess(token)
 
-            if (requiresSchoolSelection) {
+            // Role check comes FIRST and overrides requiresSchoolSelection —
+            // that backend flag alone isn't a reliable signal for roles like
+            // GLOBAL_SALES_SUPPORT, which must never fetch/save a school or
+            // reach the dashboard, even if a schoolId happens to be present
+            // on their account.
+            const isNoDashboardRole = NO_DASHBOARD_ROLES.includes(role)
+
+            if (isNoDashboardRole || requiresSchoolSelection) {
+                // Explicitly clear any stale school context so a leftover
+                // localStorage 'school' entry can't leak into AppLayout later.
+                if (isNoDashboardRole) {
+                    saveSchool(null)
+                }
                 navigate('/superAdmin')
             } else {
                 const schoolId = user?.schoolId

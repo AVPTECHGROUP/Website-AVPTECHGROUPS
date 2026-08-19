@@ -256,6 +256,10 @@ const roleBadgeStyles = {
 }
 
 // ── Strict Access Checker ──
+// (imports, menuSections, roleBadgeStyles — all unchanged, omitted here for brevity;
+// keep exactly what you already have)
+
+// ── Strict Access Checker ──
 const checkAccess = (item, userPermissions, userRole, features) => {
   // 1. System Role Lock Check
   if (item.systemRole) {
@@ -263,7 +267,12 @@ const checkAccess = (item, userPermissions, userRole, features) => {
       Permission: SYSTEM_ROLES.ROLE_MANAGE,
       schoolConfig: SYSTEM_ROLES.SCHOOL_CONFIG_MANAGE,
       templates: SYSTEM_ROLES.GLOBAL_ADMIN_ONLY || ['GLOBAL_ADMIN'],
-      leadManagement: SYSTEM_ROLES.LEAD_MANAGEMENT_ROLES || ['GLOBAL_ADMIN', 'GLOBAL_SALES_SUPPORT'],
+      // Sidebar visibility only — GLOBAL_ADMIN exclusively. GLOBAL_SALES_SUPPORT
+      // never gets a dashboard/sidebar (see DASHBOARD_ROLES), so this is a
+      // defensive floor: even if that ever changes, Demo Leads still won't
+      // show up here for them. Their access stays routed through the Select
+      // School console button, which uses LEAD_MANAGEMENT_ROLES separately.
+      leadManagement: SYSTEM_ROLES.SIDEBAR_LEAD_MANAGEMENT_ROLES || ['GLOBAL_ADMIN'],
     }
     return (map[item.id] || []).includes(userRole)
   }
@@ -290,6 +299,8 @@ const checkAccess = (item, userPermissions, userRole, features) => {
 
   return true;
 }
+
+// (rest of Sidebar component — Sidebar function body, JSX, styles — all unchanged)
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen, setMobileSidebarOpen }) => {
   const navigate = useNavigate()
