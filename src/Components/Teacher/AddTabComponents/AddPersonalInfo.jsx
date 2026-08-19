@@ -210,6 +210,36 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange, errors, set
                         />
                     </div>
 
+                    {/*Pan number */}
+                    <div className="col-span-2">
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            PAN NUMBER
+                        </label>
+                        <input
+                            type="text"
+                            name="PAN NUMBER"
+                            value={formData.PAN_NUMBER}
+                            onChange={handleInputChange}
+                            placeholder="e.g. BCIJS3193D"
+                            className="bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+
+                    {/*UAN NUMBER */}
+                    <div className="col-span-2">
+                        <label className="block font-semibold text-gray-600 text-sm mb-2">
+                            UAN NUMBER
+                        </label>
+                        <input
+                            type="text"
+                            name="UAN NUMBER"
+                            value={formData.UAN_NUMBER}
+                            onChange={handleInputChange}
+                            placeholder="e.g. 904593JI04959"
+                            className="bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+
                     {/* Joining Date */}
                     <div className="col-span-2">
                         <label className="block font-semibold text-gray-600 text-sm mb-2">

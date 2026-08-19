@@ -152,8 +152,10 @@ export const PERMISSIONS = {
 // Allowing a custom role to grant itself access to the role-editor or school-config
 // via its own permission set would be a privilege-escalation hole.
 export const SYSTEM_ROLES = {
-  ROLE_MANAGE:         ['GLOBAL_ADMIN'],
+  ROLE_MANAGE:          ['GLOBAL_ADMIN'],
   SCHOOL_CONFIG_MANAGE: ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
-  SCHOOL_SWITCHER:     ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
-  SCHOOL_PICKER:       ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
+  SCHOOL_SWITCHER:      ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
+  SCHOOL_PICKER:        ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
+  GLOBAL_ADMIN_ONLY:    ['GLOBAL_ADMIN'],
+  LEAD_MANAGEMENT_ROLES: ['GLOBAL_ADMIN', 'GLOBAL_SALES_SUPPORT'],
 };
