@@ -4,13 +4,13 @@ import { Search, Users, Wallet, CalendarCog, HandCoins, FileText, GraduationCap,
 import { getTeacherLookup } from "../../Api/Teachers/TeachersAPI";
 import { getUsersSummary, searchUsers, getRolesSummary } from "../../Api/StaffManagement/UserManagementAPI.js"; // TODO: confirm this path
 import TeacherSalaryConfig from "./TeacherSalaryconfig";
-import LeaveConfigManager from "./LeaveConfigManager";
+import UserLeaveBalanceView from "./UserLeaveBalanceView";
 import AdvanceSalaryPanel from "./AdvanceSalaryPanel";
 import SalarySlip from "./Salaryslipgenerator";
 
 const TABS = [
     { key: "salary", label: "Salary Structure", icon: Wallet },
-    { key: "leavePolicy", label: "Leave Policy", icon: CalendarCog },
+    { key: "leavePolicy", label: "Leave Balance", icon: CalendarCog },
     { key: "advance", label: "Advance Salary", icon: HandCoins },
     { key: "slip", label: "Salary Slip", icon: FileText },
 ];
@@ -26,7 +26,7 @@ const EXCLUDED_STAFF_ROLES = ["TEACHER", "STUDENT", "PARENT"];
 
 // Normalizes a raw User record (whatever shape getUsersSummary/searchUsers
 // returns) into the {id, name, designation, employeeCode} shape every
-// downstream payroll component (TeacherSalaryConfig, LeaveConfigManager,
+// downstream payroll component (TeacherSalaryConfig, UserLeaveBalanceView,
 // AdvanceSalaryPanel, SalarySlip) already expects via its `teacher` prop.
 const normalizePerson = (u) => ({
     id: u.id,
@@ -352,7 +352,10 @@ const AdminPayrollView = () => {
                                 />
                             )}
                             {activeTab === "leavePolicy" && (
-                                <LeaveConfigManager readOnly={!canManageLeavePolicy} />
+                                <UserLeaveBalanceView
+                                    userId={selectedPerson.id}
+                                    userName={selectedPerson.name}
+                                />
                             )}
                             {activeTab === "advance" && (
                                 <AdvanceSalaryPanel teacher={selectedPerson} readOnly={!canConfigure} />

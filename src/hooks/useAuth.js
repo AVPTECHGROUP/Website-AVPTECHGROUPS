@@ -1,5 +1,6 @@
 import { useContext } from 'react';
 import { UserContext } from '../ContextAPI/UserContext';
+import { getUserRole } from '../utils/getCurrUserDetails/GetCurrUserDetails.js';
 
 /**
  * Central hook for auth state and permission checking.
@@ -11,7 +12,7 @@ export const useAuth = () => {
   const { user } = useContext(UserContext);
 
   const permissions = user?.permissions ?? [];
-  const role = user?.userType ?? null;
+  const role = getUserRole(user);
 
   return {
     user,

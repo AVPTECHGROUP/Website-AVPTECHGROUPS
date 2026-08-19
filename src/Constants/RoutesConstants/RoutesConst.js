@@ -16,6 +16,7 @@ export const ROLES = {
   PARENT: 'PARENT',
   STORE_ACCOUNTANT: 'STORE_ACCOUNTANT',
   STORE_SELLER: 'STORE_SELLER',
+  GLOBAL_SALES_SUPPORT: 'GLOBAL_SALES_SUPPORT',
 };
 
 // ─── Reusable Role Groups (grouped by access pattern) ──────────────────────
@@ -62,11 +63,14 @@ export const ROLE_GROUPS = {
   // ADMIN, SUPER_ADMIN, GLOBAL_ADMIN, PRINCIPAL (manage users)
   MANAGE_USERS_ROLES: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.GLOBAL_ADMIN, ROLES.PRINCIPAL],
 
+  // GLOBAL_ADMIN, GLOBAL_SALES_SUPPORT (demo leads / lead management)
+  LEAD_MANAGEMENT_ROLES: [ROLES.GLOBAL_ADMIN, ROLES.GLOBAL_SALES_SUPPORT],
+
   // Dashboard — broadest role list across the app
   DASHBOARD_ROLES: [
     ROLES.ADMIN, ROLES.TEACHER, ROLES.SUPER_ADMIN, ROLES.GLOBAL_ADMIN,
     ROLES.PRINCIPAL, ROLES.ACCOUNTANT, ROLES.RECEPTIONIST, ROLES.PARENT,
-    ROLES.STORE_ACCOUNTANT,
+    ROLES.STORE_ACCOUNTANT, ROLES.GLOBAL_SALES_SUPPORT,
   ],
 };
 
@@ -192,7 +196,7 @@ export const ROUTE_PATHS = {
   TRANSPORT_FEE_PLANS: '/route/feePlans',
   TRANSPORT_REPORTS: '/route/reports',
 
-  // Lead Management (internal CRM — GLOBAL_ADMIN only)
+  // Lead Management (internal CRM — GLOBAL_ADMIN & GLOBAL_SALES_SUPPORT)
   LEAD_MANAGEMENT: '/leadManagement',
 
   // Fallback redirect targets

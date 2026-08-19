@@ -11,7 +11,7 @@ export default function LeadRoutes() {
             path={ROUTE_PATHS.LEAD_MANAGEMENT}
             element={
                 <RoleProtectedRoute
-                    allowedRoles={ROLE_GROUPS.GLOBAL_ADMIN_ONLY}
+                    allowedRoles={ROLE_GROUPS.LEAD_MANAGEMENT_ROLES}
                     fallback={<Navigate to={ROUTE_PATHS.DASHBOARD} replace />}
                 >
                     <LeadManagementPage />

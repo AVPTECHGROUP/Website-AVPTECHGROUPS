@@ -252,6 +252,7 @@ const roleBadgeStyles = {
   PARENT: 'bg-orange-100 text-orange-700',
   STORE_ACCOUNTANT: 'bg-teal-100 text-teal-700',
   STORE_SELLER: 'bg-indigo-100 text-indigo-700',
+  GLOBAL_SALES_SUPPORT: 'bg-rose-100 text-rose-700',
 }
 
 // ── Strict Access Checker ──
@@ -262,7 +263,7 @@ const checkAccess = (item, userPermissions, userRole, features) => {
       Permission: SYSTEM_ROLES.ROLE_MANAGE,
       schoolConfig: SYSTEM_ROLES.SCHOOL_CONFIG_MANAGE,
       templates: SYSTEM_ROLES.GLOBAL_ADMIN_ONLY || ['GLOBAL_ADMIN'],
-      leadManagement: SYSTEM_ROLES.GLOBAL_ADMIN_ONLY || ['GLOBAL_ADMIN'],
+      leadManagement: SYSTEM_ROLES.LEAD_MANAGEMENT_ROLES || ['GLOBAL_ADMIN', 'GLOBAL_SALES_SUPPORT'],
     }
     return (map[item.id] || []).includes(userRole)
   }
