@@ -247,13 +247,6 @@ const Login_2 = ({ onLoginSuccess }) => {
         return Object.keys(allErrors).length === 0
     }
 
-    // Roles that never have dashboard/school access — regardless of what the
-    // backend's requiresSchoolSelection flag says, or whether a stray
-    // schoolId is attached to their account (e.g. because the role was
-    // originally created from within a specific school's user-management
-    // screen). These roles always land on the Select School / console page.
-    const NO_DASHBOARD_ROLES = ['GLOBAL_SALES_SUPPORT']
-
     const onSubmitHandler = async (e) => {
         e.preventDefault()
         const trimmedEmail = email.trim()
@@ -292,19 +285,14 @@ const Login_2 = ({ onLoginSuccess }) => {
 
             if (onLoginSuccess) onLoginSuccess(token)
 
-            // Role check comes FIRST and overrides requiresSchoolSelection —
-            // that backend flag alone isn't a reliable signal for roles like
-            // GLOBAL_SALES_SUPPORT, which must never fetch/save a school or
-            // reach the dashboard, even if a schoolId happens to be present
-            // on their account.
-            const isNoDashboardRole = NO_DASHBOARD_ROLES.includes(role)
-
-            if (isNoDashboardRole || requiresSchoolSelection) {
-                // Explicitly clear any stale school context so a leftover
-                // localStorage 'school' entry can't leak into AppLayout later.
-                if (isNoDashboardRole) {
-                    saveSchool(null)
-                }
+            // requiresSchoolSelection (from the backend) is the single source
+            // of truth for whether this login lands on the Select School
+            // console. GLOBAL_ADMIN, SUPER_ADMIN, and GLOBAL_READ_ONLY all go
+            // through this same path — GLOBAL_READ_ONLY has no special-cased
+            // "no dashboard" behavior; once it selects a school it reaches a
+            // full dashboard, same navigation as GLOBAL_ADMIN, just with
+            // every mutating action disabled via its VIEW-only permission set.
+            if (requiresSchoolSelection) {
                 navigate('/superAdmin')
             } else {
                 const schoolId = user?.schoolId

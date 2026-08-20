@@ -16,7 +16,15 @@ export const ROLES = {
   PARENT: 'PARENT',
   STORE_ACCOUNTANT: 'STORE_ACCOUNTANT',
   STORE_SELLER: 'STORE_SELLER',
-  GLOBAL_SALES_SUPPORT: 'GLOBAL_SALES_SUPPORT',
+  // Backend-confirmed role string (see JWT `roles` claim). Full dashboard
+  // access, identical navigation to GLOBAL_ADMIN, but every permission the
+  // backend issues for this role is a *_VIEW (or VIEW_DEMO_REQUESTS /
+  // MANAGE_DEMO_REQUESTS) permission — no CREATE/EDIT/DELETE/APPROVE keys.
+  // "Read only" is enforced via the permissions array, not via role checks
+  // in the frontend — the existing hasPermission()-gated "visible but
+  // disabled" pattern (Transport/Leaves/Timetable/Exams etc.) handles this
+  // automatically for any screen already wired that way.
+  GLOBAL_READ_ONLY: 'GLOBAL_READ_ONLY',
 };
 
 // ─── Reusable Role Groups (grouped by access pattern) ──────────────────────
@@ -57,25 +65,33 @@ export const ROLE_GROUPS = {
   // ADMIN, SUPER_ADMIN, GLOBAL_ADMIN, STORE_ACCOUNTANT, STORE_SELLER
   STOCK_SELLER_ROLES: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.GLOBAL_ADMIN, ROLES.STORE_ACCOUNTANT, ROLES.STORE_SELLER],
 
-  // SUPER_ADMIN, GLOBAL_ADMIN, GLOBAL_SALES_SUPPORT (school picker / console)
-  // GLOBAL_SALES_SUPPORT is included here — this page (SuperAdminSchools.jsx)
-  // is their landing page after login and their only route to Demo Leads.
-  SCHOOL_PICKER_ROLES: [ROLES.SUPER_ADMIN, ROLES.GLOBAL_ADMIN, ROLES.GLOBAL_SALES_SUPPORT],
+  // SUPER_ADMIN, GLOBAL_ADMIN, GLOBAL_READ_ONLY (school picker / console)
+  // GLOBAL_READ_ONLY logs in with requiresSchoolSelection: true, exactly
+  // like GLOBAL_ADMIN — it must reach /superAdmin to pick a school before
+  // entering a dashboard. Missing this entry is what causes the school
+  // picker to be skipped/blocked for this role.
+  SCHOOL_PICKER_ROLES: [ROLES.SUPER_ADMIN, ROLES.GLOBAL_ADMIN, ROLES.GLOBAL_READ_ONLY],
 
   // ADMIN, SUPER_ADMIN, GLOBAL_ADMIN, PRINCIPAL (manage users)
   MANAGE_USERS_ROLES: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.GLOBAL_ADMIN, ROLES.PRINCIPAL],
 
-  // GLOBAL_ADMIN, GLOBAL_SALES_SUPPORT (demo leads / lead management)
-  LEAD_MANAGEMENT_ROLES: [ROLES.GLOBAL_ADMIN, ROLES.GLOBAL_SALES_SUPPORT],
+  // GLOBAL_ADMIN, GLOBAL_READ_ONLY (demo leads / lead management)
+  // Note: backend also issues VIEW_DEMO_REQUESTS / MANAGE_DEMO_REQUESTS as
+  // discrete permissions for GLOBAL_READ_ONLY — if lead management should
+  // eventually be gated by permission rather than role, switch the route
+  // guard to hasPermission('VIEW_DEMO_REQUESTS') instead of this array.
+  LEAD_MANAGEMENT_ROLES: [ROLES.GLOBAL_ADMIN, ROLES.GLOBAL_READ_ONLY],
 
   // Dashboard — broadest role list across the app.
-  // GLOBAL_SALES_SUPPORT deliberately excluded: that role has no dashboard,
-  // no sidebar, and no school-scoped access of any kind. Its only two
-  // reachable pages are the Select School console and /leadManagement.
+  // GLOBAL_READ_ONLY gets full dashboard/sidebar access here, same as
+  // GLOBAL_ADMIN — it's a permission-driven read-only role, not a
+  // route-restricted one. Missing this entry is what causes the dashboard
+  // (and every module route protected by DASHBOARD_ROLES) to reject this
+  // role after school selection.
   DASHBOARD_ROLES: [
     ROLES.ADMIN, ROLES.TEACHER, ROLES.SUPER_ADMIN, ROLES.GLOBAL_ADMIN,
     ROLES.PRINCIPAL, ROLES.ACCOUNTANT, ROLES.RECEPTIONIST, ROLES.PARENT,
-    ROLES.STORE_ACCOUNTANT,
+    ROLES.STORE_ACCOUNTANT, ROLES.GLOBAL_READ_ONLY,
   ],
 };
 
@@ -201,7 +217,7 @@ export const ROUTE_PATHS = {
   TRANSPORT_FEE_PLANS: '/route/feePlans',
   TRANSPORT_REPORTS: '/route/reports',
 
-  // Lead Management (internal CRM — GLOBAL_ADMIN & GLOBAL_SALES_SUPPORT)
+  // Lead Management (internal CRM — GLOBAL_ADMIN & GLOBAL_READ_ONLY)
   LEAD_MANAGEMENT: '/leadManagement',
 
   // Fallback redirect targets

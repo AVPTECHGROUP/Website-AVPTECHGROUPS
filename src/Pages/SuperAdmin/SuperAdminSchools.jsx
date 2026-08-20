@@ -4,7 +4,7 @@ import {
   Search, Users, MapPin, ChevronLeft, ChevronRight,
   CheckCircle, LogOut, ArrowRight, GraduationCap,
   School, TrendingUp, AlertTriangle, ServerCrash,
-  Sun, Moon, Settings2, Phone, Lock,
+  Sun, Moon, Settings2, Phone,
 } from "lucide-react";
 import SchoolSelectedCard from "../../Components/SuperAdmin/SchoolSelectedCard";
 import { getMySchools, getMySchoolStats } from "../../Api/SchoolConfiguration/Schools";
@@ -60,8 +60,8 @@ const buildStats = (stats) => {
 const getRoleMeta = (role) => {
   if (role === "GLOBAL_ADMIN")
     return { label: "Global Admin Console", badge: "bg-indigo-500/15 text-indigo-400 border-indigo-500/25", roleTag: "GLOBAL ADMIN" };
-  if (role === "GLOBAL_SALES_SUPPORT")
-    return { label: "Global Sales & Support Console", badge: "bg-rose-500/15 text-rose-400 border-rose-500/25", roleTag: "GLOBAL SALES & SUPPORT" };
+  if (role === "GLOBAL_READ_ONLY")
+    return { label: "Global Read Only Console", badge: "bg-rose-500/15 text-rose-400 border-rose-500/25", roleTag: "GLOBAL READ ONLY" };
   return { label: "Super Admin Console", badge: "bg-blue-500/15 text-blue-400 border-blue-500/25", roleTag: "SUPER ADMIN" };
 };
 
@@ -207,10 +207,11 @@ export default function SuperAdminSchools() {
 
   const roleMeta = getRoleMeta(userRole);
 
-  // GLOBAL_SALES_SUPPORT sees this exact same console — same stats, same
-  // school grid, same layout — but cannot enter any school's dashboard.
-  // Their only functional action here is the Demo Leads button below.
-  const canEnterSchools = userRole !== "GLOBAL_SALES_SUPPORT";
+  // GLOBAL_READ_ONLY sees this exact same console and enters schools exactly
+  // like GLOBAL_ADMIN does. It's a permission-driven read-only role (backend
+  // issues only *_VIEW / VIEW_DEMO_REQUESTS / MANAGE_DEMO_REQUESTS
+  // permissions in the JWT for this role) — not a route-restricted one, so
+  // there is no special-casing here for entering a school's dashboard.
 
   const displayName =
       storedUser?.fullName ||
@@ -373,18 +374,12 @@ export default function SuperAdminSchools() {
                   Welcome, {storedUser?.firstName || displayName}
                 </h1>
                 <p className="text-xs sm:text-sm text-theme-subtext mt-1">
-                  {canEnterSchools ? (
-                      <>Select a school to operate. Logged in as{" "}
-                        <span className="text-teal font-semibold">{roleMeta.roleTag}</span>.</>
-                  ) : (
-                      <>Logged in as{" "}
-                        <span className="text-teal font-semibold">{roleMeta.roleTag}</span>
-                        {" "}— your access is limited to Demo Leads.</>
-                  )}
+                  Select a school to operate. Logged in as{" "}
+                  <span className="text-teal font-semibold">{roleMeta.roleTag}</span>.
                 </p>
               </div>
 
-              {/* Manage Schools + Demo Leads — GLOBAL_ADMIN & GLOBAL_SALES_SUPPORT */}
+              {/* Manage Schools + Demo Leads — GLOBAL_ADMIN & GLOBAL_READ_ONLY */}
               <div className="flex items-center gap-2 shrink-0">
                 {userRole === "GLOBAL_ADMIN" && (
                     <button
@@ -396,7 +391,7 @@ export default function SuperAdminSchools() {
                     </button>
                 )}
 
-                {(userRole === "GLOBAL_ADMIN" || userRole === "GLOBAL_SALES_SUPPORT") && (
+                {(userRole === "GLOBAL_ADMIN" || userRole === "GLOBAL_READ_ONLY") && (
                     <button
                         onClick={() => navigate("/leadManagement")}
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-theme-card border border-theme-border text-theme-text hover:border-[#00C9B1]/40 hover:text-[#00C9B1] font-bold text-xs sm:text-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer transition-all duration-200 shadow-sm"
@@ -407,17 +402,6 @@ export default function SuperAdminSchools() {
                 )}
               </div>
             </div>
-
-            {/* ── Restricted-access banner for GLOBAL_SALES_SUPPORT ── */}
-            {!canEnterSchools && (
-                <div className="flex items-center gap-3 bg-rose-950/20 border border-rose-900/30 text-rose-300 rounded-2xl px-4 sm:px-5 py-3 text-sm">
-                  <Lock size={16} className="shrink-0" />
-                  <p>
-                    You can view school data below, but entering a school's dashboard isn't part of your role.
-                    Use the <span className="font-semibold">Demo Leads</span> button above for your work.
-                  </p>
-                </div>
-            )}
 
             {/* ── Stat Cards ── */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
@@ -497,9 +481,8 @@ export default function SuperAdminSchools() {
                         return (
                             <div
                                 key={school.id}
-                                onClick={() => canEnterSchools && setSelectedId(school.id)}
-                                className={`relative rounded-2xl transition-all duration-300 overflow-hidden
-                        ${canEnterSchools ? "cursor-pointer group" : "cursor-default"}
+                                onClick={() => setSelectedId(school.id)}
+                                className={`relative rounded-2xl transition-all duration-300 overflow-hidden cursor-pointer group
                         ${isSelected
                                     ? "shadow-2xl shadow-cyan-950/40 scale-[1.02]"
                                     : "shadow-md hover:shadow-2xl hover:shadow-cyan-950/30"
@@ -511,13 +494,13 @@ export default function SuperAdminSchools() {
                                       : 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, var(--theme-card-border-light), var(--theme-card-border-light)) border-box',
                                 }}
                                 onMouseEnter={e => {
-                                  if (canEnterSchools && !isSelected) {
+                                  if (!isSelected) {
                                     e.currentTarget.style.transform = 'translateY(-4px)';
                                     e.currentTarget.style.background = 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, #00C9B1, rgba(245, 166, 35, 0.4)) border-box';
                                   }
                                 }}
                                 onMouseLeave={e => {
-                                  if (canEnterSchools && !isSelected) {
+                                  if (!isSelected) {
                                     e.currentTarget.style.transform = 'translateY(0)';
                                     e.currentTarget.style.background = 'linear-gradient(var(--theme-card-grad-start), var(--theme-card-grad-end)) padding-box, linear-gradient(135deg, var(--theme-card-border-light), var(--theme-card-border-light)) border-box';
                                   }
@@ -534,7 +517,7 @@ export default function SuperAdminSchools() {
                                 </div>
 
                                 {/* School logo */}
-                                <div className={`w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3.5 sm:mb-4 transition-transform duration-350 drop-shadow-md ${canEnterSchools ? "group-hover:scale-108" : ""}`}>
+                                <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3.5 sm:mb-4 transition-transform duration-350 drop-shadow-md group-hover:scale-108">
                                   <img
                                       src={school.logoUrl || dpis}
                                       alt={school.name}
@@ -584,23 +567,13 @@ export default function SuperAdminSchools() {
                                   )}
                                 </div>
 
-                                {/* CTA — opens school selection modal, or shows a locked state */}
-                                {canEnterSchools ? (
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); setModalSchool(school); }}
-                                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-[#00C9B1] to-[#F5A623] hover:from-[#00E5D4] hover:to-[#FFD166] text-[#05111D] font-bold text-xs hover:scale-[1.01] active:scale-[0.98] cursor-pointer transition-all duration-200 touch-manipulation shadow-md shadow-cyan-900/35"
-                                    >
-                                      Enter School <ArrowRight size={13} />
-                                    </button>
-                                ) : (
-                                    <button
-                                        disabled
-                                        title="Not available for Global Sales & Support — use Demo Leads instead"
-                                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-theme-bg border border-theme-border text-theme-subtext font-bold text-xs cursor-not-allowed opacity-70"
-                                    >
-                                      <Lock size={12} /> Restricted
-                                    </button>
-                                )}
+                                {/* CTA — opens school selection modal */}
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setModalSchool(school); }}
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-[#00C9B1] to-[#F5A623] hover:from-[#00E5D4] hover:to-[#FFD166] text-[#05111D] font-bold text-xs hover:scale-[1.01] active:scale-[0.98] cursor-pointer transition-all duration-200 touch-manipulation shadow-md shadow-cyan-900/35"
+                                >
+                                  Enter School <ArrowRight size={13} />
+                                </button>
 
                               </div>
                             </div>
@@ -617,7 +590,7 @@ export default function SuperAdminSchools() {
         </div>
 
         {/* Modal — SchoolSelectedCard handles new-tab opening internally */}
-        {canEnterSchools && modalSchool && (
+        {modalSchool && (
             <SchoolSelectedCard
                 school={modalSchool}
                 onClose={() => setModalSchool(null)}

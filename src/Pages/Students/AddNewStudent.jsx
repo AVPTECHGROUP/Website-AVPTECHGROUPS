@@ -14,6 +14,18 @@ const AS = STUDENT_MODULE_STRINGS.ADD_STUDENT;
 const C = STUDENT_MODULE_STRINGS.COMMON;
 const TAB_ORDER = ['personal', 'identity', 'family', 'other'];
 
+// FIX (requested): human-readable names used by the sequential tab-jump
+// toast below ("Please complete X first"). Kept separate from the tab
+// button's `short`/`label` strings in TABS (defined further down) since
+// those are already localized/AS-driven and this only needs plain text for
+// the toast message.
+const TAB_LABELS = {
+    personal: 'Personal Details',
+    identity: 'Identity & Documents',
+    family: 'Family Details',
+    other: 'Other Details',
+};
+
 function AddNewStudent() {
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -197,58 +209,76 @@ function AddNewStudent() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const aadhaarRegex = /^\d{12}$/;
 
-    const validatePersonalDetails = () => {
-        if (!profileImage) { toast.error(AS.ERRORS.PHOTO_REQUIRED); return false; }
-        if (!formData.firstName.trim() || !formData.gender || !formData.mobile || !formData.dob || !formData.admissionDate || !formData.address?.trim()) {
-            toast.error(AS.ERRORS.REQUIRED_FIELDS || "Please fill all mandatory fields including Address"); return false;
-        }
-        if (!formData.rollNumber.trim()) { toast.error(AS.ERRORS.ROLL_REQUIRED); return false; }
-        if (!formData.sectionId) { toast.error(AS.ERRORS.SECTION_REQUIRED); return false; }
-        if (!phoneRegex.test(formData.mobile)) { toast.error("Mobile number must be a valid 10-digit number starting with 6, 7, 8, or 9"); return false; }
-        if (formData.whatsappNumber && !phoneRegex.test(formData.whatsappNumber)) { toast.error("WhatsApp number must be a valid 10-digit number starting with 6, 7, 8, or 9"); return false; }
-        if (formData.email && !emailRegex.test(formData.email)) { toast.error(AS.ERRORS.EMAIL_INVALID); return false; }
+    // Every validate*Details function takes a `silent` flag. When
+    // silent=false (default — used by "Next"/"Save" and by handleTabClick
+    // when validating the tab the person is actually leaving), the FIRST
+    // missing/invalid mandatory field toasts its own specific message
+    // ("Profile photo is required.", "Full name is required.", etc.).
+    // When silent=true it's used only for read-only completeness checks
+    // where a toast would be redundant.
+    const validatePersonalDetails = (silent = false) => {
+        const fail = (msg) => { if (!silent) toast.error(msg); return false; };
+        if (!profileImage) return fail(AS.ERRORS?.PHOTO_REQUIRED || "Profile photo is required.");
+        if (!formData.firstName.trim()) return fail("Full name is required.");
+        if (!formData.gender) return fail("Gender is required.");
+        if (!formData.mobile) return fail("Mobile number is required.");
+        if (!phoneRegex.test(formData.mobile)) return fail("Mobile number must be a valid 10-digit number starting with 6, 7, 8, or 9.");
+        if (!formData.dob) return fail("Date of birth is required.");
+        if (!formData.admissionDate) return fail("Admission date is required.");
+        if (!formData.address?.trim()) return fail("Address is required.");
+        if (!formData.rollNumber.trim()) return fail(AS.ERRORS?.ROLL_REQUIRED || "Roll number is required.");
+        if (!formData.sectionId) return fail(AS.ERRORS?.SECTION_REQUIRED || "Section is required.");
+        if (formData.whatsappNumber && !phoneRegex.test(formData.whatsappNumber)) return fail("WhatsApp number must be a valid 10-digit number starting with 6, 7, 8, or 9.");
+        if (formData.email && !emailRegex.test(formData.email)) return fail(AS.ERRORS?.EMAIL_INVALID || "Please enter a valid email address.");
         return true;
     };
 
-    const validateIdentityDetails = () => {
-        if (formData.studentAadhaar && !aadhaarRegex.test(formData.studentAadhaar)) { toast.error("Student Aadhaar Number must be exactly 12 numeric digits"); return false; }
+    const validateIdentityDetails = (silent = false) => {
+        const fail = (msg) => { if (!silent) toast.error(msg); return false; };
+        if (formData.studentAadhaar && !aadhaarRegex.test(formData.studentAadhaar)) return fail("Student Aadhaar Number must be exactly 12 numeric digits.");
         return true;
     };
 
-    const validateFamilyDetails = () => {
-        if (!formData.fatherName?.trim()) { toast.error("Father's Name is required"); return false; }
-        if (!formData.fatherOccupation?.trim()) { toast.error("Father's Occupation is required"); return false; }
-        if (!formData.fatherPhone) { toast.error("Father's Phone number is required"); return false; }
-        if (!phoneRegex.test(formData.fatherPhone)) { toast.error("Father's Phone must be valid"); return false; }
-        if (formData.fatherEmail && !emailRegex.test(formData.fatherEmail)) { toast.error("Father's Email is invalid"); return false; }
-        if (formData.fatherAadhaar && !aadhaarRegex.test(formData.fatherAadhaar)) { toast.error("Father's Aadhaar must be 12 digits"); return false; }
-        if (!formData.motherName?.trim()) { toast.error("Mother's Name is required"); return false; }
-        if (formData.motherPhone && !phoneRegex.test(formData.motherPhone)) { toast.error("Mother's Phone must be valid"); return false; }
-        if (formData.motherEmail && !emailRegex.test(formData.motherEmail)) { toast.error("Mother's Email is invalid"); return false; }
-        if (formData.motherAadhaar && !aadhaarRegex.test(formData.motherAadhaar)) { toast.error("Mother's Aadhaar must be 12 digits"); return false; }
-        if (formData.guardianPhone && !phoneRegex.test(formData.guardianPhone)) { toast.error("Guardian's Phone must be valid"); return false; }
-        if (formData.guardianEmail && !emailRegex.test(formData.guardianEmail)) { toast.error("Guardian's Email is invalid"); return false; }
-        if (formData.emergencyContact && !phoneRegex.test(formData.emergencyContact)) { toast.error("Emergency Contact must be valid"); return false; }
+    const validateFamilyDetails = (silent = false) => {
+        const fail = (msg) => { if (!silent) toast.error(msg); return false; };
+        if (!formData.fatherName?.trim()) return fail("Father's Name is required.");
+        if (!formData.fatherOccupation?.trim()) return fail("Father's Occupation is required.");
+        if (!formData.fatherPhone) return fail("Father's Phone number is required.");
+        if (!phoneRegex.test(formData.fatherPhone)) return fail("Father's Phone must be a valid 10-digit number.");
+        if (formData.fatherEmail && !emailRegex.test(formData.fatherEmail)) return fail("Father's Email is invalid.");
+        if (formData.fatherAadhaar && !aadhaarRegex.test(formData.fatherAadhaar)) return fail("Father's Aadhaar must be 12 digits.");
+        if (!formData.motherName?.trim()) return fail("Mother's Name is required.");
+        if (formData.motherPhone && !phoneRegex.test(formData.motherPhone)) return fail("Mother's Phone must be valid.");
+        if (formData.motherEmail && !emailRegex.test(formData.motherEmail)) return fail("Mother's Email is invalid.");
+        if (formData.motherAadhaar && !aadhaarRegex.test(formData.motherAadhaar)) return fail("Mother's Aadhaar must be 12 digits.");
+        if (formData.guardianPhone && !phoneRegex.test(formData.guardianPhone)) return fail("Guardian's Phone must be valid.");
+        if (formData.guardianEmail && !emailRegex.test(formData.guardianEmail)) return fail("Guardian's Email is invalid.");
+        if (formData.emergencyContact && !phoneRegex.test(formData.emergencyContact)) return fail("Emergency Contact must be valid.");
         return true;
     };
 
-    const validateOtherDetails = () => {
-        if (formData.hostelRequired && !formData.hostelRoomNumber?.trim()) { toast.error("Hostel Room Number is required"); return false; }
+    const validateOtherDetails = (silent = false) => {
+        const fail = (msg) => { if (!silent) toast.error(msg); return false; };
+        if (formData.hostelRequired && !formData.hostelRoomNumber?.trim()) return fail("Hostel Room Number is required.");
         if (formData.bankAccountNumber) {
-            if (formData.bankAccountNumber.length < 9 || formData.bankAccountNumber.length > 18) { toast.error("Bank Account Number must be between 9 and 18 digits"); return false; }
+            if (formData.bankAccountNumber.length < 9 || formData.bankAccountNumber.length > 18) return fail("Bank Account Number must be between 9 and 18 digits.");
         }
         return true;
     };
 
-    const validateTab = (tab) => {
-        if (tab === 'personal') return validatePersonalDetails();
-        if (tab === 'identity') return validateIdentityDetails();
-        if (tab === 'family') return validateFamilyDetails();
-        if (tab === 'other') return validateOtherDetails();
+    const validateTab = (tab, silent = false) => {
+        if (tab === 'personal') return validatePersonalDetails(silent);
+        if (tab === 'identity') return validateIdentityDetails(silent);
+        if (tab === 'family') return validateFamilyDetails(silent);
+        if (tab === 'other') return validateOtherDetails(silent);
         return true;
     };
 
     const scrollToTop = () => formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // "Next" always operates on the CURRENT tab only, so the specific
+    // field-level toast from validateTab (silent=false, the default) is
+    // exactly right here — the person is actively working on this tab.
     const handleNextTab = () => {
         if (!validateTab(activeTab)) return;
         const idx = TAB_ORDER.indexOf(activeTab);
@@ -258,15 +288,50 @@ function AddNewStudent() {
         const idx = TAB_ORDER.indexOf(activeTab);
         if (idx > 0) { setActiveTab(TAB_ORDER[idx - 1]); scrollToTop(); }
     };
+
+    // FIX (bug reported): clicking a stepper tab directly used to allow
+    // jumping ahead multiple steps at once (e.g. Personal -> Family),
+    // silently skipping the Identity & Documents tab. That tab has no
+    // mandatory fields, so the old "validate every tab strictly before the
+    // target" check passed vacuously and let the jump through — Personal
+    // only *looked* like it was enforced because it happens to have
+    // required fields.
+    //
+    // Fixed behaviour:
+    //  - Clicking backward (an earlier tab, or the current one) is always
+    //    free — no validation needed to go back and review.
+    //  - Clicking forward validates the tab the person is currently on
+    //    (same specific field-level toast as "Next"), and if that passes,
+    //    forward movement is only ever ONE step at a time — identical to
+    //    what "Next" would do. Trying to jump further ahead drops the
+    //    person on the very next tab in the sequence with a
+    //    "Please complete X first" toast, instead of silently skipping it.
     const handleTabClick = (tab) => {
         const targetIdx = TAB_ORDER.indexOf(tab);
         const currentIdx = TAB_ORDER.indexOf(activeTab);
-        if (targetIdx > currentIdx) {
-            for (let i = currentIdx; i < targetIdx; i++) {
-                if (!validateTab(TAB_ORDER[i])) return;
-            }
+
+        // Backward (or clicking the already-active tab): always allowed.
+        if (targetIdx <= currentIdx) {
+            setActiveTab(tab);
+            scrollToTop();
+            return;
         }
-        setActiveTab(tab); scrollToTop();
+
+        // Forward: the tab being left must be valid first.
+        if (!validateTab(activeTab)) return; // validateTab toasts the specific field message
+
+        // Forward movement via the stepper is capped at one tab at a time,
+        // same as "Next" — this is what stops skipping past an unvisited tab.
+        if (targetIdx > currentIdx + 1) {
+            const nextTabKey = TAB_ORDER[currentIdx + 1];
+            toast.error(`Please complete "${TAB_LABELS[nextTabKey]}" first.`);
+            setActiveTab(nextTabKey);
+            scrollToTop();
+            return;
+        }
+
+        setActiveTab(tab);
+        scrollToTop();
     };
 
     const handleSubmit = (e) => e.preventDefault();
@@ -363,7 +428,7 @@ function AddNewStudent() {
                             <nav className="flex flex-wrap -mb-px">
                                 {TABS.map(({ key, label, short, Icon }) => (
                                     <button key={key} type="button" onClick={() => handleTabClick(key)}
-                                        className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                            className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                                         <Icon size={20} />
                                         <span className="hidden sm:inline">{label}</span>
                                         <span className="sm:hidden">{short}</span>
@@ -388,7 +453,7 @@ function AddNewStudent() {
                                                     )}
                                                 </div>
                                                 <button type="button" onClick={() => setShowPhotoMenu(true)}
-                                                    className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors">
+                                                        className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors">
                                                     <Camera className="w-3.5 h-3.5 text-white" />
                                                 </button>
                                             </div>
@@ -396,7 +461,7 @@ function AddNewStudent() {
                                             <div className="flex-1">
                                                 {!imagePreview ? (
                                                     <button type="button" onClick={() => setShowPhotoMenu(true)}
-                                                        className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer">
+                                                            className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer">
                                                         <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
                                                         <p className="text-sm font-medium text-blue-600">{AS.PROFILE_PHOTO.CTA}</p>
                                                         <p className="text-xs text-gray-400 mt-0.5">{AS.PROFILE_PHOTO.FORMAT_HELP}</p>
@@ -409,11 +474,11 @@ function AddNewStudent() {
                                                         </div>
                                                         <div className="flex gap-2 shrink-0">
                                                             <button type="button" onClick={() => setShowPhotoMenu(true)}
-                                                                className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors">
+                                                                    className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors">
                                                                 {AS.PROFILE_PHOTO.CHANGE}
                                                             </button>
                                                             <button type="button" onClick={handleRemoveImage}
-                                                                className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors">
+                                                                    className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors">
                                                                 <X className="w-3.5 h-3.5" />
                                                             </button>
                                                         </div>
@@ -431,7 +496,7 @@ function AddNewStudent() {
                                                 {AS.ROLL_LABEL}<span className="text-red-600 ml-1">*</span>
                                             </label>
                                             <input type="text" id="rollNumber" name="rollNumber" value={formData.rollNumber} onChange={handleInputChange} placeholder={AS.ROLL_PLACEHOLDER}
-                                                className="bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                                   className="bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                         </div>
                                     </div>
                                 </>
