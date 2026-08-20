@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { CreditCard, Bike, Users, AlertCircle, X, Printer } from 'lucide-react';
 
 import { useClasses } from '../../ContextAPI/ClassContext';
@@ -23,10 +23,13 @@ import CyclePassTab from './CyclePassTab';
 import VisitorPassTab from './VisitorPassTab';
 
 export default function PassManagement() {
-    const { classes } = useClasses();
-    const { schoolInfo } = useDecodedUser();
+    const classContext = useClasses() || {};
+    const classes = Array.isArray(classContext.classes) ? classContext.classes : [];
 
-    // Active Tab State ('tab1' = ID/Gate Pass, 'tab2' = Cycle Pass, 'tab3' = Visitor Pass)
+    const userContext = useDecodedUser() || {};
+    const schoolInfo = userContext.schoolInfo || {};
+
+    // Active Tab State
     const [activeTab, setActiveTab] = useState('tab1');
 
     // Filter States
@@ -38,7 +41,7 @@ export default function PassManagement() {
     const [students, setStudents] = useState([]);
     const [loadingStudents, setLoadingStudents] = useState(false);
 
-    // Default Template HTML States for all 4 Types
+    // Default Template HTML States
     const [visitorDefaultTemplateHtml, setVisitorDefaultTemplateHtml] = useState(null);
     const [cycleDefaultTemplateHtml, setCycleDefaultTemplateHtml] = useState(null);
     const [gateDefaultTemplateHtml, setGateDefaultTemplateHtml] = useState(null);
@@ -65,26 +68,27 @@ export default function PassManagement() {
 
     const [previewModal, setPreviewModal] = useState({ open: false, data: null, type: null });
     const [toast, setToast] = useState(null);
+    const isFetchingRef = useRef(false);
 
-    // Fetch All Default Print Templates On Mount
+    // Safe Template Preloader
     useEffect(() => {
+        let isMounted = true;
         const fetchDefaultTemplates = async () => {
-            // Helper function to load template from Cache -> API -> Fallback Stub
-            const loadTemplate = async (typeKey, setSetter) => {
-                const cached = getCachedDefaultTemplate(typeKey);
-                if (cached?.templateHtml) {
-                    setSetter(cached.templateHtml);
-                    return;
-                }
+            const loadTemplate = async (typeKey, setter) => {
                 try {
+                    const cached = getCachedDefaultTemplate(typeKey);
+                    if (cached?.templateHtml) {
+                        if (isMounted) setter(cached.templateHtml);
+                        return;
+                    }
                     const apiData = await getDefaultPrintTemplate(typeKey);
-                    setSetter(apiData?.templateHtml || TEMPLATE_TYPES[typeKey]?.stub);
+                    if (isMounted) setter(apiData?.templateHtml || TEMPLATE_TYPES[typeKey]?.stub || '');
                 } catch {
-                    setSetter(TEMPLATE_TYPES[typeKey]?.stub || '');
+                    if (isMounted) setter(TEMPLATE_TYPES[typeKey]?.stub || '');
                 }
             };
 
-            await Promise.all([
+            await Promise.allSettled([
                 loadTemplate('VISITOR_PASS', setVisitorDefaultTemplateHtml),
                 loadTemplate('CYCLE_STAND_PASS', setCycleDefaultTemplateHtml),
                 loadTemplate('GATE_PASS', setGateDefaultTemplateHtml),
@@ -93,23 +97,31 @@ export default function PassManagement() {
         };
 
         fetchDefaultTemplates();
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
-    const showToast = (message, isWarn = false) => {
+    const showToast = useCallback((message, isWarn = false) => {
         setToast({ message, isWarn });
         setTimeout(() => setToast(null), 3600);
-    };
+    }, []);
 
     const availableSections = useMemo(() => {
-        if (selectedClassId === 'all') return [];
+        if (selectedClassId === 'all' || !Array.isArray(classes)) return [];
         const targetClass = classes.find((c) => String(c.id) === String(selectedClassId));
-        return targetClass?.sections || [];
+        return Array.isArray(targetClass?.sections) ? targetClass.sections : [];
     }, [classes, selectedClassId]);
 
-    // Fetch Students
+    // Fetch Students Safely
     useEffect(() => {
+        let isMounted = true;
+
         const fetchStudentsData = async () => {
+            if (isFetchingRef.current) return;
+            isFetchingRef.current = true;
             setLoadingStudents(true);
+
             try {
                 let responseData = [];
                 if (selectedSectionId && selectedSectionId !== 'all') {
@@ -117,11 +129,14 @@ export default function PassManagement() {
                 } else if (selectedClassId && selectedClassId !== 'all') {
                     responseData = await getStudentByClass(selectedClassId);
                 } else {
-                    const res = await getStudents(0, 4000);
+                    const res = await getStudents(0, 500);
                     responseData = Array.isArray(res) ? res : (res?.content || res?.data || []);
                 }
 
+                if (!isMounted) return;
+
                 const rawList = Array.isArray(responseData) ? responseData : (responseData?.data || responseData?.content || []);
+
                 const formattedList = rawList.map((st, idx) => {
                     const sId = st.id || idx + 1;
                     const fName = st.firstName || st.first_name || '';
@@ -141,7 +156,7 @@ export default function PassManagement() {
                         sectionName: st.sectionName || currentSecObj?.name || '—',
                         father: st.fatherName || 'N/A',
                         contact: st.fatherPhone || st.motherPhone || 'N/A',
-                        cycleReg: st.cycleRegNo || st.cycleReg || `CYC-${1000 + sId}`,
+                        cycleReg: st.cycleRegNo || st.cycleReg || '',
                         profileImageUrl: st.profileImageUrl || null,
                     };
                 });
@@ -149,17 +164,22 @@ export default function PassManagement() {
                 setStudents(formattedList);
             } catch (err) {
                 console.error("Error fetching students:", err);
-                setStudents([]);
+                if (isMounted) setStudents([]);
             } finally {
-                setLoadingStudents(false);
+                if (isMounted) setLoadingStudents(false);
+                isFetchingRef.current = false;
             }
         };
 
         fetchStudentsData();
+
+        return () => {
+            isMounted = false;
+        };
     }, [selectedClassId, selectedSectionId, classes]);
 
-    // 🔥 STRICT SINGLE-PAGE PRINT ENGINE
-    const executePrint = (htmlContent) => {
+    // Single Card Direct Print Engine
+    const executePrint = useCallback((htmlContent) => {
         const iframe = document.createElement('iframe');
         iframe.style.position = 'fixed';
         iframe.style.right = '0';
@@ -177,42 +197,39 @@ export default function PassManagement() {
             <head>
                 <title>Print Pass</title>
                 <style>
-                    @page {
-                        size: A4 portrait;
-                        margin: 0;
+                    @page { 
+                        size: A4 portrait; 
+                        margin: 0; 
                     }
-                    *, *:before, *:after {
-                        box-sizing: border-box;
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
+                    *, *:before, *:after { 
+                        box-sizing: border-box !important; 
+                        -webkit-print-color-adjust: exact !important; 
+                        print-color-adjust: exact !important; 
                     }
-                    html, body {
-                        margin: 0;
-                        padding: 0;
-                        background: #ffffff !important;
-                        width: 100%;
-                        height: 100%;
+                    html, body { 
+                        margin: 0 !important; 
+                        padding: 0 !important; 
+                        background: #ffffff !important; 
+                        width: 100% !important; 
+                        height: 100% !important; 
                     }
-                    body {
-                        display: flex;
-                        justify-content: center;
-                        align-items: flex-start;
-                        padding: 8mm 0;
+                    body { 
+                        display: flex; 
+                        justify-content: center; 
+                        align-items: center; 
+                        padding: 6mm 0; 
                     }
                     .vp-premium, .gp-premium, .cs-premium, .cyc-card, .rc-premium, .fr2-wrap, .idc-wrap {
-                        page-break-inside: avoid !important;
-                        break-inside: avoid !important;
-                        margin: 0 auto !important;
-                        box-shadow: none !important;
-                        max-width: 100% !important;
-                        transform: scale(0.92);
-                        transform-origin: top center;
+                        page-break-inside: avoid !important; 
+                        break-inside: avoid !important; 
+                        margin: 0 auto !important; 
+                        box-shadow: none !important; 
+                        zoom: 0.95;
+                        transform-origin: center center; 
                     }
                 </style>
             </head>
-            <body>
-                ${htmlContent}
-            </body>
+            <body>${htmlContent}</body>
             </html>
         `);
         doc.close();
@@ -226,47 +243,328 @@ export default function PassManagement() {
                 }
             }, 1000);
         }, 300);
-    };
+    }, []);
 
-    // DYNAMIC TEMPLATE RENDERER FOR ALL 4 TYPES
-    const renderCardHTML = (s, type) => {
-        if (type === 'visitor') {
-            const activeTemplate = visitorDefaultTemplateHtml || TEMPLATE_TYPES.VISITOR_PASS?.stub;
-            const mergeData = buildVisitorPassMergeData(s, schoolInfo);
-            return renderTemplate(activeTemplate, mergeData);
+    // 🖨️ SEPARATED BULK PRINT ENGINE (ID: 2/PAGE | CYCLE: 3 LARGE/PAGE | GATE: 1/PAGE)
+    const executeBulkPrint = useCallback((htmlContents, title = 'passes_batch', passType = 'id') => {
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+
+        let combinedHtml = '';
+        let dynamicPrintStyles = '';
+
+        if (passType === 'id') {
+            // 🔹 ID CARDS: EXACT 2 PER A4 PAGE
+            const sheets = [];
+            for (let i = 0; i < htmlContents.length; i += 2) {
+                sheets.push(htmlContents.slice(i, i + 2));
+            }
+
+            combinedHtml = sheets
+                .map(
+                    (sheetItems, idx) => `
+                <div class="bulk-sheet ${idx === sheets.length - 1 ? 'last-sheet' : ''}">
+                    ${sheetItems
+                            .map(
+                                (cardHtml) => `
+                        <div class="bulk-card-container">
+                            ${cardHtml}
+                        </div>
+                    `
+                            )
+                            .join('')}
+                </div>
+            `
+                )
+                .join('');
+
+            dynamicPrintStyles = `
+                .bulk-sheet {
+                    width: 100%;
+                    height: 100vh;
+                    max-height: 100vh;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-evenly;
+                    align-items: center;
+                    padding: 4mm 0;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                    page-break-after: always !important;
+                    break-after: page !important;
+                    box-sizing: border-box;
+                    overflow: hidden !important;
+                }
+                .bulk-sheet.last-sheet {
+                    page-break-after: avoid !important;
+                    break-after: avoid !important;
+                }
+                .bulk-card-container {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    width: 100%;
+                    max-height: 48vh;
+                    margin: 0 auto;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                    box-sizing: border-box;
+                    overflow: hidden;
+                }
+                .bulk-card-container > * {
+                    margin: 0 auto !important;
+                    box-shadow: none !important;
+                    zoom: 0.72;
+                    transform-origin: center center;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                }
+            `;
+        } else if (passType === 'cycle') {
+            // 🔹 CYCLE PASSES: EXACT 3 FULL-SIZE CRISP PASSES PER A4 PAGE
+            const sheets = [];
+            for (let i = 0; i < htmlContents.length; i += 3) {
+                sheets.push(htmlContents.slice(i, i + 3));
+            }
+
+            combinedHtml = sheets
+                .map(
+                    (sheetItems, idx) => `
+                <div class="bulk-cycle-sheet ${idx === sheets.length - 1 ? 'last-sheet' : ''}">
+                    ${sheetItems
+                            .map(
+                                (cardHtml) => `
+                        <div class="bulk-cycle-card-container">
+                            ${cardHtml}
+                        </div>
+                    `
+                            )
+                            .join('')}
+                </div>
+            `
+                )
+                .join('');
+
+            dynamicPrintStyles = `
+                .bulk-cycle-sheet {
+                    width: 100%;
+                    height: 100vh;
+                    max-height: 100vh;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-around;
+                    align-items: center;
+                    padding: 5mm 0;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                    page-break-after: always !important;
+                    break-after: page !important;
+                    box-sizing: border-box;
+                    overflow: hidden !important;
+                }
+                .bulk-cycle-sheet.last-sheet {
+                    page-break-after: avoid !important;
+                    break-after: avoid !important;
+                }
+                .bulk-cycle-card-container {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    width: 100%;
+                    height: 31vh;
+                    max-height: 90mm;
+                    margin: 0 auto;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                    box-sizing: border-box;
+                    overflow: hidden;
+                }
+                /* Sized to comfortably fit 3 passes with full-sized fonts and images */
+                .bulk-cycle-card-container > * {
+                    margin: 0 auto !important;
+                    box-shadow: none !important;
+                    width: 180mm !important;
+                    max-width: 180mm !important;
+                    zoom: 0.92;
+                    transform-origin: center center;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                }
+            `;
+        } else {
+            // 🔹 GATE PASSES: 1 FULL PASS PER A4 PAGE
+            combinedHtml = htmlContents
+                .map(
+                    (html, idx) => `
+                <div class="bulk-gate-sheet ${idx === htmlContents.length - 1 ? 'last-sheet' : ''}">
+                    ${html}
+                </div>
+            `
+                )
+                .join('');
+
+            dynamicPrintStyles = `
+                .bulk-gate-sheet {
+                    width: 100%;
+                    height: 100vh;
+                    max-height: 100vh;
+                    display: flex;
+                    justify-content: center;
+                    align-items: flex-start;
+                    padding: 8mm 0;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                    page-break-after: always !important;
+                    break-after: page !important;
+                    box-sizing: border-box;
+                    overflow: hidden !important;
+                }
+                .bulk-gate-sheet.last-sheet {
+                    page-break-after: avoid !important;
+                    break-after: avoid !important;
+                }
+                .bulk-gate-sheet > * {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                    margin: 0 auto !important;
+                    box-shadow: none !important;
+                    max-width: 100% !important;
+                    zoom: 0.92;
+                    transform-origin: top center;
+                }
+            `;
         }
 
-        if (type === 'cycle') {
-            const activeTemplate = cycleDefaultTemplateHtml || TEMPLATE_TYPES.CYCLE_STAND_PASS?.stub;
-            const mergeData = buildCyclePassMergeData(s, schoolInfo);
-            return renderTemplate(activeTemplate, mergeData);
-        }
+        const doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>${title}</title>
+                <style>
+                    @page { 
+                        size: A4 portrait; 
+                        margin: 0; 
+                    }
+                    *, *:before, *:after { 
+                        box-sizing: border-box !important; 
+                        -webkit-print-color-adjust: exact !important; 
+                        print-color-adjust: exact !important; 
+                    }
+                    html, body { 
+                        margin: 0 !important; 
+                        padding: 0 !important; 
+                        background: #ffffff !important; 
+                        width: 100% !important; 
+                        height: 100% !important; 
+                    }
+                    body { 
+                        display: block; 
+                    }
+                    ${dynamicPrintStyles}
+                    .vp-premium, .gp-premium, .cs-premium, .cyc-card, .rc-premium, .fr2-wrap, .idc-wrap {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                        margin: 0 auto !important;
+                        box-shadow: none !important;
+                    }
+                </style>
+            </head>
+            <body>${combinedHtml}</body>
+            </html>
+        `);
+        doc.close();
 
-        if (type === 'gate') {
-            const activeTemplate = gateDefaultTemplateHtml || TEMPLATE_TYPES.GATE_PASS?.stub;
-            const mergeData = buildGatePassMergeData(s, schoolInfo);
-            return renderTemplate(activeTemplate, mergeData);
-        }
+        iframe.contentWindow.focus();
+        setTimeout(() => {
+            iframe.contentWindow.print();
+            setTimeout(() => {
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+            }, 1000);
+        }, 300);
+    }, []);
 
-        if (type === 'id') {
-            const activeTemplate = idCardDefaultTemplateHtml || TEMPLATE_TYPES.ID_CARD?.stub;
-            const mergeData = buildIdCardMergeData(s, schoolInfo);
-            return renderTemplate(activeTemplate, mergeData);
+    // Safe Template HTML Generator
+    const renderCardHTML = useCallback((s, type) => {
+        try {
+            if (!s) return '';
+            if (type === 'visitor') {
+                const activeTemplate = visitorDefaultTemplateHtml || TEMPLATE_TYPES.VISITOR_PASS?.stub;
+                return renderTemplate(activeTemplate, buildVisitorPassMergeData(s, schoolInfo));
+            }
+            if (type === 'cycle') {
+                const activeTemplate = cycleDefaultTemplateHtml || TEMPLATE_TYPES.CYCLE_STAND_PASS?.stub;
+                return renderTemplate(activeTemplate, buildCyclePassMergeData(s, schoolInfo));
+            }
+            if (type === 'gate') {
+                const activeTemplate = gateDefaultTemplateHtml || TEMPLATE_TYPES.GATE_PASS?.stub;
+                return renderTemplate(activeTemplate, buildGatePassMergeData(s, schoolInfo));
+            }
+            if (type === 'id') {
+                const activeTemplate = idCardDefaultTemplateHtml || TEMPLATE_TYPES.ID_CARD?.stub;
+                return renderTemplate(activeTemplate, buildIdCardMergeData(s, schoolInfo));
+            }
+        } catch (err) {
+            console.error('Template render error:', err);
+            return '<div style="padding:20px;color:red;font-size:12px;">Error generating preview template.</div>';
         }
-    };
+        return '';
+    }, [visitorDefaultTemplateHtml, cycleDefaultTemplateHtml, gateDefaultTemplateHtml, idCardDefaultTemplateHtml, schoolInfo]);
 
-    const handlePreview = (item, type) => {
+    const handlePreview = useCallback((item, type) => {
         setPreviewModal({ open: true, data: item, type });
-    };
+    }, []);
 
-    const handleDirectPrint = (item, type) => {
+    const handleDirectPrint = useCallback((item, type) => {
         const html = renderCardHTML(item, type);
         executePrint(html);
-    };
+    }, [renderCardHTML, executePrint]);
+
+    const handleBulkGenerate = useCallback((type, selectedIdsOrList) => {
+        if (!selectedIdsOrList || selectedIdsOrList.length === 0) {
+            showToast('Please select at least one student.', true);
+            return false;
+        }
+
+        try {
+            let selectedStudentsList = [];
+            if (typeof selectedIdsOrList[0] === 'object') {
+                selectedStudentsList = selectedIdsOrList;
+            } else {
+                selectedStudentsList = students.filter((st) => selectedIdsOrList.includes(st.id));
+            }
+
+            if (selectedStudentsList.length === 0) {
+                showToast('No matching student data found.', true);
+                return false;
+            }
+
+            const htmlPages = selectedStudentsList.map((st) => renderCardHTML(st, type));
+            const passTypeLabel = type === 'id' ? 'ID Card' : type === 'cycle' ? 'Cycle Pass' : 'Gate Pass';
+            const title = `student_${type}_passes_${Date.now()}`;
+
+            executeBulkPrint(htmlPages, title, type);
+            showToast(`${selectedStudentsList.length} ${passTypeLabel}${selectedStudentsList.length > 1 ? 'es' : ''} generated successfully.`);
+            return true;
+        } catch (err) {
+            console.error('Bulk generation error:', err);
+            showToast('Failed to generate PDF.', true);
+            return false;
+        }
+    }, [students, renderCardHTML, executeBulkPrint, showToast]);
 
     return (
-        <div className="flex flex-col min-h-screen lg:h-screen lg:overflow-hidden bg-gradient-to-b from-teal-50/40 to-slate-100/60 text-slate-900 font-sans">
-            <div className="flex flex-col flex-1 lg:overflow-hidden p-3 sm:p-4 gap-3 min-h-0 w-full max-w-[1600px] mx-auto">
+        <div className="w-full min-h-screen bg-gradient-to-b from-teal-50/40 to-slate-100/60 text-slate-900 font-sans p-3 sm:p-4 pb-12 flex flex-col gap-3">
+            <div className="flex flex-col flex-1 gap-3 w-full max-w-[1600px] mx-auto">
 
                 {/* Toast Notification */}
                 {toast && (
@@ -311,7 +609,7 @@ export default function PassManagement() {
                     </button>
                 </div>
 
-                {/* TAB 1: STUDENT ID & GATE PASS */}
+                {/* TAB 1 */}
                 {activeTab === 'tab1' && (
                     <StudentIdGatePassTab
                         classes={classes}
@@ -326,11 +624,12 @@ export default function PassManagement() {
                         loadingStudents={loadingStudents}
                         onPreview={handlePreview}
                         onPrint={handleDirectPrint}
+                        onBulkGenerate={handleBulkGenerate}
                         showToast={showToast}
                     />
                 )}
 
-                {/* TAB 2: CYCLE PASS */}
+                {/* TAB 2 */}
                 {activeTab === 'tab2' && (
                     <CyclePassTab
                         classes={classes}
@@ -342,13 +641,15 @@ export default function PassManagement() {
                         searchQuery={searchQuery}
                         setSearchQuery={setSearchQuery}
                         students={students}
+                        loadingStudents={loadingStudents}
                         onPreview={handlePreview}
                         onPrint={handleDirectPrint}
+                        onBulkGenerate={handleBulkGenerate}
                         showToast={showToast}
                     />
                 )}
 
-                {/* TAB 3: VISITOR'S PASS */}
+                {/* TAB 3 */}
                 {activeTab === 'tab3' && (
                     <VisitorPassTab
                         visitors={visitors}
@@ -360,7 +661,6 @@ export default function PassManagement() {
                         showToast={showToast}
                     />
                 )}
-
             </div>
 
             {/* SHARED PREVIEW MODAL */}
