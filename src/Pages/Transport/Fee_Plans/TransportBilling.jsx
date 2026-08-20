@@ -652,15 +652,13 @@ export default function TransportBilling() {
                           {months.map((m) => (
                             <button
                               key={m.idx}
-                              disabled={isFlat || paid || !config.allowMonthlyAdjustments}
+                              disabled={paid || !config.allowMonthlyAdjustments}
                               onClick={() => setMonthModal({ open: true, record: r, monthObj: m })}
                               title="Click to override month transport fee"
-                              className={`px-2 py-1 rounded-lg text-xs font-semibold border whitespace-nowrap transition-all ${isFlat
-                                ? "bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed"
-                                : m.amount === 0
-                                  ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                              className={`px-2 py-1 rounded-lg text-xs font-semibold border whitespace-nowrap transition-all ${m.amount === 0
+                                  ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100 cursor-pointer"
                                   : m.adjusted
-                                    ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                                    ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 cursor-pointer"
                                     : "bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer"
                                 }`}
                             >
@@ -699,7 +697,7 @@ export default function TransportBilling() {
                               <CreditCard className="w-3.5 h-3.5" /> Collect Fee
                             </button>
                           )}
-                          {!paid && !isFlat && config.allowMonthlyAdjustments && (
+                          {!paid && config.allowMonthlyAdjustments && (
                             <button
                               onClick={() => setMonthModal({ open: true, record: r, monthObj: months[0] || null })}
                               className="inline-flex items-center cursor-pointer gap-1 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-2.5 py-1.5 rounded-lg transition-colors"
@@ -757,7 +755,6 @@ export default function TransportBilling() {
           ) : (
             filtered.map((r) => {
               const months = getMonthCols(r);
-              const isFlat = r.calcMode === "FLAT";
               const concession = concessionAmount(r);
               const paid = isPaid(r);
               return (
@@ -792,14 +789,12 @@ export default function TransportBilling() {
                       {months.map((m) => (
                         <button
                           key={m.idx}
-                          disabled={isFlat || paid || !config.allowMonthlyAdjustments}
+                          disabled={paid || !config.allowMonthlyAdjustments}
                           onClick={() => setMonthModal({ open: true, record: r, monthObj: m })}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border whitespace-nowrap transition-colors ${isFlat
-                            ? "bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed"
-                            : m.amount === 0
-                              ? "bg-red-50 text-red-600 border-red-200"
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border whitespace-nowrap transition-colors ${m.amount === 0
+                              ? "bg-red-50 text-red-600 border-red-200 cursor-pointer"
                               : m.adjusted
-                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                ? "bg-amber-50 text-amber-700 border-amber-200 cursor-pointer"
                                 : "bg-gray-50 text-gray-700 border-gray-200 hover:border-blue-300 cursor-pointer"
                             }`}
                         >
@@ -842,7 +837,7 @@ export default function TransportBilling() {
                         <CreditCard className="w-3.5 h-3.5" /> Collect Fee
                       </button>
                     )}
-                    {!paid && !isFlat && config.allowMonthlyAdjustments && (
+                    {!paid && config.allowMonthlyAdjustments && (
                       <button
                         onClick={() => setMonthModal({ open: true, record: r, monthObj: months[0] || null })}
                         className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1.5 rounded-lg transition-all cursor-pointer"
@@ -984,7 +979,6 @@ function SingleMonthOverrideModal({
   const [customReason, setCustomReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Sync state when selected month changes via dropdown
   const handleMonthChange = (mVal) => {
     const found = months.find((m) => m.month === Number(mVal));
     setSelectedMonth(Number(mVal));
@@ -1005,9 +999,9 @@ function SingleMonthOverrideModal({
       }
       finalAmount = Number(amount);
     } else if (overrideMode === "WAIVE") {
-      finalAmount = 0; // Waive month
+      finalAmount = 0;
     } else if (overrideMode === "REVERT") {
-      finalAmount = null; // Revert to base rate
+      finalAmount = null;
     }
 
     const finalReason = reason === "Other" ? customReason.trim() : reason;
@@ -1052,7 +1046,6 @@ function SingleMonthOverrideModal({
         </div>
       </div>
 
-      {/* Override Action Mode Radio Selector */}
       <div className="mb-5">
         <label className="block text-sm font-semibold text-gray-800 mb-2">Override Type</label>
         <div className="grid grid-cols-3 gap-2">
@@ -1160,7 +1153,7 @@ function BulkMonthOverrideModal({
 }) {
   const [selectedMonth, setSelectedMonth] = useState(12);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [overrideMode, setOverrideMode] = useState("WAIVE"); // WAIVE, CUSTOM, REVERT
+  const [overrideMode, setOverrideMode] = useState("WAIVE");
   const [amount, setAmount] = useState(0);
 
   const availableReasons = useMemo(() => {
@@ -1868,7 +1861,7 @@ function BillingDetailModal({
               {m.adjusted ? (m.reason || "Adjusted") : "Standard Fee"}
             </span>
             <button
-              disabled={isFlat || paid || !allowMonthlyAdjustments}
+              disabled={paid || !allowMonthlyAdjustments}
               onClick={() => onOpenMonthOverride(record, m)}
               className="w-full inline-flex items-center justify-center gap-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 border border-blue-100 px-2.5 py-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >

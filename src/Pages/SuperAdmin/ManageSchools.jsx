@@ -4,6 +4,7 @@ import {
     Search, ArrowLeft, Plus, X, Eye, Pencil, Power, PowerOff,
     School, MapPin, Phone, Mail, Globe, Sun, Moon, ServerCrash,
     ChevronLeft, ChevronRight, Loader2, ShieldAlert, Building2,
+    CheckCircle2
 } from "lucide-react";
 import {
     getSchools, createSchool, updateSchool, getSchoolById,
@@ -13,7 +14,7 @@ import dpis from "../../assets/Images/SS_logo_3.png";
 import { UserContext } from "../../ContextAPI/UserContext";
 
 /* ════════════════════════════════════════════
-    Helpers
+    Helpers & Configuration
 ════════════════════════════════════════════ */
 const boardBadge = (board) => {
     const map = {
@@ -31,22 +32,45 @@ const EMPTY_FORM = {
 };
 
 const FORM_FIELDS = [
-    { key: "name", label: "School Name", required: true, span: 2 },
-    { key: "code", label: "School Code", required: true },
-    { key: "board", label: "Board", type: "select", options: ["CBSE", "ICSE", "STATE BOARD"] },
-    { key: "address", label: "Address", span: 2 },
-    { key: "city", label: "City" },
-    { key: "state", label: "State" },
-    { key: "pincode", label: "Pincode", type: "text", maxLength: 6 },
-    { key: "phone", label: "Phone Number", type: "tel", required: true, maxLength: 10, placeholder: "10-digit phone number" },
-    { key: "email", label: "Email", type: "email" },
-    { key: "website", label: "Website" },
-    { key: "principalName", label: "Principal Name" },
-    { key: "affiliationNumber", label: "Affiliation Number" },
-    { key: "establishedYear", label: "Established Year", type: "number" },
+    { key: "name", label: "School Name", required: true, placeholder: "e.g. St. Xavier's High School", span: 2 },
+    { key: "code", label: "School Code", required: true, placeholder: "e.g. SCH1024" },
+    { key: "board", label: "Board", type: "select", required: true, options: ["CBSE", "ICSE", "STATE BOARD"] },
+    { key: "affiliationNumber", label: "Affiliation Number", required: true, placeholder: "e.g. CBSE/AFF/2026/01" },
+    { key: "phone", label: "Phone Number", type: "tel", required: true, maxLength: 10, placeholder: "10-digit number (starts with 6-9)" },
+    { key: "email", label: "Email", type: "email", placeholder: "e.g. contact@school.edu" },
+    { key: "principalName", label: "Principal Name", placeholder: "e.g. Dr. Arthur Pendelton" },
+    { key: "establishedYear", label: "Established Year", type: "number", placeholder: "e.g. 1995" },
+    { key: "address", label: "Address", placeholder: "e.g. 123 Knowledge Park Avenue", span: 2 },
+    { key: "city", label: "City", placeholder: "e.g. Mumbai" },
+    { key: "state", label: "State", placeholder: "e.g. Maharashtra" },
+    { key: "pincode", label: "Pincode", type: "text", maxLength: 6, placeholder: "e.g. 400001" },
+    { key: "website", label: "Website", placeholder: "e.g. https://schoolspine.edu" },
     { key: "status", label: "Status", type: "select", options: ["ACTIVE", "INACTIVE"] },
-    { key: "logoUrl", label: "Logo URL", span: 2 },
+    { key: "logoUrl", label: "Logo URL", placeholder: "e.g. https://example.com/logo.png", span: 2 },
 ];
+
+/* ════════════════════════════════════════════
+    Toast Notification Component
+════════════════════════════════════════════ */
+const Toast = ({ message, onClose }) => {
+    useEffect(() => {
+        const timer = setTimeout(onClose, 3500);
+        return () => clearTimeout(timer);
+    }, [onClose]);
+
+    return (
+        <div className="fixed top-5 right-5 z-[150] flex items-center gap-3 bg-emerald-950/90 text-emerald-300 border border-emerald-500/30 px-4 py-3 rounded-xl shadow-2xl backdrop-blur-md animate-in slide-in-from-top-4 duration-200">
+            <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+            <span className="text-xs sm:text-sm font-semibold">{message}</span>
+            <button
+                onClick={onClose}
+                className="ml-2 text-emerald-400 hover:text-white transition-colors cursor-pointer"
+            >
+                <X size={14} />
+            </button>
+        </div>
+    );
+};
 
 /* ════════════════════════════════════════════
     Add / Edit School Modal
@@ -66,13 +90,11 @@ const SchoolFormModal = ({ editSchool, onClose, onSaved }) => {
     const [err, setErr] = useState(null);
 
     const handleChange = (key, value) => {
-        // Real-time numeric filtering for Phone (Max 10 digits)
         if (key === "phone") {
             const digits = value.replace(/\D/g, "").slice(0, 10);
             setForm((f) => ({ ...f, phone: digits }));
             return;
         }
-        // Real-time numeric filtering for Pincode (Max 6 digits)
         if (key === "pincode") {
             const digits = value.replace(/\D/g, "").slice(0, 6);
             setForm((f) => ({ ...f, pincode: digits }));
@@ -88,19 +110,25 @@ const SchoolFormModal = ({ editSchool, onClose, onSaved }) => {
         if (!form.code.trim()) {
             return "School Code is required.";
         }
-        // Phone number validation: Must be exactly 10 digits
-        if (!form.phone || form.phone.trim().length !== 10) {
-            return "Phone number must be exactly 10 digits.";
+        if (!form.board || !form.board.trim()) {
+            return "Board selection is required.";
         }
-        // Email validation if filled
+        if (!form.affiliationNumber || !form.affiliationNumber.trim()) {
+            return "Affiliation Number is required.";
+        }
+        // Phone number validation: Must start with 6, 7, 8, or 9 and be exactly 10 digits
+        if (!form.phone || !/^[6-9]\d{9}$/.test(form.phone.trim())) {
+            return "Phone number must be a 10-digit number starting with 6, 7, 8, or 9.";
+        }
+        // Email validation if provided
         if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
             return "Please enter a valid email address.";
         }
-        // Pincode validation if filled
+        // Pincode validation if provided
         if (form.pincode && form.pincode.trim().length !== 6) {
             return "Pincode must be a 6-digit number.";
         }
-        // Established Year validation if filled
+        // Established Year validation if provided
         if (form.establishedYear) {
             const year = Number(form.establishedYear);
             const currentYear = new Date().getFullYear();
@@ -113,7 +141,7 @@ const SchoolFormModal = ({ editSchool, onClose, onSaved }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         const validationError = validateForm();
         if (validationError) {
             setErr(validationError);
@@ -130,7 +158,7 @@ const SchoolFormModal = ({ editSchool, onClose, onSaved }) => {
             const res = isEdit
                 ? await updateSchool(editSchool.id, payload)
                 : await createSchool(payload);
-            onSaved(res?.data || res);
+            onSaved(isEdit ? "Changed successfully" : "Added successfully");
         } catch (e2) {
             setErr(e2.message || "Something went wrong while saving.");
         } finally {
@@ -187,9 +215,9 @@ const SchoolFormModal = ({ editSchool, onClose, onSaved }) => {
                                         type={f.type || "text"}
                                         value={form[f.key]}
                                         onChange={(e) => handleChange(f.key, e.target.value)}
-                                        placeholder={f.placeholder || ""}
+                                        placeholder={f.placeholder || `Enter ${f.label.toLowerCase()}`}
                                         maxLength={f.maxLength}
-                                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3.5 py-2.5 text-sm text-theme-text placeholder:text-theme-subtext/60 focus:outline-none focus:border-[#00C9B1]/60 focus:ring-2 focus:ring-[#00C9B1]/20 transition-all duration-200"
+                                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-3.5 py-2.5 text-sm text-theme-text placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#00C9B1]/60 focus:ring-2 focus:ring-[#00C9B1]/20 transition-all duration-200"
                                     />
                                 )}
                             </div>
@@ -246,16 +274,16 @@ const ViewSchoolModal = ({ schoolId, onClose }) => {
         ? [
             ["Code", school.code],
             ["Board", school.board],
+            ["Affiliation No.", school.affiliationNumber],
+            ["Phone", school.phone],
+            ["Email", school.email],
+            ["Principal", school.principalName],
+            ["Established", school.establishedYear],
             ["Address", school.address],
             ["City", school.city],
             ["State", school.state],
             ["Pincode", school.pincode],
-            ["Phone", school.phone],
-            ["Email", school.email],
             ["Website", school.website],
-            ["Principal", school.principalName],
-            ["Affiliation No.", school.affiliationNumber],
-            ["Established", school.establishedYear],
             ["Status", school.status],
         ].filter(([, v]) => v !== undefined && v !== null && v !== "")
         : [];
@@ -350,8 +378,8 @@ const PaginationButtons = ({ page, totalPages, setPage }) => {
                         <button
                             onClick={() => setPage(p)}
                             className={`w-8 h-8 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${p === page
-                                    ? "bg-[#00C9B1] text-[#05111D]"
-                                    : "bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:border-[#00C9B1]/30 hover:text-[#00C9B1] hover:bg-[#00C9B1]/10"
+                                ? "bg-[#00C9B1] text-[#05111D]"
+                                : "bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:border-[#00C9B1]/30 hover:text-[#00C9B1] hover:bg-[#00C9B1]/10"
                                 }`}
                         >
                             {p + 1}
@@ -392,6 +420,7 @@ export default function ManageSchools() {
     const [schools, setSchools] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [toastMessage, setToastMessage] = useState(null);
     const [togglingId, setTogglingId] = useState(null);
 
     const [searchInput, setSearchInput] = useState("");
@@ -467,6 +496,7 @@ export default function ManageSchools() {
             setSchools((prev) =>
                 prev.map((s) => (s.id === school.id ? { ...s, isActive: !s.isActive } : s))
             );
+            setToastMessage(`School ${school.isActive ? "deactivated" : "activated"} successfully`);
         } catch (e) {
             setError(e.message || "Failed to update school status");
         } finally {
@@ -474,14 +504,19 @@ export default function ManageSchools() {
         }
     };
 
-    const handleSaved = () => {
+    const handleSaved = (message) => {
         setShowForm(false);
         setEditSchool(null);
+        setToastMessage(message);
         fetchSchools();
     };
 
     return (
         <div className="min-h-screen bg-theme-bg text-theme-text font-sans relative overflow-hidden transition-colors duration-300">
+            {toastMessage && (
+                <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
+            )}
+
             {/* Grid overlay */}
             <div className="absolute inset-0 pointer-events-none opacity-[0.4]" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
             <div className="pointer-events-none absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full opacity-[0.22] blur-[120px]"
@@ -545,7 +580,7 @@ export default function ManageSchools() {
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
                             placeholder="Search by name, code or city..."
-                            className="w-full bg-theme-card border border-theme-border rounded-xl pl-9 pr-4 py-2.5 text-sm text-theme-text placeholder:text-theme-subtext focus:outline-none focus:border-[#00C9B1]/60 focus:bg-theme-bg focus:ring-2 focus:ring-[#00C9B1]/20 transition-all duration-200"
+                            className="w-full bg-theme-card border border-theme-border rounded-xl pl-9 pr-4 py-2.5 text-sm text-theme-text placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#00C9B1]/60 focus:bg-theme-bg focus:ring-2 focus:ring-[#00C9B1]/20 transition-all duration-200"
                         />
                     </div>
                     <select
@@ -690,8 +725,8 @@ export default function ManageSchools() {
                                                         disabled={togglingId === school.id}
                                                         title={school.isActive ? "Deactivate" : "Activate"}
                                                         className={`p-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${school.isActive
-                                                                ? "text-emerald-400 hover:text-red-400 hover:bg-red-500/10"
-                                                                : "text-red-400 hover:text-emerald-400 hover:bg-emerald-500/10"
+                                                            ? "text-emerald-400 hover:text-red-400 hover:bg-red-500/10"
+                                                            : "text-red-400 hover:text-emerald-400 hover:bg-emerald-500/10"
                                                             }`}
                                                     >
                                                         {togglingId === school.id
