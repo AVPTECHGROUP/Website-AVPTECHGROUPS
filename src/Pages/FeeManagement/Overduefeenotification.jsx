@@ -5,7 +5,7 @@ import {
     Clock, Bell, Users, Search, Send, Calendar, Phone, Hash,
     ChevronLeft, ChevronRight, Layers,
 } from 'lucide-react';
-import { getFeePeriods, getAcademicYears } from '../../Api/FeeManagement/FeePeriods';
+import { getFeePeriods } from '../../Api/FeeManagement/FeePeriods';
 import { getOutstandingFees } from '../../Api/FeeManagement/FeeCollection.js';
 import { getFeeStructures } from '../../Api/FeeManagement/FeeStructures';
 import { getActiveClasses } from '../../Api/Academics/ClassSectionAPI.js';
@@ -33,21 +33,25 @@ import { UserContext } from '../../ContextAPI/UserContext';
 //    dropped, structure-scoping and server-side search won't take effect
 //    until FeeCollection.js is updated to pass them through. Paste that
 //    file and I'll wire it up exactly.
-// 6. NEW: a fee period can have MULTIPLE fee structures (confirmed by your
+// 6. A fee period can have MULTIPLE fee structures (confirmed by your
 //    /v1/fee/structures?periodId=12 response — 6 structures, several of
 //    them scoped to the same class with different amounts/custom names).
 //    A Fee Structure dropdown now sits between Period and Class so the
 //    correct structure (and therefore correct amount) is unambiguous. The
 //    Class dropdown is now scoped ONLY to the selected structure's classes
 //    — not merged across every structure on the period like before.
-// 7. NEW: search is now debounced and sent to the backend as `search` on
-//    every page fetch (assumption #5 above) instead of being filtered only
-//    on the current page client-side — with ~1887 records and 10/page,
-//    client-only filtering was never going to find most of them.
+// 7. Search is debounced and sent to the backend as `search` on every page
+//    fetch (assumption #5 above) instead of being filtered only on the
+//    current page client-side.
 // 8. Backend needs to actually use `structureId` to scope the returned
 //    outstanding-fee amounts/rows to that specific structure — otherwise
 //    picking different structures for the same class+period will show the
 //    same (wrong) numbers.
+// 9. NEW: `currentAcademicYear` comes from UserContext (same field
+//    CollectionsHistory.jsx reads as `currentAcademicYear?.id` /
+//    `currentAcademicYear?.label`). If your UserContext names these fields
+//    differently, adjust the two lines right after `useContext(UserContext)`
+//    below.
 
 // ─── Toast (self-contained) ───────────────────────────────────────────────────
 let _dispatch = null;
@@ -170,11 +174,27 @@ const mergeStudentRecord = (outstandingRaw, profile) => {
     };
 };
 
+// FIX (requested — bug: "shows 1 selected but sends to all 19"): sums an
+// already-fetched list of raw outstanding-fee records' due amounts, using
+// the same field-fallback chain as mergeStudentRecord above so the "true
+// total due" figure (see fetchTrueOverdueTotal effect below) is computed
+// consistently with what's shown per-row in the table.
+const sumDueAmount = (records) =>
+    (records || []).reduce(
+        (sum, r) => sum + (r.balanceDue ?? r.dueAmount ?? r.outstandingAmount ?? r.balanceAmount ?? 0),
+        0
+    );
+
 // ─── Confirm Send Modal ────────────────────────────────────────────────────
 // No message field, no student picker: the backend notifies every parent
 // with an overdue balance for the chosen class + period (+ structure), so
 // this is a straight confirmation, not a compose step.
-const ConfirmSendModal = ({ open, onClose, onConfirm, loading, className, periodName, structureName, studentCount, totalDue }) => {
+//
+// FIX (requested): studentCount/totalDue passed in here must ALWAYS
+// reflect the true, unsearched, unpaginated scope of who will actually be
+// notified — never the current page's or the current search's numbers.
+// See the `trueOverdueTotal` state + its effect in the main component.
+const ConfirmSendModal = ({ open, onClose, onConfirm, loading, loadingTotals, className, periodName, structureName, studentCount, totalDue }) => {
     if (!open) return null;
 
     return (
@@ -195,18 +215,23 @@ const ConfirmSendModal = ({ open, onClose, onConfirm, loading, className, period
                         <AlertTriangle size={14} className="flex-shrink-0 mt-0.5 text-amber-500" />
                         <span>
                             This sends a push notification to <strong>every</strong> parent with an
-                            overdue balance in this class for this period. Individual targeting
+                            overdue balance in this class for this period — regardless of any search
+                            or page filter currently applied to the table below. Individual targeting
                             isn't supported by the notification service.
                         </span>
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                         <div className="bg-gray-50 rounded-lg px-3 py-2.5">
-                            <div className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide">Students</div>
-                            <div className="font-bold text-gray-800 mt-0.5">{studentCount}</div>
+                            <div className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide">Students (all overdue)</div>
+                            <div className="font-bold text-gray-800 mt-0.5">
+                                {loadingTotals ? <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin inline-block" /> : studentCount}
+                            </div>
                         </div>
                         <div className="bg-gray-50 rounded-lg px-3 py-2.5">
-                            <div className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide">Total Due</div>
-                            <div className="font-bold text-gray-800 mt-0.5">{formatCurrency(totalDue)}</div>
+                            <div className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide">Total Due (all overdue)</div>
+                            <div className="font-bold text-gray-800 mt-0.5">
+                                {loadingTotals ? <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin inline-block" /> : formatCurrency(totalDue)}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -218,7 +243,7 @@ const ConfirmSendModal = ({ open, onClose, onConfirm, loading, className, period
                     </button>
                     <button
                         onClick={onConfirm}
-                        disabled={loading}
+                        disabled={loading || loadingTotals}
                         className="px-4 py-2 text-sm font-semibold text-white bg-[#2563EB] rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-2">
                         {loading ? <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <Send size={13} />}
                         {loading ? 'Sending…' : 'Send to All Overdue'}
@@ -256,11 +281,8 @@ const OverduePeriodCard = ({ p, selected, onSelect }) => (
 );
 
 // ─── Pagination Bar ─────────────────────────────────────────────────────────
-// Rows-per-page selector + "Showing X to Y of Z" + page-number nav with
-// ellipsis — same visual pattern used elsewhere in the app (e.g. Print
-// Templates list).
 const getPageNumbers = (currentPageZeroIdx, totalPages) => {
-    const cur = currentPageZeroIdx + 1; // 1-indexed for display
+    const cur = currentPageZeroIdx + 1;
     if (totalPages <= 7) {
         return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
@@ -331,31 +353,29 @@ const PaginationBar = ({ currentPage, totalPages, totalElements, pageSize, pageS
 
 // ─── Component ─────────────────────────────────────────────────────────────
 const OverdueFeeNotifications = () => {
-    const { schoolId } = useContext(UserContext);
-
-    // Academic year filter
-    const [academicYears, setAcademicYears] = useState([]);
-    const [academicYearsLoading, setAcademicYearsLoading] = useState(false);
-    const [selectedAcademicYearId, setSelectedAcademicYearId] = useState('');
+    // FIX (requested): academic year is no longer a separate API call + a
+    // dropdown the admin picks from — it's read directly from UserContext's
+    // `currentAcademicYear`, the school's actual current academic year
+    // (same source CollectionsHistory.jsx already relies on). There is
+    // nothing to select anymore; the page is always scoped to whichever
+    // year is currently active for the school.
+    const { schoolId, currentAcademicYear } = useContext(UserContext);
+    const academicYearId = currentAcademicYear?.id || null;
+    const academicYearLabel = currentAcademicYear?.label || currentAcademicYear?.name || '';
 
     // Overdue periods (open only)
     const [periods, setPeriods] = useState([]);
     const [periodsLoading, setPeriodsLoading] = useState(false);
     const [selectedPeriodId, setSelectedPeriodId] = useState('');
 
-    // Fee structures for the selected period — a period can have MULTIPLE
-    // structures (see assumption #6), so the user must pick one explicitly
-    // before a class list (scoped to that structure) becomes available.
+    // Fee structures for the selected period
     const [allClasses, setAllClasses] = useState([]);
     const [structures, setStructures] = useState([]);
     const [structuresLoading, setStructuresLoading] = useState(false);
     const [selectedStructureId, setSelectedStructureId] = useState('');
     const [selectedClassId, setSelectedClassId] = useState('');
 
-    // Students — server-side paginated via getOutstandingFees. No
-    // selection state anymore: the backend only accepts classId + periodId
-    // (+ structureId), so every row returned for the current page/search is
-    // what gets notified — there's nothing per-row left to toggle.
+    // Students — server-side paginated via getOutstandingFees.
     const [students, setStudents] = useState([]);
     const [studentsLoading, setStudentsLoading] = useState(false);
     const [search, setSearch] = useState('');
@@ -365,30 +385,20 @@ const OverdueFeeNotifications = () => {
     // Pagination
     const PAGE_SIZE_OPTIONS = [10, 25, 50];
     const [pageSize, setPageSize] = useState(10);
-    const [currentPage, setCurrentPage] = useState(0); // 0-indexed
+    const [currentPage, setCurrentPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
+
+    // FIX (requested — bug: "students selected 1 but sends to all 19"):
+    // the TRUE scope of who gets notified, completely independent of the
+    // search box and pagination above. This is what actually drives the
+    // confirm-send modal's numbers — see the effect below.
+    const [trueOverdueTotal, setTrueOverdueTotal] = useState({ count: 0, dueAmount: 0 });
+    const [trueTotalLoading, setTrueTotalLoading] = useState(false);
 
     // Send notification modal
     const [modalOpen, setModalOpen] = useState(false);
     const [sending, setSending] = useState(false);
-
-    // Load academic years once
-    useEffect(() => {
-        (async () => {
-            setAcademicYearsLoading(true);
-            try {
-                const data = await getAcademicYears();
-                const list = Array.isArray(data) ? data : [];
-                setAcademicYears(list);
-                if (list.length > 0) setSelectedAcademicYearId(String(list[0].id));
-            } catch (err) {
-                toast.error('Failed to load academic years', err.message);
-            } finally {
-                setAcademicYearsLoading(false);
-            }
-        })();
-    }, []);
 
     // Load all active classes once (school-scoped) — used only as a name
     // fallback when a fee structure doesn't include a className.
@@ -405,15 +415,15 @@ const OverdueFeeNotifications = () => {
         })();
     }, [schoolId]);
 
-    // Fetch fee periods whenever the academic year filter changes, then keep
+    // Fetch fee periods for the school's current academic year, then keep
     // only OPEN periods whose due date has already passed.
     useEffect(() => {
-        if (!selectedAcademicYearId) return;
+        if (!academicYearId) return;
         setSelectedPeriodId('');
         (async () => {
             setPeriodsLoading(true);
             try {
-                const data = await getFeePeriods(selectedAcademicYearId);
+                const data = await getFeePeriods(academicYearId);
                 const overdue = (Array.isArray(data) ? data : []).filter(isOpenOverduePeriod);
                 setPeriods(overdue);
             } catch (err) {
@@ -423,11 +433,9 @@ const OverdueFeeNotifications = () => {
                 setPeriodsLoading(false);
             }
         })();
-    }, [selectedAcademicYearId]);
+    }, [academicYearId]);
 
-    // Once a period is picked, fetch ALL its fee structures — the user then
-    // explicitly picks ONE structure below (a period can have several, see
-    // assumption #6), and the class dropdown is scoped to that structure.
+    // Once a period is picked, fetch ALL its fee structures.
     useEffect(() => {
         setSelectedStructureId('');
         setSelectedClassId('');
@@ -447,29 +455,12 @@ const OverdueFeeNotifications = () => {
         })();
     }, [selectedPeriodId]);
 
-    // Reset the class selection whenever the structure changes — classes are
-    // scoped per-structure now, not merged across the whole period.
+    // Reset the class selection whenever the structure changes.
     useEffect(() => {
         setSelectedClassId('');
     }, [selectedStructureId]);
 
-    // Fetch full student profiles for the selected class so roll number,
-    // guardian name/phone, and photo can be merged into each outstanding-fee
-    // row — the outstanding-fees endpoint itself only returns studentId,
-    // studentName, admissionNumber, className, sectionName, balances and
-    // dates (confirmed from the raw response), nothing about the guardian
-    // or roll number. `getStudentByClass` was already imported but never
-    // called, which is why profileMap stayed empty and everything fell back
-    // to '—'.
-    //
-    // ASSUMPTION: `getStudentByClass(classId)` returns an array (or
-    // `{ data: [...] }`) of student profile objects shaped like
-    // `mergeStudentRecord` expects — `id`/`studentId`, `fullName`,
-    // `admissionNumber`, `rollNumber`, `className`, `sectionName`,
-    // `guardianName`/`fatherName`/`motherName`,
-    // `guardianPhone`/`fatherPhone`/`motherPhone`, `profileImageUrl`, and
-    // optionally a nested `personalDetails.mobile`. If your actual response
-    // shape differs, paste StudentsApi.js and I'll adjust the mapping.
+    // Fetch full student profiles for the selected class.
     useEffect(() => {
         setProfileMap(new Map());
         if (!selectedClassId) return;
@@ -498,9 +489,6 @@ const OverdueFeeNotifications = () => {
 
     const selectedStructure = structures.find((s) => String(s.id) === selectedStructureId);
 
-    // Classes available for the SELECTED STRUCTURE ONLY — prefer the
-    // structure's own className; fall back to the school's class list if
-    // the structure only carries a classId.
     const classOptions = useMemo(() => {
         if (!selectedStructure) return [];
         return normalizeStructureClasses(selectedStructure).map((c) => ({
@@ -511,22 +499,19 @@ const OverdueFeeNotifications = () => {
 
     const selectedClass = classOptions.find((c) => c.value === selectedClassId);
 
-    // Debounce the search box before it hits the server.
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
         return () => clearTimeout(t);
     }, [search]);
 
-    // Reset to page 1 whenever any filter (period, structure, class, page
-    // size, or search) changes.
     useEffect(() => {
         setCurrentPage(0);
     }, [selectedPeriodId, selectedStructureId, selectedClassId, pageSize, debouncedSearch]);
 
-    // Fetch the current page of overdue students once a period, structure,
-    // and class are all picked. `structureId` and `search` are passed
-    // through to the backend — see assumption #5 for the FeeCollection.js
-    // dependency this relies on.
+    // Fetch the current page of overdue students — respects search +
+    // pagination. This is ONLY for what's displayed on screen; it must
+    // never be used to decide what actually gets notified — see
+    // trueOverdueTotal below for that.
     useEffect(() => {
         if (!selectedPeriodId || !selectedStructureId || !selectedClassId) {
             setStudents([]);
@@ -560,35 +545,69 @@ const OverdueFeeNotifications = () => {
         })();
     }, [selectedPeriodId, selectedStructureId, selectedClassId, currentPage, pageSize, debouncedSearch]);
 
-    // Merge the current page's raw overdue records with each student's full
-    // profile for a richer table (photo, admission no., guardian contact).
-    // Search now happens server-side (see fetch effect above), so this is
-    // no longer filtered again client-side — `students` already reflects
-    // exactly what should be shown/sent for the current page.
+    // FIX (requested — bug: "students selected 1 but sends to all 19"): the
+    // actual notification send only ever passes classId+periodId(+
+    // structureId) to the backend — it completely ignores the search box
+    // and the current page (see handleConfirmSend below). So the confirm
+    // modal's numbers must come from a SEPARATE, unsearched, unpaginated
+    // fetch of the whole overdue scope — not from `students`/`totalElements`
+    // above, which reflect only what's currently displayed. This effect
+    // intentionally does NOT depend on `debouncedSearch`, `currentPage`, or
+    // `pageSize` — only on the actual notification scope (class/period/
+    // structure) — so typing into search or changing pages never changes
+    // what this shows.
+    //
+    // `size: 2000` is a practical cap to pull the whole overdue list for a
+    // single class in one request rather than paginating just to sum it —
+    // a single class realistically won't exceed that. If a class ever
+    // could, swap this for a backend aggregate endpoint (total count +
+    // total due) instead of summing client-side.
+    useEffect(() => {
+        if (!selectedPeriodId || !selectedStructureId || !selectedClassId) {
+            setTrueOverdueTotal({ count: 0, dueAmount: 0 });
+            return;
+        }
+        let cancelled = false;
+        (async () => {
+            setTrueTotalLoading(true);
+            try {
+                const { records, pagination } = await getOutstandingFees({
+                    classId: selectedClassId,
+                    periodId: selectedPeriodId,
+                    structureId: selectedStructureId,
+                    status: 'OVERDUE',
+                    page: 0,
+                    size: 2000,
+                });
+                if (cancelled) return;
+                setTrueOverdueTotal({
+                    count: pagination?.totalElements ?? records.length,
+                    dueAmount: sumDueAmount(records),
+                });
+            } catch (err) {
+                if (!cancelled) {
+                    toast.error('Failed to compute total overdue count', err.message);
+                    setTrueOverdueTotal({ count: 0, dueAmount: 0 });
+                }
+            } finally {
+                if (!cancelled) setTrueTotalLoading(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [selectedPeriodId, selectedStructureId, selectedClassId]);
+
     const filteredStudents = useMemo(
         () => students.map((r) => mergeStudentRecord(r, profileMap.get(String(r.studentId ?? r.id)))),
         [students, profileMap]
     );
 
-    // Totals shown in the confirm modal reflect what's currently shown on
-    // this page (search-filtered), as a preview — the actual send always
-    // covers the whole class+period+structure regardless of pagination,
-    // since the backend can't be scoped to a subset of students. If your
-    // backend can return a true aggregate (e.g. `pagination.totalDueAmount`),
-    // swap this for that value — it'll be more accurate than a page-local sum.
-    const totalDueAll = useMemo(
-        () => filteredStudents.reduce((sum, s) => sum + (s.dueAmount || 0), 0),
-        [filteredStudents]
-    );
-
     const handleConfirmSend = async () => {
         setSending(true);
         try {
-            // TODO: if the backend ever adds studentIds / message support,
-            // pass them here. Today it accepts classId + periodId and
-            // notifies every overdue parent in that scope — structureId is
-            // included defensively in case the endpoint is updated to use
-            // it for scoping too; harmless to send if it's ignored.
+            // Note: this deliberately never includes `search` — the send has
+            // always covered the full scope regardless of what's typed in
+            // the search box, which is exactly the behavior the confirm
+            // modal now accurately reflects via trueOverdueTotal.
             const result = await sendOverdueFeeNotifications({
                 classId: selectedClassId,
                 periodId: selectedPeriodId,
@@ -618,18 +637,16 @@ const OverdueFeeNotifications = () => {
                     <p className="text-xs sm:text-sm text-gray-400 mt-0.5">Remind students with pending fees past their due date</p>
                 </div>
 
-                <div className="w-full sm:w-64">
+                {/* FIX (requested): read-only label sourced from UserContext's
+                    currentAcademicYear — no dropdown, no separate API call.
+                    The page is always scoped to the school's actual current
+                    academic year. */}
+                <div className="w-full sm:w-auto">
                     <label className="block text-xs font-semibold text-gray-700 mb-1.5">Academic Year</label>
-                    {academicYearsLoading ? (
-                        <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-400">Loading…</div>
-                    ) : (
-                        <Select
-                            value={selectedAcademicYearId}
-                            onChange={setSelectedAcademicYearId}
-                            options={academicYears.map((ay) => ({ value: String(ay.id), label: ay.label || ay.name }))}
-                            placeholder="Select academic year"
-                        />
-                    )}
+                    <div className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-semibold inline-flex items-center gap-2 w-full sm:w-auto">
+                        <Calendar size={13} className="text-gray-400 flex-shrink-0" />
+                        {academicYearId ? (academicYearLabel || `Year #${academicYearId}`) : 'Loading…'}
+                    </div>
                 </div>
             </div>
 
@@ -653,7 +670,14 @@ const OverdueFeeNotifications = () => {
                     </h2>
                 </div>
 
-                {periodsLoading ? (
+                {!academicYearId ? (
+                    <div className="flex items-center justify-center py-14">
+                        <div className="text-gray-400 text-sm flex items-center gap-2">
+                            <span className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                            Waiting for academic year…
+                        </div>
+                    </div>
+                ) : periodsLoading ? (
                     <div className="flex items-center justify-center py-14">
                         <div className="text-gray-400 text-sm flex items-center gap-2">
                             <span className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -666,7 +690,7 @@ const OverdueFeeNotifications = () => {
                             <Calendar size={20} className="text-gray-400" />
                         </div>
                         <div className="text-sm font-semibold text-gray-500">No open overdue fee periods</div>
-                        <div className="text-xs text-gray-400 mt-1">Nothing is currently past its due date for this academic year.</div>
+                        <div className="text-xs text-gray-400 mt-1">Nothing is currently past its due date for {academicYearLabel || 'this academic year'}.</div>
                     </div>
                 ) : (
                     <div className="p-4 sm:p-5">
@@ -749,14 +773,24 @@ const OverdueFeeNotifications = () => {
                         </h2>
 
                         {selectedClassId && (
-                            <div className="relative w-full sm:w-72">
-                                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Search by name, roll no. or admission no."
-                                    className="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all w-full text-left"
-                                />
+                            <div>
+                                <div className="relative w-full sm:w-72">
+                                    <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                        placeholder="Search by name, roll no. or admission no."
+                                        className="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all w-full text-left"
+                                    />
+                                </div>
+                                {/* FIX (requested): explicit reminder that search only
+                                    narrows this table's view — it never narrows who
+                                    actually gets notified. */}
+                                {debouncedSearch && (
+                                    <p className="text-[11px] text-gray-400 mt-1.5">
+                                        Search only filters this table — the reminder still goes to all {trueOverdueTotal.count} overdue student(s) in this class/period.
+                                    </p>
+                                )}
                             </div>
                         )}
                     </div>
@@ -866,7 +900,9 @@ const OverdueFeeNotifications = () => {
                         <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-3.5 border-t border-gray-100">
                             <p className="text-xs text-gray-500">
                                 <span className="font-semibold text-gray-700">{filteredStudents.length}</span> student(s) on this page
-                                <span className="ml-2 text-gray-400">· {formatCurrency(totalDueAll)} due (this page)</span>
+                                <span className="ml-2 text-gray-400">
+                                    · reminder covers all {trueTotalLoading ? '…' : trueOverdueTotal.count} overdue student(s) in this class
+                                </span>
                             </p>
                             <button
                                 onClick={() => setModalOpen(true)}
@@ -885,11 +921,12 @@ const OverdueFeeNotifications = () => {
                 onClose={() => !sending && setModalOpen(false)}
                 onConfirm={handleConfirmSend}
                 loading={sending}
+                loadingTotals={trueTotalLoading}
                 className={selectedClass?.label || '—'}
                 periodName={selectedPeriod?.name || '—'}
                 structureName={selectedStructure ? buildStructureLabel(selectedStructure) : ''}
-                studentCount={filteredStudents.length}
-                totalDue={totalDueAll}
+                studentCount={trueOverdueTotal.count}
+                totalDue={trueOverdueTotal.dueAmount}
             />
         </div>
     );

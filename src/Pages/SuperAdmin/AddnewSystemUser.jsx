@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, User, Camera, X, Image as ImageIcon, RefreshCcw } from 'lucide-react';
+import { ChevronLeft, User, Camera, X, Image as ImageIcon, RefreshCcw, IndianRupee, Landmark } from 'lucide-react';
 import { toast } from 'react-toastify';
 import AddPersonalDetails from '../../Components/SuperAdmin/AddTabComponents/AddPersionslDetails';
+import SalaryDetailsTab from '../../Components/Teacher/AddTabComponents/AddSalaryDetails';
+import BankDetailsTab from '../../Components/SuperAdmin/AddTabComponents/AddBankDetails';
 import { createUser, updateUserById, getAllUserRoles } from '../../Api/StaffManagement/UserManagementAPI';
+import { upsertTeacherSalary } from '../../Api/Teachers/TeachersAPI';
 import USER_MANAGEMENT_STRINGS from '../../Constants/StringConstants/UserManagemetConstant';
 
 const VALID_GENDERS = ['MALE', 'FEMALE', 'OTHER'];
@@ -11,6 +14,8 @@ const PARENT_LIKE_ROLES = ['PARENT'];
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMP_CODE_REGEX = /^[A-Za-z0-9\-_]{2,20}$/;
+const IFSC_REGEX = /^[A-Za-z]{4}0[A-Za-z0-9]{6}$/;
+const ACCOUNT_NUMBER_REGEX = /^\d{6,20}$/;
 const MAX_NAME_LENGTH = 100;
 const MAX_ADDRESS_LENGTH = 300;
 const MAX_EXPERIENCE = 60;
@@ -26,6 +31,15 @@ const isValidJoiningDate = (dateStr) => {
     const d = new Date(dateStr);
     return !isNaN(d.getTime()) && d <= new Date();
 };
+
+// ── Local-date helper (same UTC/local-safe approach used for teachers) ──
+function getTodayLocalISO() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
 const validateFormData = (formData, validRoles = []) => {
     const fieldErrors = {};
@@ -69,6 +83,31 @@ const validateFormData = (formData, validRoles = []) => {
     return { valid: Object.keys(fieldErrors).length === 0, fieldErrors };
 };
 
+// Salary is optional — only enforced once the user starts filling it in
+// (mirrors the Bank Details validation approach: format/completeness
+// checks only kick in when there's actual data to validate).
+const validateSalaryData = (formData) => {
+    const salaryErrors = {};
+    const touchedSalary = formData.salaryType || formData.baseSalary;
+    if (touchedSalary) {
+        if (!formData.salaryType) salaryErrors.salaryType = 'Please select a salary type.';
+        if (!formData.baseSalary || Number(formData.baseSalary) <= 0) salaryErrors.baseSalary = 'Base salary must be greater than 0.';
+    }
+    return { valid: Object.keys(salaryErrors).length === 0, salaryErrors };
+};
+
+// Bank Details are optional — only format-checked when filled in.
+const validateBankData = (formData) => {
+    const bankErrors = {};
+    if (formData.ifscCode && !IFSC_REGEX.test(formData.ifscCode.trim())) {
+        bankErrors.ifscCode = 'Enter a valid 11-character IFSC code.';
+    }
+    if (formData.accountNumber && !ACCOUNT_NUMBER_REGEX.test(formData.accountNumber.trim())) {
+        bankErrors.accountNumber = 'Account number should be 6-20 digits.';
+    }
+    return { valid: Object.keys(bankErrors).length === 0, bankErrors };
+};
+
 function AddnewSystemUser() {
     const strings = USER_MANAGEMENT_STRINGS.ADD_USER;
     const commonStrings = USER_MANAGEMENT_STRINGS.COMMON;
@@ -76,10 +115,14 @@ function AddnewSystemUser() {
     const [activeTab, setActiveTab] = useState('personal');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [fieldErrors, setFieldErrors] = useState({});
+    const [salaryErrors, setSalaryErrors] = useState({});
+    const [bankErrors, setBankErrors] = useState({});
     const createdUserIdRef = useRef(null);
     const [profileImage, setProfileImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const fileInputRef = useRef(null);
+    const salarySectionRef = useRef(null);
+    const bankSectionRef = useRef(null);
 
     // --- CAMERA & POPUP STATE ---
     const [showPhotoMenu, setShowPhotoMenu] = useState(false);
@@ -156,10 +199,12 @@ function AddnewSystemUser() {
 
     const [formData, setFormData] = useState({
         name: '', gender: '', email: '', loginEmail: '', mobile: '', address: '', dob: '', employeeCode: '', highestQualification: '',
-        experience: 0, joiningDate: '', payrollStatus: '', accountStatus: false, userRole: '', salaryType: '', baseSalary: '',
+        experience: 0, joiningDate: '', payrollStatus: '', accountStatus: false, userRole: '', salaryType: 'MONTHLY', baseSalary: '',
         leaveDeductionPerDay: '', houseRentAllowance: '', travelAllowance: '', dearnessAllowance: '', specialAllowance: '',
         otherAllowances: '', providentFund: '', professionalTax: '', incomeTax: '', otherDeductions: '', assignedClass: '',
         section: '', primarySubject: '', additionalSubjects: '', isClassTeacher: false,
+        // Bank Details
+        accountHolderName: '', accountNumber: '', bankName: '', ifscCode: '', branchName: '', branchAddress: '', iban: '', swiftCode: '',
     });
 
     useEffect(() => {
@@ -180,6 +225,7 @@ function AddnewSystemUser() {
     }, []);
 
     const validRoleNames = roleOptions.map((r) => r.roleVal);
+    const isParentLike = PARENT_LIKE_ROLES.includes(formData.userRole);
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
@@ -202,6 +248,8 @@ function AddnewSystemUser() {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         if (fieldErrors[name]) setFieldErrors((prev) => { const next = { ...prev }; delete next[name]; return next; });
+        if (salaryErrors[name]) setSalaryErrors((prev) => { const next = { ...prev }; delete next[name]; return next; });
+        if (bankErrors[name]) setBankErrors((prev) => { const next = { ...prev }; delete next[name]; return next; });
         let sanitized = value;
         if (name === 'mobile') sanitized = value.replace(/\D/g, '').slice(0, 10);
         if (name === 'experience') sanitized = value === '' ? '' : Math.max(0, Math.min(MAX_EXPERIENCE, Number(value)));
@@ -211,27 +259,83 @@ function AddnewSystemUser() {
     };
 
     const buildPayload = (data) => {
-        const isParentLike = PARENT_LIKE_ROLES.includes(data.userRole);
+        const isParent = PARENT_LIKE_ROLES.includes(data.userRole);
         const personalDetails = {
             fullName: data.name.trim(), mobile: data.mobile.trim(), email: data.email.trim(), gender: data.gender.toUpperCase(),
             dateOfBirth: data.dob || null, address: data.address?.trim() || 'NA',
         };
-        if (isParentLike) return { email: data.email.trim(), roleNames: [data.userRole], personalDetails, accountStatus: 'ACTIVE' };
+        if (isParent) return { email: data.email.trim(), roleNames: [data.userRole], personalDetails, accountStatus: 'ACTIVE' };
         return {
             email: data.email.trim(), roleNames: [data.userRole], personalDetails,
             professionalDetails: {
                 employeeCode: data.employeeCode?.trim() || generateEmployeeCode(), qualification: data.highestQualification?.trim() || 'NA',
                 experienceYears: Number(data.experience) || 0, joiningDate: data.joiningDate || null,
             },
+            bankDetails: {
+                accountHolderName: data.accountHolderName || '',
+                accountNumber: data.accountNumber || '',
+                bankName: data.bankName || '',
+                ifscCode: data.ifscCode || '',
+                branchName: data.branchName || '',
+                branchAddress: data.branchAddress || '',
+                iban: data.iban || '',
+                swiftCode: data.swiftCode || '',
+            },
             accountStatus: 'ACTIVE',
         };
+    };
+
+    const goToTab = (targetTab) => {
+        const { valid, fieldErrors: errs } = validateFormData(formData, validRoleNames);
+        if (!valid) {
+            setFieldErrors(errs);
+            toast.error("Please fill all required personal details correctly.");
+            setActiveTab('personal');
+            return;
+        }
+        if (targetTab === 'bank' && !isParentLike) {
+            const { valid: salaryValid, salaryErrors: sErrs } = validateSalaryData(formData);
+            if (!salaryValid) {
+                setSalaryErrors(sErrs);
+                toast.error("Please correct the salary details before continuing.");
+                setActiveTab('salary');
+                return;
+            }
+        }
+        setActiveTab(targetTab);
+        const ref = targetTab === 'salary' ? salarySectionRef : bankSectionRef;
+        setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         const { valid, fieldErrors: errs } = validateFormData(formData, validRoleNames);
-        if (!valid) { setFieldErrors(errs); toast.error("Please fill all required details correctly."); return; }
+        if (!valid) {
+            setFieldErrors(errs);
+            toast.error("Please fill all required personal details correctly.");
+            setActiveTab('personal');
+            return;
+        }
+        if (!isParentLike) {
+            const { valid: salaryValid, salaryErrors: sErrs } = validateSalaryData(formData);
+            if (!salaryValid) {
+                setSalaryErrors(sErrs);
+                toast.error("Please correct the salary details.");
+                setActiveTab('salary');
+                return;
+            }
+            const { valid: bankValid, bankErrors: bErrs } = validateBankData(formData);
+            if (!bankValid) {
+                setBankErrors(bErrs);
+                toast.error("Please correct the bank details.");
+                setActiveTab('bank');
+                return;
+            }
+        }
+
         setFieldErrors({});
+        setSalaryErrors({});
+        setBankErrors({});
         setIsSubmitting(true);
         const loadingToast = toast.loading('Adding user...');
         try {
@@ -244,6 +348,43 @@ function AddnewSystemUser() {
             } else {
                 response = await updateUserById(createdUserIdRef.current, apiPayload);
             }
+
+            // Salary is a separate record, saved the same way it is for
+            // teachers — only attempted when the user actually filled it in.
+            if (!isParentLike && formData.salaryType && formData.baseSalary) {
+                try {
+                    const baseSalary = Number(formData.baseSalary) || 0;
+                    const hra = Number(formData.houseRentAllowance) || 0;
+                    const ta = Number(formData.travelAllowance) || 0;
+                    const da = Number(formData.dearnessAllowance) || 0;
+                    const sa = Number(formData.specialAllowance) || 0;
+                    const oa = Number(formData.otherAllowances) || 0;
+                    const pf = Number(formData.providentFund) || 0;
+                    const profTax = Number(formData.professionalTax) || 0;
+                    const incomeTax = Number(formData.incomeTax) || 0;
+                    const otherDed = Number(formData.otherDeductions) || 0;
+                    const leaveDeduction = Number(formData.leaveDeductionPerDay) || 0;
+
+                    const grossSalary = baseSalary + hra + ta + da + sa + oa + pf;
+                    const totalDeductions = profTax + incomeTax + otherDed + leaveDeduction;
+                    const netSalary = grossSalary - totalDeductions;
+                    const today = getTodayLocalISO();
+                    const effectiveTo = `${new Date().getFullYear()}-12-31`;
+
+                    const salaryPayload = {
+                        salaryType: formData.salaryType, baseSalary, houseRentAllowance: hra, travelAllowance: ta,
+                        dearnessAllowance: da, specialAllowance: sa, otherAllowances: oa, providentFund: pf,
+                        professionalTax: profTax, incomeTax, otherDeductions: otherDed, leaveDeductionPerDay: leaveDeduction,
+                        effectiveFrom: today, effectiveTo, payrollEligible: true, remarks: "Created via AddnewSystemUser",
+                        grossSalary, totalDeductions, netSalary,
+                    };
+                    await upsertTeacherSalary(createdUserIdRef.current, salaryPayload);
+                } catch (salaryErr) {
+                    console.error('Salary save error:', salaryErr);
+                    toast.warning('User was saved, but salary details could not be saved. You can add them from Edit.');
+                }
+            }
+
             toast.dismiss(loadingToast);
             toast.success(`${formData.name.trim()} : ${response?.message ?? 'User added successfully ✅'}`);
             if (profileImage) toast.info("Profile photo may take a few seconds to reflect.", { autoClose: 4000 });
@@ -272,11 +413,27 @@ function AddnewSystemUser() {
                         <div className="border-b border-gray-200">
                             <nav className="flex flex-wrap -mb-px">
                                 <button type="button" onClick={() => setActiveTab('personal')}
-                                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                        className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'personal' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                                     <User size={20} />
                                     <span className="hidden sm:inline">{strings.PERSONAL_DETAILS}</span>
                                     <span className="sm:hidden">{strings.PERSONAL_SHORT}</span>
                                 </button>
+                                {!isParentLike && (
+                                    <button type="button" onClick={() => goToTab('salary')}
+                                            className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'salary' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                        <IndianRupee size={18} />
+                                        <span className="hidden sm:inline">Salary Details</span>
+                                        <span className="sm:hidden">Salary</span>
+                                    </button>
+                                )}
+                                {!isParentLike && (
+                                    <button type="button" onClick={() => goToTab('bank')}
+                                            className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'bank' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                        <Landmark size={18} />
+                                        <span className="hidden sm:inline">Bank Details</span>
+                                        <span className="sm:hidden">Bank</span>
+                                    </button>
+                                )}
                             </nav>
                         </div>
                         <div className="p-4 sm:p-6 lg:p-8">
@@ -296,14 +453,14 @@ function AddnewSystemUser() {
                                                     )}
                                                 </div>
                                                 <button type="button" onClick={() => setShowPhotoMenu(true)}
-                                                    className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors">
+                                                        className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors">
                                                     <Camera className="w-3.5 h-3.5 text-white" />
                                                 </button>
                                             </div>
                                             <div className="flex-1">
                                                 {!imagePreview ? (
                                                     <button type="button" onClick={() => setShowPhotoMenu(true)}
-                                                        className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer">
+                                                            className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer">
                                                         <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
                                                         <p className="text-sm font-medium text-blue-600">{strings.CLICK_TO_UPLOAD}</p>
                                                         <p className="text-xs text-gray-400 mt-0.5">{strings.UPLOAD_HELP}</p>
@@ -316,11 +473,11 @@ function AddnewSystemUser() {
                                                         </div>
                                                         <div className="flex gap-2 shrink-0">
                                                             <button type="button" onClick={() => setShowPhotoMenu(true)}
-                                                                className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors">
+                                                                    className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors">
                                                                 Change
                                                             </button>
                                                             <button type="button" onClick={handleRemoveImage}
-                                                                className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors">
+                                                                    className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors">
                                                                 <X className="w-3.5 h-3.5" />
                                                             </button>
                                                         </div>
@@ -333,17 +490,41 @@ function AddnewSystemUser() {
                                     <AddPersonalDetails formData={formData} setFormData={setFormData} handleInputChange={handleInputChange} fieldErrors={fieldErrors} setFieldErrors={setFieldErrors} roleOptions={roleOptions} rolesLoading={rolesLoading} />
                                 </>
                             )}
+
+                            {activeTab === 'salary' && !isParentLike && (
+                                <div ref={salarySectionRef}>
+                                    <SalaryDetailsTab formData={formData} setFormData={setFormData} handleInputChange={handleInputChange} errors={salaryErrors} setSalaryErrors={setSalaryErrors} />
+                                </div>
+                            )}
+
+                            {activeTab === 'bank' && !isParentLike && (
+                                <div ref={bankSectionRef}>
+                                    <BankDetailsTab formData={formData} handleInputChange={handleInputChange} errors={bankErrors} />
+                                </div>
+                            )}
                         </div>
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
                             <div className="flex flex-col sm:flex-row justify-end gap-3">
                                 <button type="button" onClick={() => navigate('/manageUsers')} className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                                     {commonStrings.DISCARD}
                                 </button>
-                                <button disabled={isSubmitting} type="submit" className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
-                                    {isSubmitting ? (
-                                        <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />{commonStrings.ADDING}</span>
-                                    ) : commonStrings.SAVE_DETAILS}
-                                </button>
+                                {activeTab === 'personal' && !isParentLike && (
+                                    <button type="button" onClick={() => goToTab('salary')} className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors">
+                                        Next
+                                    </button>
+                                )}
+                                {activeTab === 'salary' && (
+                                    <button type="button" onClick={() => goToTab('bank')} className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors">
+                                        Next
+                                    </button>
+                                )}
+                                {(activeTab === 'personal' && isParentLike) || activeTab === 'bank' ? (
+                                    <button disabled={isSubmitting} type="submit" className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
+                                        {isSubmitting ? (
+                                            <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />{commonStrings.ADDING}</span>
+                                        ) : commonStrings.SAVE_DETAILS}
+                                    </button>
+                                ) : null}
                             </div>
                         </div>
                     </div>

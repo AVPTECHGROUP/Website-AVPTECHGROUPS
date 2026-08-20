@@ -16,6 +16,7 @@ export const ROLES = {
   PARENT: 'PARENT',
   STORE_ACCOUNTANT: 'STORE_ACCOUNTANT',
   STORE_SELLER: 'STORE_SELLER',
+  GLOBAL_SALES_SUPPORT: 'GLOBAL_SALES_SUPPORT',
 };
 
 // ─── Reusable Role Groups (grouped by access pattern) ──────────────────────
@@ -56,13 +57,21 @@ export const ROLE_GROUPS = {
   // ADMIN, SUPER_ADMIN, GLOBAL_ADMIN, STORE_ACCOUNTANT, STORE_SELLER
   STOCK_SELLER_ROLES: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.GLOBAL_ADMIN, ROLES.STORE_ACCOUNTANT, ROLES.STORE_SELLER],
 
-  // SUPER_ADMIN, GLOBAL_ADMIN (school picker)
-  SCHOOL_PICKER_ROLES: [ROLES.SUPER_ADMIN, ROLES.GLOBAL_ADMIN],
+  // SUPER_ADMIN, GLOBAL_ADMIN, GLOBAL_SALES_SUPPORT (school picker / console)
+  // GLOBAL_SALES_SUPPORT is included here — this page (SuperAdminSchools.jsx)
+  // is their landing page after login and their only route to Demo Leads.
+  SCHOOL_PICKER_ROLES: [ROLES.SUPER_ADMIN, ROLES.GLOBAL_ADMIN, ROLES.GLOBAL_SALES_SUPPORT],
 
   // ADMIN, SUPER_ADMIN, GLOBAL_ADMIN, PRINCIPAL (manage users)
   MANAGE_USERS_ROLES: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.GLOBAL_ADMIN, ROLES.PRINCIPAL],
 
-  // Dashboard — broadest role list across the app
+  // GLOBAL_ADMIN, GLOBAL_SALES_SUPPORT (demo leads / lead management)
+  LEAD_MANAGEMENT_ROLES: [ROLES.GLOBAL_ADMIN, ROLES.GLOBAL_SALES_SUPPORT],
+
+  // Dashboard — broadest role list across the app.
+  // GLOBAL_SALES_SUPPORT deliberately excluded: that role has no dashboard,
+  // no sidebar, and no school-scoped access of any kind. Its only two
+  // reachable pages are the Select School console and /leadManagement.
   DASHBOARD_ROLES: [
     ROLES.ADMIN, ROLES.TEACHER, ROLES.SUPER_ADMIN, ROLES.GLOBAL_ADMIN,
     ROLES.PRINCIPAL, ROLES.ACCOUNTANT, ROLES.RECEPTIONIST, ROLES.PARENT,
@@ -192,7 +201,7 @@ export const ROUTE_PATHS = {
   TRANSPORT_FEE_PLANS: '/route/feePlans',
   TRANSPORT_REPORTS: '/route/reports',
 
-  // Lead Management (internal CRM — GLOBAL_ADMIN only)
+  // Lead Management (internal CRM — GLOBAL_ADMIN & GLOBAL_SALES_SUPPORT)
   LEAD_MANAGEMENT: '/leadManagement',
 
   // Fallback redirect targets

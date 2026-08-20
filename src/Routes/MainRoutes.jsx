@@ -30,7 +30,7 @@ import TransportRoutes from './Transport/TransportRoutes';
 import TemplatesRoutes from './Templates/TemplatesRoutes';
 
 import { ROLE_GROUPS, ROUTE_PATHS, ROUTES_UI_STRINGS } from '../Constants/RoutesConstants/RoutesConst';
-import LeadRoutes from "./DemoLeads/LeadsRoutes.jsx";
+import { leadManagementRoute } from "./DemoLeads/LeadsRoutes.jsx";
 
 // Lazy-loaded standalone pages[cite: 2]
 const Login = lazy(() => import('../Pages/Login_2'));
@@ -107,13 +107,13 @@ const HomeworkPage = lazy(() => import('../Pages/Homework/Homeworkpage'));
 
 // Fee Management[cite: 2]
 const OverviewPage = lazy(() =>
-  import('../Pages/FeeManagement/FeeManagement').then((m) => ({ default: m.OverviewPage }))
+    import('../Pages/FeeManagement/FeeManagement').then((m) => ({ default: m.OverviewPage }))
 );
 const FeeSynthesisPage = lazy(() =>
-  import('../Pages/FeeManagement/FeeManagement').then((m) => ({ default: m.FeeSynthesisPage }))
+    import('../Pages/FeeManagement/FeeManagement').then((m) => ({ default: m.FeeSynthesisPage }))
 );
 const CollectionsPage = lazy(() =>
-  import('../Pages/FeeManagement/FeeManagement').then((m) => ({ default: m.CollectionsPage }))
+    import('../Pages/FeeManagement/FeeManagement').then((m) => ({ default: m.CollectionsPage }))
 );
 
 const AcademicYear = lazy(() => import('../Pages/Attendance/AcademicYear/AcademicYear'));
@@ -148,13 +148,13 @@ const LeadManagementPage = lazy(() => import('../Pages/LeadManagement/LeadManage
 
 // Suspense fallback[cite: 2]
 const PageLoader = () => (
-  <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 sm:gap-5 bg-white px-4">
-    <div className="relative h-12 w-12 sm:h-16 sm:w-16">
-      <div className="absolute inset-0 rounded-full border-4 border-blue-100" />
-      <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 border-r-blue-600 animate-spin" />
+    <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 sm:gap-5 bg-white px-4">
+      <div className="relative h-12 w-12 sm:h-16 sm:w-16">
+        <div className="absolute inset-0 rounded-full border-4 border-blue-100" />
+        <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 border-r-blue-600 animate-spin" />
+      </div>
+      <p className="text-base sm:text-lg font-semibold text-gray-700 text-center">{ROUTES_UI_STRINGS.LOADING_APP}</p>
     </div>
-    <p className="text-base sm:text-lg font-semibold text-gray-700 text-center">{ROUTES_UI_STRINGS.LOADING_APP}</p>
-  </div>
 );
 
 // Smart root redirect based on role[cite: 2]
@@ -163,9 +163,12 @@ const RootRedirect = () => {
     try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
   })();
   const role =
-    storedUser?.userType ||
-    (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null);
+      storedUser?.userType ||
+      (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null);
   if (role === 'STORE_SELLER') return <Navigate to={ROUTE_PATHS.STOCK_STUDENT_ORDERS_REDIRECT} replace />;
+  // GLOBAL_SALES_SUPPORT has no dashboard — route them to the school-picker/
+  // console page instead, same as GLOBAL_ADMIN/SUPER_ADMIN land on.
+  if (role === 'GLOBAL_SALES_SUPPORT') return <Navigate to={ROUTE_PATHS.SUPER_ADMIN} replace />;
   return <Navigate to={ROUTE_PATHS.DASHBOARD} replace />;
 };
 
@@ -173,61 +176,66 @@ const MainRoutes = () => {
   const isLoggedIn = !!localStorage.getItem('token');
 
   return (
-    <Suspense fallback={<PageLoader />}>
-      <ScrollToTop />
-      <Routes>
-        {/* Public landing pages */}
-        {SchoolSpineWebRoutes({ RootRedirect, isLoggedIn })}
+      <Suspense fallback={<PageLoader />}>
+        <ScrollToTop />
+        <Routes>
+          {/* Public landing pages */}
+          {SchoolSpineWebRoutes({ RootRedirect, isLoggedIn })}
 
-        {/* Auth */}
-        <Route path={ROUTE_PATHS.LOGIN} element={isLoggedIn ? <RootRedirect /> : <Login />} />
+          {/* Auth */}
+          <Route path={ROUTE_PATHS.LOGIN} element={isLoggedIn ? <RootRedirect /> : <Login />} />
 
-        {/* Protected Routes */}
-        <Route element={<ProtectedRoutes />}>
-          {/* School picker */}
-          {superAdminSchoolPickerRoute()}
+          {/* Protected Routes */}
+          <Route element={<ProtectedRoutes />}>
+            {/* School picker */}
+            {superAdminSchoolPickerRoute()}
 
-          {/* Manage Schools — GLOBAL_ADMIN only, standalone (no sidebar), same tier as school picker */}
-          <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN']} />}>
-            <Route path="/super-admin/manage-schools" element={<ManageSchools />} />
+            {/* Manage Schools — GLOBAL_ADMIN only, standalone (no sidebar), same tier as school picker */}
+            <Route element={<RoleProtectedRoute allowedRoles={['GLOBAL_ADMIN']} />}>
+              <Route path="/super-admin/manage-schools" element={<ManageSchools />} />
+            </Route>
+
+            {/* Demo Leads — GLOBAL_ADMIN & GLOBAL_SALES_SUPPORT, standalone (no sidebar,
+              no school context). Deliberately NOT inside AppLayout: that layout is
+              school-scoped and would render Lead Management inside whatever school
+              happens to be in localStorage, which is the bug this fixes. Same tier
+              as the school picker and Manage Schools above. */}
+            {leadManagementRoute()}
+
+            {/* Main App Routes inside AppLayout */}
+            <Route element={<AppLayout />}>
+              {DashboardRoutes()}
+              <Route path={ROUTE_PATHS.SETTINGS} element={<Settings />} />
+
+              {/* Pass & ID Management Route */}
+              <Route path="/passManagement" element={<PassManagement />} />
+
+              {AttendanceRoutes()}
+              {AcademicsRoutes()}
+              <Route path="/academics/studentPromotion" element={<StudentPromotion />} />
+              {CommunicationRoutes()}
+              {ExamsRoutes()}
+              {FeeManagementRoutes()}
+              {HomeworkRoutes()}
+              {LeavesRoutes()}
+              {RoleBasedPermissionRoutes()}
+              {ScheduleRoutes()}
+              {SchoolsRoutes()}
+              {StockRoutes()}
+              {StudentsRoutes()}
+              {SubjectManagementRoutes()}
+              {superAdminManageUsersRoutes()}
+              {TeachersRoutes()}
+              {PayrollRoutes()}
+              {TransportRoutes()}
+              {TemplatesRoutes()}
+
+              {/* Fallback */}
+              <Route path="*" element={<RootRedirect />} />
+            </Route>
           </Route>
-
-          {/* Main App Routes inside AppLayout */}
-          <Route element={<AppLayout />}>
-            {DashboardRoutes()}
-            <Route path={ROUTE_PATHS.SETTINGS} element={<Settings />} />
-
-            {/* Pass & ID Management Route */}
-            <Route path="/passManagement" element={<PassManagement />} />
-
-            {AttendanceRoutes()}
-            {AcademicsRoutes()}
-            <Route path="/academics/studentPromotion" element={<StudentPromotion />} />
-            {CommunicationRoutes()}
-            {ExamsRoutes()}
-            {FeeManagementRoutes()}
-            {HomeworkRoutes()}
-            {LeavesRoutes()}
-            {RoleBasedPermissionRoutes()}
-            {ScheduleRoutes()}
-            {SchoolsRoutes()}
-            {StockRoutes()}
-            {StudentsRoutes()}
-            {SubjectManagementRoutes()}
-            {superAdminManageUsersRoutes()}
-            {TeachersRoutes()}
-            {PayrollRoutes()}
-            {TransportRoutes()}
-            {TemplatesRoutes()}
-            {LeadRoutes()}
-
-
-            {/* Fallback */}
-            <Route path="*" element={<RootRedirect />} />
-          </Route>
-        </Route>
-      </Routes>
-    </Suspense>
+        </Routes>
+      </Suspense>
   );
 };
 

@@ -152,8 +152,23 @@ export const PERMISSIONS = {
 // Allowing a custom role to grant itself access to the role-editor or school-config
 // via its own permission set would be a privilege-escalation hole.
 export const SYSTEM_ROLES = {
-  ROLE_MANAGE:         ['GLOBAL_ADMIN'],
+  ROLE_MANAGE:          ['GLOBAL_ADMIN'],
   SCHOOL_CONFIG_MANAGE: ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
-  SCHOOL_SWITCHER:     ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
-  SCHOOL_PICKER:       ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
+  SCHOOL_SWITCHER:      ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
+  SCHOOL_PICKER:        ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
+  GLOBAL_ADMIN_ONLY:    ['GLOBAL_ADMIN'],
+
+  // Route-level access to /leadManagement. GLOBAL_SALES_SUPPORT reaches this
+  // page ONLY via the "Demo Leads" button on the Select School console
+  // (SuperAdminSchools.jsx) — never through the in-dashboard sidebar, since
+  // that role has no dashboard access at all (see DASHBOARD_ROLES in
+  // RoutesConst.js).
+  LEAD_MANAGEMENT_ROLES: ['GLOBAL_ADMIN', 'GLOBAL_SALES_SUPPORT'],
+
+  // Sidebar-only visibility for the Demo Leads menu item. Deliberately
+  // GLOBAL_ADMIN only — do NOT reuse LEAD_MANAGEMENT_ROLES here. If
+  // GLOBAL_SALES_SUPPORT is ever routed into a dashboard by mistake, this
+  // keeps Demo Leads out of their sidebar; their only entry point to it
+  // stays the Select School console.
+  SIDEBAR_LEAD_MANAGEMENT_ROLES: ['GLOBAL_ADMIN'],
 };
