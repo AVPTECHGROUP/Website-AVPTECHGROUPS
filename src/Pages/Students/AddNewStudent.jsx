@@ -218,7 +218,7 @@ function AddNewStudent() {
     // where a toast would be redundant.
     const validatePersonalDetails = (silent = false) => {
         const fail = (msg) => { if (!silent) toast.error(msg); return false; };
-        if (!profileImage) return fail(AS.ERRORS?.PHOTO_REQUIRED || "Profile photo is required.");
+        // if (!profileImage) return fail(AS.ERRORS?.PHOTO_REQUIRED || "Profile photo is required.");
         if (!formData.firstName.trim()) return fail("Full name is required.");
         if (!formData.gender) return fail("Gender is required.");
         if (!formData.mobile) return fail("Mobile number is required.");
@@ -441,7 +441,8 @@ function AddNewStudent() {
                                 <>
                                     <div className="mb-6">
                                         <label className="block font-semibold text-gray-600 text-sm mb-3">
-                                            {AS.PROFILE_PHOTO.LABEL} <span className="text-red-600 ml-1">*</span>
+                                            {AS.PROFILE_PHOTO.LABEL}
+                                            {/*<span className="text-red-600 ml-1">*</span>*/}
                                         </label>
                                         <div className="flex items-center gap-5">
                                             <div className="relative shrink-0">
