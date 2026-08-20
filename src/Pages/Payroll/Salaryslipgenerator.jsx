@@ -1,5 +1,11 @@
-import React, { useState } from "react";
-import { FileText, Download, CalendarDays, TrendingUp, TrendingDown } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "react-toastify";
+import {
+    FileText, Download, CalendarDays, TrendingUp, TrendingDown,
+    Loader2, AlertTriangle, RefreshCw,
+} from "lucide-react";
+import { getDefaultPrintTemplate } from "../../Api/PrintTemplate/PrintTemplatesApi";
+import {renderMergeTemplate} from "../../Components/Templates/Mergetemplate.js";
 
 const MONTHS = [
     "January", "February", "March", "April", "May", "June",
@@ -7,7 +13,10 @@ const MONTHS = [
 ];
 
 // ── UI-only mock slip data ──────────────────────────────────────────────
-// Swap this for getSalarySlip(teacher.id, month, year) later.
+// TODO: swap this for getSalarySlip(teacher.id, month, year) once the
+// backend endpoint exists — still pending as of this change. Everything
+// below this point (template fetch, merge, preview, print) is real and
+// already wired to whatever `slip` ends up containing.
 const MOCK_SLIP = {
     workingDays: 26,
     presentDays: 23,
@@ -23,7 +32,7 @@ const MOCK_SLIP = {
     deductions: [
         { label: "Provident Fund", amount: 1800 },
         { label: "Professional Tax", amount: 200 },
-        { label: "Unpaid Leave (1 day)" },
+        { label: "Unpaid Leave (1 day)", amount: 0 },
     ],
 };
 
@@ -31,18 +40,98 @@ const SalarySlip = ({ teacher }) => {
     const now = new Date();
     const [month, setMonth] = useState(now.getMonth());
     const [year, setYear] = useState(now.getFullYear());
-    const [downloading, setDownloading] = useState(false);
 
-    const slip = MOCK_SLIP; // TODO: fetch based on teacher.id + month + year
+    // ── Default SALARY_SLIP template (fetched from the Print Templates
+    // module, same source PrintTemplatesPage's "Preview Default" uses) ──
+    const [template, setTemplate] = useState(null);
+    const [templateLoading, setTemplateLoading] = useState(true);
+    const [templateError, setTemplateError] = useState("");
+
+    const fetchTemplate = async () => {
+        setTemplateLoading(true);
+        setTemplateError("");
+        try {
+            const data = await getDefaultPrintTemplate("SALARY_SLIP");
+            if (data) {
+                setTemplate(data);
+            } else {
+                setTemplate(null);
+                setTemplateError("No default Salary Slip template has been set yet.");
+            }
+        } catch (err) {
+            setTemplate(null);
+            setTemplateError(err.message || "Failed to load the default Salary Slip template.");
+        } finally {
+            setTemplateLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchTemplate();
+    }, []);
+
+    const slip = MOCK_SLIP;
 
     const totalEarnings = slip.baseSalary + slip.bonus + slip.earnings.reduce((s, e) => s + e.amount, 0);
-    const totalDeductions = slip.deductions.reduce((s, d) => s + d.amount, 0);
+    const totalDeductions = slip.deductions.reduce((s, d) => s + (d.amount || 0), 0);
     const netPay = totalEarnings - totalDeductions;
 
-    const handleDownload = async () => {
-        setDownloading(true);
-        // TODO: replace with downloadSalarySlip(teacher.id, month + 1, year)
-        setTimeout(() => setDownloading(false), 800);
+    // Data merged into the template's {{tokens}} / {{#earnings}} loops.
+    const mergeData = useMemo(() => ({
+        employeeName: teacher?.name || "",
+        designation: teacher?.designation || "Teacher",
+        employeeCode: teacher?.employeeCode || "—",
+        month: MONTHS[month],
+        year: String(year),
+        period: `${MONTHS[month]} ${year}`,
+        workingDays: slip.workingDays,
+        presentDays: slip.presentDays,
+        paidLeaveDays: slip.paidLeaveDays,
+        unpaidLeaveDays: slip.unpaidLeaveDays,
+        baseSalary: slip.baseSalary.toLocaleString("en-IN"),
+        bonus: slip.bonus.toLocaleString("en-IN"),
+        totalEarnings: totalEarnings.toLocaleString("en-IN"),
+        totalDeductions: totalDeductions.toLocaleString("en-IN"),
+        netPay: netPay.toLocaleString("en-IN"),
+        earnings: slip.earnings.map((e) => ({
+            label: e.label,
+            amount: e.amount != null ? e.amount.toLocaleString("en-IN") : "",
+        })),
+        deductions: slip.deductions.map((d) => ({
+            label: d.label,
+            amount: d.amount ? d.amount.toLocaleString("en-IN") : "",
+        })),
+    }), [teacher, slip, month, year, totalEarnings, totalDeductions, netPay]);
+
+    const mergedHtml = useMemo(
+        () => (template?.templateHtml ? renderMergeTemplate(template.templateHtml, mergeData) : ""),
+        [template, mergeData]
+    );
+
+    const handlePrint = () => {
+        if (!mergedHtml) return;
+        const printWindow = window.open("", "_blank", "width=900,height=1100");
+        if (!printWindow) {
+            toast.error("Please allow pop-ups for this site to print or download the slip.");
+            return;
+        }
+        printWindow.document.open();
+        printWindow.document.write(mergedHtml);
+        printWindow.document.close();
+
+        // Templates are plain HTML/CSS (no React lifecycle), so we trigger
+        // print on load with a short fallback in case the load event is
+        // skipped after document.write in some browsers. The `printed` flag
+        // stops both paths from opening the dialog twice.
+        let printed = false;
+        const triggerPrint = () => {
+            if (printed) return;
+            printed = true;
+            printWindow.focus();
+            printWindow.print();
+        };
+        printWindow.onload = triggerPrint;
+        setTimeout(triggerPrint, 400);
     };
 
     return (
@@ -76,11 +165,12 @@ const SalarySlip = ({ teacher }) => {
                     </select>
                     <button
                         type="button"
-                        onClick={handleDownload}
-                        disabled={downloading}
-                        className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 disabled:opacity-60"
+                        onClick={handlePrint}
+                        disabled={!mergedHtml}
+                        className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                        title={mergedHtml ? "Opens the print dialog — choose \"Save as PDF\" to download" : "No template loaded yet"}
                     >
-                        <Download className="w-4 h-4" /> {downloading ? "Preparing…" : "Download PDF"}
+                        <Download className="w-4 h-4" /> Print / Download PDF
                     </button>
                 </div>
             </div>
@@ -106,66 +196,43 @@ const SalarySlip = ({ teacher }) => {
                 })}
             </div>
 
-            {/* Slip breakdown */}
+            {/* Template-rendered slip */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
-                    <div>
-                        <p className="text-sm sm:text-base font-semibold text-gray-900">{teacher?.name}</p>
-                        <p className="text-xs text-gray-500">{teacher?.designation || "Teacher"} · {MONTHS[month]} {year}</p>
-                    </div>
-                    <span className="bg-green-100 border border-green-200 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
-            Net Pay ₹{netPay.toLocaleString()}
-          </span>
+                <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50 text-[11px] font-bold text-gray-500 uppercase tracking-wide flex items-center justify-between gap-2">
+                    <span>Rendered from default Salary Slip template</span>
+                    {templateError && !templateLoading && (
+                        <button
+                            type="button"
+                            onClick={fetchTemplate}
+                            className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 normal-case font-semibold"
+                        >
+                            <RefreshCw className="w-3 h-3" /> Retry
+                        </button>
+                    )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
-                    {/* Earnings */}
-                    <div className="p-4 sm:p-5">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Earnings</p>
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-xs sm:text-sm">
-                                <span className="text-gray-700">Base Salary</span>
-                                <span className="font-medium text-gray-900">₹{slip.baseSalary.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between text-xs sm:text-sm">
-                                <span className="text-gray-700">Bonus</span>
-                                <span className="font-medium text-gray-900">₹{slip.bonus.toLocaleString()}</span>
-                            </div>
-                            {slip.earnings.map((e) => (
-                                <div key={e.label} className="flex justify-between text-xs sm:text-sm">
-                                    <span className="text-gray-700">{e.label}</span>
-                                    <span className="font-medium text-gray-900">₹{e.amount.toLocaleString()}</span>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="flex justify-between text-xs sm:text-sm font-semibold border-t border-gray-100 mt-3 pt-3">
-                            <span className="text-gray-900">Total Earnings</span>
-                            <span className="text-green-600">₹{totalEarnings.toLocaleString()}</span>
-                        </div>
+                {templateLoading ? (
+                    <div className="px-5 py-16 text-center text-gray-400">
+                        <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
+                        Loading template…
                     </div>
-
-                    {/* Deductions */}
-                    <div className="p-4 sm:p-5">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Deductions</p>
-                        <div className="space-y-2">
-                            {slip.deductions.map((d) => (
-                                <div key={d.label} className="flex justify-between text-xs sm:text-sm">
-                                    <span className="text-gray-700">{d.label}</span>
-                                    <span className="font-medium text-red-600">-₹{d.amount.toLocaleString()}</span>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="flex justify-between text-xs sm:text-sm font-semibold border-t border-gray-100 mt-3 pt-3">
-                            <span className="text-gray-900">Total Deductions</span>
-                            <span className="text-red-600">-₹{totalDeductions.toLocaleString()}</span>
-                        </div>
+                ) : templateError ? (
+                    <div className="px-5 py-16 text-center">
+                        <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto mb-2" />
+                        <p className="text-sm text-gray-700 font-medium">{templateError}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                            Set a default template under Payroll → Print Templates → Salary Slip.
+                        </p>
                     </div>
-                </div>
-
-                <div className="bg-blue-50 border-t border-blue-100 p-4 sm:p-5 flex items-center justify-between">
-                    <span className="text-sm sm:text-base font-semibold text-gray-900">Net Pay</span>
-                    <span className="text-lg sm:text-xl font-bold text-blue-700">₹{netPay.toLocaleString()}</span>
-                </div>
+                ) : (
+                    <iframe
+                        title="salary-slip-preview"
+                        srcDoc={mergedHtml}
+                        sandbox=""
+                        className="w-full border-0 bg-white"
+                        style={{ minHeight: "70vh" }}
+                    />
+                )}
             </div>
         </div>
     );
