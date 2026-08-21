@@ -14,11 +14,8 @@ const AS = STUDENT_MODULE_STRINGS.ADD_STUDENT;
 const C = STUDENT_MODULE_STRINGS.COMMON;
 const TAB_ORDER = ['personal', 'identity', 'family', 'other'];
 
-// FIX (requested): human-readable names used by the sequential tab-jump
-// toast below ("Please complete X first"). Kept separate from the tab
-// button's `short`/`label` strings in TABS (defined further down) since
-// those are already localized/AS-driven and this only needs plain text for
-// the toast message.
+// Human-readable names used by both the "please fill this tab first" toast
+// (completely untouched tab) and the sequential tab-jump toast below.
 const TAB_LABELS = {
     personal: 'Personal Details',
     identity: 'Identity & Documents',
@@ -209,16 +206,28 @@ function AddNewStudent() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const aadhaarRegex = /^\d{12}$/;
 
-    // Every validate*Details function takes a `silent` flag. When
-    // silent=false (default — used by "Next"/"Save" and by handleTabClick
-    // when validating the tab the person is actually leaving), the FIRST
-    // missing/invalid mandatory field toasts its own specific message
-    // ("Profile photo is required.", "Full name is required.", etc.).
-    // When silent=true it's used only for read-only completeness checks
-    // where a toast would be redundant.
+    // Each validate*Details function now distinguishes two situations:
+    //
+    //  1. The tab is COMPLETELY untouched — nothing has been typed into any
+    //     of its fields. Rather than surfacing whichever field happens to
+    //     be checked first internally, this shows one generic, tab-level
+    //     toast: `Please fill "Personal Details" first.` — that's the
+    //     right message when someone has genuinely skipped a whole section.
+    //
+    //  2. The tab has SOME data in it but a specific mandatory field is
+    //     still missing or invalid — this shows the specific field-level
+    //     toast, same as before (e.g. "Full name is required.").
+    //
+    // The `silent` flag (default false) still controls whether a toast
+    // fires at all — used by handleTabClick's read-only completeness
+    // checks where a toast would be redundant.
     const validatePersonalDetails = (silent = false) => {
-        const fail = (msg) => { if (!silent) toast.error(msg); return false; };
-        // if (!profileImage) return fail(AS.ERRORS?.PHOTO_REQUIRED || "Profile photo is required.");
+        const isEmpty = !formData.firstName.trim() && !formData.gender && !formData.mobile
+            && !formData.dob && !formData.address?.trim() && !formData.rollNumber.trim() && !formData.sectionId;
+        const fail = (msg) => {
+            if (!silent) toast.error(isEmpty ? `Please fill "${TAB_LABELS.personal}" first.` : msg);
+            return false;
+        };
         if (!formData.firstName.trim()) return fail("Full name is required.");
         if (!formData.gender) return fail("Gender is required.");
         if (!formData.mobile) return fail("Mobile number is required.");
@@ -233,6 +242,9 @@ function AddNewStudent() {
         return true;
     };
 
+    // Identity & Documents has no mandatory fields, so there's no "empty
+    // tab" case here — the only possible failure is an invalid (not
+    // missing) Aadhaar number, which is always a specific-field situation.
     const validateIdentityDetails = (silent = false) => {
         const fail = (msg) => { if (!silent) toast.error(msg); return false; };
         if (formData.studentAadhaar && !aadhaarRegex.test(formData.studentAadhaar)) return fail("Student Aadhaar Number must be exactly 12 numeric digits.");
@@ -240,7 +252,12 @@ function AddNewStudent() {
     };
 
     const validateFamilyDetails = (silent = false) => {
-        const fail = (msg) => { if (!silent) toast.error(msg); return false; };
+        const isEmpty = !formData.fatherName?.trim() && !formData.fatherOccupation?.trim()
+            && !formData.fatherPhone && !formData.motherName?.trim();
+        const fail = (msg) => {
+            if (!silent) toast.error(isEmpty ? `Please fill "${TAB_LABELS.family}" first.` : msg);
+            return false;
+        };
         if (!formData.fatherName?.trim()) return fail("Father's Name is required.");
         if (!formData.fatherOccupation?.trim()) return fail("Father's Occupation is required.");
         if (!formData.fatherPhone) return fail("Father's Phone number is required.");
@@ -257,6 +274,11 @@ function AddNewStudent() {
         return true;
     };
 
+    // Other Details has no baseline-mandatory fields either — Hostel Room
+    // Number only becomes required once the person has already toggled
+    // "Hostel Required" ON, which is itself an action that means the tab
+    // is no longer "untouched". So there's no meaningful empty-tab case
+    // here — every possible failure is already a specific-field situation.
     const validateOtherDetails = (silent = false) => {
         const fail = (msg) => { if (!silent) toast.error(msg); return false; };
         if (formData.hostelRequired && !formData.hostelRoomNumber?.trim()) return fail("Hostel Room Number is required.");
@@ -276,9 +298,11 @@ function AddNewStudent() {
 
     const scrollToTop = () => formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-    // "Next" always operates on the CURRENT tab only, so the specific
-    // field-level toast from validateTab (silent=false, the default) is
-    // exactly right here — the person is actively working on this tab.
+    // "Next" always operates on the CURRENT tab only, so the toast from
+    // validateTab (silent=false, the default) is exactly right here — the
+    // person is actively working on this tab, and gets either the generic
+    // "please fill this tab" message (untouched) or the specific field
+    // message (partially filled), per validateTab's own logic above.
     const handleNextTab = () => {
         if (!validateTab(activeTab)) return;
         const idx = TAB_ORDER.indexOf(activeTab);
@@ -289,42 +313,32 @@ function AddNewStudent() {
         if (idx > 0) { setActiveTab(TAB_ORDER[idx - 1]); scrollToTop(); }
     };
 
-    // FIX (bug reported): clicking a stepper tab directly used to allow
-    // jumping ahead multiple steps at once (e.g. Personal -> Family),
-    // silently skipping the Identity & Documents tab. That tab has no
-    // mandatory fields, so the old "validate every tab strictly before the
-    // target" check passed vacuously and let the jump through — Personal
-    // only *looked* like it was enforced because it happens to have
-    // required fields.
-    //
-    // Fixed behaviour:
-    //  - Clicking backward (an earlier tab, or the current one) is always
-    //    free — no validation needed to go back and review.
-    //  - Clicking forward validates the tab the person is currently on
-    //    (same specific field-level toast as "Next"), and if that passes,
-    //    forward movement is only ever ONE step at a time — identical to
-    //    what "Next" would do. Trying to jump further ahead drops the
-    //    person on the very next tab in the sequence with a
-    //    "Please complete X first" toast, instead of silently skipping it.
+    // Clicking a stepper tab directly:
+    //  - Backward (an earlier tab, or the current one): always allowed —
+    //    no validation needed to go back and review.
+    //  - Forward: the tab being left must be valid first, using the same
+    //    empty-vs-partial toast logic as "Next". If that passes, forward
+    //    movement is capped at ONE tab at a time, same as "Next" — trying
+    //    to jump further ahead (e.g. Personal -> Family, skipping Identity)
+    //    drops the person on the very next tab in the sequence with
+    //    `Please fill "Identity & Documents" first.` instead of silently
+    //    skipping it, regardless of whether that next tab has mandatory
+    //    fields or not.
     const handleTabClick = (tab) => {
         const targetIdx = TAB_ORDER.indexOf(tab);
         const currentIdx = TAB_ORDER.indexOf(activeTab);
 
-        // Backward (or clicking the already-active tab): always allowed.
         if (targetIdx <= currentIdx) {
             setActiveTab(tab);
             scrollToTop();
             return;
         }
 
-        // Forward: the tab being left must be valid first.
-        if (!validateTab(activeTab)) return; // validateTab toasts the specific field message
+        if (!validateTab(activeTab)) return; // validateTab toasts the right message for this tab's state
 
-        // Forward movement via the stepper is capped at one tab at a time,
-        // same as "Next" — this is what stops skipping past an unvisited tab.
         if (targetIdx > currentIdx + 1) {
             const nextTabKey = TAB_ORDER[currentIdx + 1];
-            toast.error(`Please complete "${TAB_LABELS[nextTabKey]}" first.`);
+            toast.error(`Please fill "${TAB_LABELS[nextTabKey]}" first.`);
             setActiveTab(nextTabKey);
             scrollToTop();
             return;
@@ -442,7 +456,6 @@ function AddNewStudent() {
                                     <div className="mb-6">
                                         <label className="block font-semibold text-gray-600 text-sm mb-3">
                                             {AS.PROFILE_PHOTO.LABEL}
-                                            {/*<span className="text-red-600 ml-1">*</span>*/}
                                         </label>
                                         <div className="flex items-center gap-5">
                                             <div className="relative shrink-0">
