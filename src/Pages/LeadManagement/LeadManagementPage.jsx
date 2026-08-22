@@ -3,9 +3,8 @@ import { Users, Sparkles, PhoneCall, CalendarClock, CheckCircle2, XCircle } from
 import StatCard from "../../Components/Leads/StatCards.jsx";
 import LeadsFilterBar from "../../Components/Leads/LeadsFilterbar.jsx";
 import LeadsTable from "../../Components/Leads/LeadsTable.jsx";
-import LeadViewModal from "../../Components/Leads/LeadViewModal.jsx";
-// viewing the details at lead page
-import LeadEditModal from "../../Components/Leads/LeadEditModal.jsx";
+import LeadViewModal from "../../Components/Leads/Leadviewmodal.jsx";
+import LeadEditModal from "../../Components/Leads/Leadeditmodal.jsx";
 import { LEAD_STAT_CARDS, DEFAULT_PAGE_SIZE } from "../../Constants/StringConstants/LeadsConstants.js";
 import { getLeadStats, getLeads } from "../../Api/Demoleads/Demoleads.js";
 
