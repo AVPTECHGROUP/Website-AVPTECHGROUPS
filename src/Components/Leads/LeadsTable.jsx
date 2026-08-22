@@ -129,9 +129,9 @@ const LeadsTable = ({
                     <select
                         value={pageSize}
                         onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                        className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-600"
+                        className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-600 mr-200"
                     >
-                        {[10, 20, 50].map((size) => (
+                        {[15, 25, 50].map((size) => (
                             <option key={size} value={size}>
                                 {size} / page
                             </option>
