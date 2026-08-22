@@ -5,106 +5,158 @@ import {
     Loader2, AlertTriangle, RefreshCw,
 } from "lucide-react";
 import { getDefaultPrintTemplate } from "../../Api/PrintTemplate/PrintTemplatesApi";
-import {renderMergeTemplate} from "../../Components/Templates/Mergetemplate.js";
+import { renderTemplate, buildSalarySlipMergeData } from "../../Components/Templates/Mergetemplate.js";
+import {
+    getCachedDefaultTemplate,
+    cacheDefaultTemplate,
+    clearCachedDefaultTemplate,
+} from "../../utils/TemplateStorage/templateCache";
+
+const TEMPLATE_TYPE = "SALARY_SLIP";
 
 const MONTHS = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
 ];
 
-// ── UI-only mock slip data ──────────────────────────────────────────────
+// ── UI-only mock slip data (mirrors the fields on the printed slip: basic
+// pay is itemized in `earnings`, statutory/attendance deductions are itemized
+// in `deductions` — gross/net/words are all derived by buildSalarySlipMergeData) ──
 // TODO: swap this for getSalarySlip(teacher.id, month, year) once the
 // backend endpoint exists — still pending as of this change. Everything
 // below this point (template fetch, merge, preview, print) is real and
 // already wired to whatever `slip` ends up containing.
 const MOCK_SLIP = {
+    department: "Mathematics",
+    dateOfJoining: "15/06/2023",
+    paymentMode: "Bank Transfer",
+    payrollStatus: "PROCESSED",
+
     workingDays: 26,
-    presentDays: 23,
-    paidLeaveDays: 2,
+    presentDays: 24,
+    paidLeaveDays: 1,
     unpaidLeaveDays: 1,
-    baseSalary: 45000,
-    bonus: 2000,
+    halfDayDays: 0,
+    lateMarks: 3,
+
     earnings: [
-        { label: "House Rent Allowance", amount: 9000 },
-        { label: "Travel Allowance", amount: 2500 },
-        { label: "Dearness Allowance", amount: 3200 },
+        { label: "Basic Salary", amount: 30000 },
+        { label: "HRA", amount: 8000 },
+        { label: "Conveyance Allowance", amount: 2000 },
+        { label: "Academic / Teaching Allowance", amount: 3000 },
+        { label: "Other Allowance", amount: 2000 },
     ],
     deductions: [
-        { label: "Provident Fund", amount: 1800 },
+        { label: "Unpaid Leave - 1 Day", amount: 1153.85 },
+        { label: "Unauthorized Absence - 1 Day", amount: 1153.85 },
+        { label: "Late Penalty - 3 Marks", amount: 576.92 },
+        { label: "Provident Fund (PF)", amount: 3000 },
         { label: "Professional Tax", amount: 200 },
-        { label: "Unpaid Leave (1 day)", amount: 0 },
+        { label: "TDS", amount: 500 },
     ],
+
+    bankName: "—",
+    ifscCode: "—",
+    accountNumber: "—",
+    transactionId: "—",
 };
 
-const SalarySlip = ({ teacher }) => {
+const pad2 = (n) => String(n).padStart(2, "0");
+const formatDMY = (date) => `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${date.getFullYear()}`;
+
+// `school` should come from the same UserContext source FeeReceiptPrint.jsx
+// pulls schoolName from — pass it down as a prop once that's wired here too.
+const SalarySlip = ({ teacher, school = {} }) => {
     const now = new Date();
     const [month, setMonth] = useState(now.getMonth());
     const [year, setYear] = useState(now.getFullYear());
 
-    // ── Default SALARY_SLIP template (fetched from the Print Templates
-    // module, same source PrintTemplatesPage's "Preview Default" uses) ──
-    const [template, setTemplate] = useState(null);
-    const [templateLoading, setTemplateLoading] = useState(true);
+    // ── Default SALARY_SLIP template. Read the cache synchronously first so
+    // the slip renders instantly on repeat visits, then refresh from the API
+    // in the background (silently, if we already had something to show). ──
+    const [template, setTemplate] = useState(() => getCachedDefaultTemplate(TEMPLATE_TYPE));
+    const [templateLoading, setTemplateLoading] = useState(() => !getCachedDefaultTemplate(TEMPLATE_TYPE));
     const [templateError, setTemplateError] = useState("");
 
-    const fetchTemplate = async () => {
-        setTemplateLoading(true);
+    const fetchTemplate = async ({ silent = false } = {}) => {
+        if (!silent) setTemplateLoading(true);
         setTemplateError("");
         try {
-            const data = await getDefaultPrintTemplate("SALARY_SLIP");
+            const data = await getDefaultPrintTemplate(TEMPLATE_TYPE);
             if (data) {
                 setTemplate(data);
+                cacheDefaultTemplate(TEMPLATE_TYPE, data);
             } else {
+                clearCachedDefaultTemplate(TEMPLATE_TYPE);
                 setTemplate(null);
                 setTemplateError("No default Salary Slip template has been set yet.");
             }
         } catch (err) {
-            setTemplate(null);
-            setTemplateError(err.message || "Failed to load the default Salary Slip template.");
+            // Network/API failure — keep showing whatever cached template we
+            // already have rather than blanking the screen; only surface an
+            // error if there's genuinely nothing to render.
+            setTemplate((prev) => {
+                if (!prev) setTemplateError(err.message || "Failed to load the default Salary Slip template.");
+                return prev;
+            });
         } finally {
             setTemplateLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchTemplate();
+        fetchTemplate({ silent: !!template });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const slip = MOCK_SLIP;
 
-    const totalEarnings = slip.baseSalary + slip.bonus + slip.earnings.reduce((s, e) => s + e.amount, 0);
-    const totalDeductions = slip.deductions.reduce((s, d) => s + (d.amount || 0), 0);
-    const netPay = totalEarnings - totalDeductions;
+    const periodStart = new Date(year, month, 1);
+    const periodEnd = new Date(year, month + 1, 0); // last day of the selected month
 
-    // Data merged into the template's {{tokens}} / {{#earnings}} loops.
-    const mergeData = useMemo(() => ({
-        employeeName: teacher?.name || "",
-        designation: teacher?.designation || "Teacher",
-        employeeCode: teacher?.employeeCode || "—",
+    // Flat record combining employee + period + attendance + pay data, in
+    // the same shape buildFeeReceiptMergeData / buildGatePassMergeData etc.
+    // expect for their "record" argument.
+    const slipRecord = useMemo(() => ({
+        employeeName: teacher?.name,
+        designation: teacher?.designation,
+        employeeCode: teacher?.employeeCode,
+        department: teacher?.department || slip.department,
+        dateOfJoining: teacher?.dateOfJoining || slip.dateOfJoining,
+        paymentMode: slip.paymentMode,
+        payrollStatus: slip.payrollStatus,
+
         month: MONTHS[month],
         year: String(year),
         period: `${MONTHS[month]} ${year}`,
+        payPeriod: `${formatDMY(periodStart)} - ${formatDMY(periodEnd)}`,
+        paymentDate: formatDMY(periodEnd),
+        generatedOn: formatDMY(now),
+
         workingDays: slip.workingDays,
         presentDays: slip.presentDays,
         paidLeaveDays: slip.paidLeaveDays,
         unpaidLeaveDays: slip.unpaidLeaveDays,
-        baseSalary: slip.baseSalary.toLocaleString("en-IN"),
-        bonus: slip.bonus.toLocaleString("en-IN"),
-        totalEarnings: totalEarnings.toLocaleString("en-IN"),
-        totalDeductions: totalDeductions.toLocaleString("en-IN"),
-        netPay: netPay.toLocaleString("en-IN"),
-        earnings: slip.earnings.map((e) => ({
-            label: e.label,
-            amount: e.amount != null ? e.amount.toLocaleString("en-IN") : "",
-        })),
-        deductions: slip.deductions.map((d) => ({
-            label: d.label,
-            amount: d.amount ? d.amount.toLocaleString("en-IN") : "",
-        })),
-    }), [teacher, slip, month, year, totalEarnings, totalDeductions, netPay]);
+        halfDayDays: slip.halfDayDays,
+        lateMarks: slip.lateMarks,
+
+        bankName: slip.bankName,
+        ifscCode: slip.ifscCode,
+        accountNumber: slip.accountNumber,
+        transactionId: slip.transactionId,
+
+        earnings: slip.earnings,
+        deductions: slip.deductions,
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }), [teacher, slip, month, year]);
+
+    const mergeData = useMemo(
+        () => buildSalarySlipMergeData(slipRecord, school),
+        [slipRecord, school]
+    );
 
     const mergedHtml = useMemo(
-        () => (template?.templateHtml ? renderMergeTemplate(template.templateHtml, mergeData) : ""),
+        () => (template?.templateHtml ? renderTemplate(template.templateHtml, mergeData) : ""),
         [template, mergeData]
     );
 
@@ -203,7 +255,7 @@ const SalarySlip = ({ teacher }) => {
                     {templateError && !templateLoading && (
                         <button
                             type="button"
-                            onClick={fetchTemplate}
+                            onClick={() => fetchTemplate()}
                             className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 normal-case font-semibold"
                         >
                             <RefreshCw className="w-3 h-3" /> Retry
