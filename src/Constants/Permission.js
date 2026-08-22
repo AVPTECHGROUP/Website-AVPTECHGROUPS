@@ -160,7 +160,7 @@ export const PERMISSIONS = {
 // via its own permission set would be a privilege-escalation hole.
 export const SYSTEM_ROLES = {
   ROLE_MANAGE:          ['GLOBAL_ADMIN'],
-  SCHOOL_CONFIG_MANAGE: ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
+  SCHOOL_CONFIG_MANAGE: ['SUPER_ADMIN', 'GLOBAL_ADMIN','ADMIN'],
   SCHOOL_SWITCHER:      ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
   SCHOOL_PICKER:        ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'GLOBAL_READ_ONLY'],
   GLOBAL_ADMIN_ONLY:    ['GLOBAL_ADMIN'],
