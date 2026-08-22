@@ -233,10 +233,7 @@ const menuSections = [
         id: 'schoolConfig', icon: SchoolIcon, label: 'School Config', route: '/schoolConfig',
         systemRole: true,
       },
-      {
-        id: 'leadManagement', icon: Phone, label: 'Demo Leads', route: '/leadManagement',
-        systemRole: true,
-      }
+
     ]
   }
 ]

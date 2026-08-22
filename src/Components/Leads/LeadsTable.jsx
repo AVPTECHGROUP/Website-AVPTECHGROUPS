@@ -1,4 +1,4 @@
-import { Eye, Inbox, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, Pencil, Inbox, ChevronLeft, ChevronRight } from "lucide-react";
 import LeadStatusBadge from "./LeadsStatusbadge.jsx";
 import { STUDENT_STRENGTH_LABELS } from "../../Constants/StringConstants/LeadsConstants.js";
 import { formatDateTime, getInitials, getAvatarColor } from "./Leadformatters.js";
@@ -10,6 +10,7 @@ const LeadsTable = ({
                         loading,
                         error,
                         onView,
+                        onEdit,
                         page, // 0-indexed, matches the API's `pageable.pageNumber`
                         totalPages,
                         totalElements,
@@ -92,14 +93,24 @@ const LeadsTable = ({
                                 </td>
                                 <td className="px-4 py-3 text-slate-500">{formatDateTime(lead.createdAt)}</td>
                                 <td className="px-4 py-3">
-                                    <div className="flex justify-end">
+                                    <div className="flex justify-end gap-1">
                                         <button
                                             type="button"
                                             onClick={() => onView(lead)}
-                                            className="flex items-center gap-1 rounded-md px-2 py-1 text-blue-600 hover:bg-blue-50"
+                                            title="View"
+                                            aria-label="View lead"
+                                            className="flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-700"
                                         >
                                             <Eye className="h-4 w-4" />
-                                            View
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => onEdit(lead)}
+                                            title="Edit"
+                                            aria-label="Edit lead"
+                                            className="flex h-8 w-8 items-center justify-center rounded-md text-blue-600 hover:bg-blue-50"
+                                        >
+                                            <Pencil className="h-4 w-4" />
                                         </button>
                                     </div>
                                 </td>
