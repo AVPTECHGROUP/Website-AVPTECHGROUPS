@@ -30,10 +30,6 @@ const REFERENCE_LABEL_BY_MODE = {
     DD: 'Demand Draft Number',
 }
 
-/**
- * Maps student ID card details + school details into the data object expected
- * by the ID_CARD template merge engine (Front + Back side support)[cite: 3, 10].
- */
 export function buildIdCardMergeData(student = {}, school = {}) {
     const schoolName = school?.name || school?.schoolName || 'School Name';
 
