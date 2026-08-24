@@ -31,11 +31,9 @@ const inputCls = (err) =>
     } rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 transition-all`;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-// FIX: previously rounded to whole hours, so a 30-minute gap showed as
-// "0 hours" (or got swallowed entirely). Now breaks duration into
-// days / hours / minutes and shows the smallest meaningful unit
-// (e.g. "30 minutes", "1 hour 30 min", "2 days 3 hours").
+// FIX: old version rounded straight to hours (ms / 3.6e6), so a 30-minute
+// gap rounded to 0 and fell through to showing "1 hour" / "0 hours".
+// Now computes total minutes first, then renders the smallest sensible unit.
 function calcDuration(start, end) {
   try {
     const s = new Date(start), e = new Date(end);
