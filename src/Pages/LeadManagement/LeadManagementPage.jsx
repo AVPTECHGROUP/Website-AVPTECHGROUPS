@@ -3,7 +3,8 @@ import { Users, Sparkles, PhoneCall, CalendarClock, CheckCircle2, XCircle } from
 import StatCard from "../../Components/Leads/StatCards.jsx";
 import LeadsFilterBar from "../../Components/Leads/LeadsFilterbar.jsx";
 import LeadsTable from "../../Components/Leads/LeadsTable.jsx";
-import LeadDetailsModal from "../../Components/Leads/Leadsdetailmodal.jsx";
+import LeadViewModal from "../../Components/Leads/Leadviewmodal.jsx";
+import LeadEditModal from "../../Components/Leads/Leadeditmodal.jsx";
 import { LEAD_STAT_CARDS, DEFAULT_PAGE_SIZE } from "../../Constants/StringConstants/LeadsConstants.js";
 import { getLeadStats, getLeads } from "../../Api/Demoleads/Demoleads.js";
 
@@ -31,7 +32,10 @@ const LeadManagementPage = () => {
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-    const [selectedLead, setSelectedLead] = useState(null);
+    // Separate state for the two modals — view is read-only, edit is the
+    // only place that talks to the update API.
+    const [viewLead, setViewLead] = useState(null);
+    const [editLead, setEditLead] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
 
     // Debounce free-text search so we don't fire a request per keystroke.
@@ -136,7 +140,8 @@ const LeadManagementPage = () => {
                         leads={leads}
                         loading={leadsLoading}
                         error={leadsError}
-                        onView={setSelectedLead}
+                        onView={setViewLead}
+                        onEdit={setEditLead}
                         page={page}
                         totalPages={pageData.totalPages}
                         totalElements={pageData.totalElements}
@@ -147,12 +152,23 @@ const LeadManagementPage = () => {
                 </div>
             </div>
 
-            {selectedLead && (
-                <LeadDetailsModal
-                    lead={selectedLead}
-                    onClose={() => setSelectedLead(null)}
+            {viewLead && (
+                <LeadViewModal
+                    lead={viewLead}
+                    onClose={() => setViewLead(null)}
+                    onEdit={(lead) => {
+                        setViewLead(null);
+                        setEditLead(lead);
+                    }}
+                />
+            )}
+
+            {editLead && (
+                <LeadEditModal
+                    lead={editLead}
+                    onClose={() => setEditLead(null)}
                     onUpdated={(updated) => {
-                        setSelectedLead(updated);
+                        setEditLead(updated);
                         handleUpdated();
                     }}
                 />

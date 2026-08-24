@@ -146,6 +146,13 @@ export const PERMISSIONS = {
   // ── Class Item Config ────────────────────────────────────────────────────────
   CLASS_ITEM_CONFIG_VIEW: 'CLASS_ITEM_CONFIG_VIEW',
   CLASS_ITEM_CONFIG_EDIT: 'CLASS_ITEM_CONFIG_EDIT',
+
+  // ── Demo Requests / Leads ────────────────────────────────────────────────────
+  // Confirmed from backend JWT for GLOBAL_READ_ONLY — these are the actual
+  // permission keys gating the lead-management feature, distinct from the
+  // module CRUD keys above.
+  VIEW_DEMO_REQUESTS:   'VIEW_DEMO_REQUESTS',
+  MANAGE_DEMO_REQUESTS: 'MANAGE_DEMO_REQUESTS',
 };
 
 // These screens stay ROLE-locked on purpose — never permission-gated.
@@ -153,22 +160,22 @@ export const PERMISSIONS = {
 // via its own permission set would be a privilege-escalation hole.
 export const SYSTEM_ROLES = {
   ROLE_MANAGE:          ['GLOBAL_ADMIN'],
-  SCHOOL_CONFIG_MANAGE: ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
+  SCHOOL_CONFIG_MANAGE: ['SUPER_ADMIN', 'GLOBAL_ADMIN','ADMIN'],
   SCHOOL_SWITCHER:      ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
-  SCHOOL_PICKER:        ['SUPER_ADMIN', 'GLOBAL_ADMIN'],
+  SCHOOL_PICKER:        ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'GLOBAL_READ_ONLY'],
   GLOBAL_ADMIN_ONLY:    ['GLOBAL_ADMIN'],
 
-  // Route-level access to /leadManagement. GLOBAL_SALES_SUPPORT reaches this
-  // page ONLY via the "Demo Leads" button on the Select School console
-  // (SuperAdminSchools.jsx) — never through the in-dashboard sidebar, since
-  // that role has no dashboard access at all (see DASHBOARD_ROLES in
-  // RoutesConst.js).
-  LEAD_MANAGEMENT_ROLES: ['GLOBAL_ADMIN', 'GLOBAL_SALES_SUPPORT'],
+  // Route-level access to /leadManagement. GLOBAL_READ_ONLY reaches this
+  // page the same way GLOBAL_ADMIN does. Backend also sends
+  // VIEW_DEMO_REQUESTS / MANAGE_DEMO_REQUESTS as discrete permissions for
+  // this role — if you want finer-grained control later (e.g. view leads
+  // but not edit them), gate individual actions inside the page on those
+  // permission keys via hasPermission() rather than expanding this list.
+  LEAD_MANAGEMENT_ROLES: ['GLOBAL_ADMIN', 'GLOBAL_READ_ONLY'],
 
-  // Sidebar-only visibility for the Demo Leads menu item. Deliberately
-  // GLOBAL_ADMIN only — do NOT reuse LEAD_MANAGEMENT_ROLES here. If
-  // GLOBAL_SALES_SUPPORT is ever routed into a dashboard by mistake, this
-  // keeps Demo Leads out of their sidebar; their only entry point to it
-  // stays the Select School console.
+  // Sidebar-only visibility for the Demo Leads menu item, if/when one is
+  // added inside the dashboard shell (as opposed to the Select School
+  // console button). Add GLOBAL_READ_ONLY here too if it should also see
+  // Demo Leads in the in-dashboard sidebar, not just on the console.
   SIDEBAR_LEAD_MANAGEMENT_ROLES: ['GLOBAL_ADMIN'],
 };
