@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { createCircular, uploadCircularAttachment } from '../../../Api/Communication/CircularApi';
 import { useClasses } from '../../../ContextAPI/ClassContext.jsx';
+import { useAuth } from '../../../hooks/useAuth';
 import COMMUNICATION_CONSTS from '../../../Constants/StringConstants/CommunicationConstants';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -67,6 +68,13 @@ export default function CreateCircularPage() {
 
   // ── API data from ClassContext
   const { classes, loading: classesLoading } = useClasses();
+
+  // ── Permission: does the logged-in user's role publish circulars without
+  // going through the approval flow (e.g. Global Admin), or does it require
+  // approval (e.g. Teacher)? Verify CIRCULAR_APPROVE is the correct key in
+  // your Permissions constants file — swap it if there's a more precise one.
+  const { hasPermission } = useAuth();
+  const canPublishDirectly = hasPermission('CIRCULAR_APPROVE');
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const setField = (k) => (e) => {
@@ -191,7 +199,12 @@ export default function CreateCircularPage() {
       await uploadCircularAttachment(data.id, fd);
     }
 
-    showToast('success', COMMUNICATION_CONSTS.CREATE_CIRCULAR_TOAST.SUBMITTED);
+    showToast(
+        'success',
+        canPublishDirectly
+            ? COMMUNICATION_CONSTS.CREATE_CIRCULAR_TOAST.SUBMITTED
+            : (COMMUNICATION_CONSTS.CREATE_CIRCULAR_TOAST.SENT_FOR_APPROVAL ?? COMMUNICATION_CONSTS.CREATE_CIRCULAR_TOAST.SUBMITTED)
+    );
     setTimeout(() => navigate(COMMUNICATION_CONSTS.COMMUNICATION_ROUTES.CIRCULARS), COMMUNICATION_CONSTS.SUBMIT_REDIRECT_DELAY_MS);
   };
 
@@ -426,8 +439,12 @@ export default function CreateCircularPage() {
                   disabled={submitting}
                   className="flex items-center cursor-pointer justify-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-colors"
               >
-                {submitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                {form.type === 'CLASS_SPECIFIC' ? COMMUNICATION_CONSTS.CREATE_CIRCULAR_TEXT.SUBMIT_CLASS_SPECIFIC : COMMUNICATION_CONSTS.CREATE_CIRCULAR_TEXT.SUBMIT_SCHOOL_WIDE}
+                {submitting
+                    ? <Loader2 size={14} className="animate-spin" />
+                    : (canPublishDirectly ? <Send size={14} /> : <LucideClockPlus size={14} />)}
+                {canPublishDirectly
+                    ? (COMMUNICATION_CONSTS.CREATE_CIRCULAR_TEXT.SUBMIT ?? 'Submit')
+                    : (COMMUNICATION_CONSTS.CREATE_CIRCULAR_TEXT.SEND_FOR_APPROVAL ?? 'Send for Approval')}
               </button>
             </div>
           </div>
