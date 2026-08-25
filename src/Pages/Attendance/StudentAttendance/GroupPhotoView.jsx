@@ -477,7 +477,6 @@ export default function GroupPhotoView({ onBack, selectedClass, selectedSection 
     }, [selectedClass, selectedSection]);
 
     const submitGroupPhoto = async (imageFile, previewUrl = null) => {
-        const { gpsLatitude, gpsLongitude } = getSchoolLocation();
         if (!selectedClass?.id || !selectedSection?.id) {
             alert(UI_STRINGS.ALERTS.MISSING_CLASS_SECTION);
             return;
@@ -489,12 +488,15 @@ export default function GroupPhotoView({ onBack, selectedClass, selectedSection 
         if (previewUrl) setCapturedPreview(previewUrl);
 
         try {
+            // ✅ Await getSchoolLocation() to retrieve GPS coordinates
+            const { gpsLatitude, gpsLongitude } = await getSchoolLocation();
+
             const rawRes = await groupMarkAttendance({
                 classId: selectedClass.id,
                 sectionId: selectedSection.id,
                 image: imageFile,
-                gps_latitude: gpsLatitude,
-                gps_longitude: gpsLongitude,
+                gpsLatitude,
+                gpsLongitude,
             });
             const data = extractGroupResponse(rawRes);
             setGroupResult(data);
