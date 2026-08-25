@@ -351,145 +351,196 @@ export const TEMPLATE_TYPES = {
     // Student/receipt-style fields are merge-driven; the Reason checklist,
     // leaving date/time, and all 4 signature boxes stay blank on purpose —
     // this is a print-and-fill form, staff tick/sign it by hand at the gate.
-    stub: `<div class="gp-premium">
-<style>
-  .gp-premium { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; max-width: 700px; margin: 0 auto; border: 2px solid #0f1e3d; border-radius: 14px; overflow: hidden; background: #ffffff; color: #1f2937; box-shadow: 0 12px 32px rgba(15,30,61,0.14); }
-
-  .gp-header { display: flex; align-items: center; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid #e5e7eb; }
-  .gp-logo { width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg,#0f1e3d,#1e3a8a); color: #fbbf24; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; border: 2px solid #fbbf24; overflow: hidden; }
-  .gp-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-  .gp-school-block { flex: 1; min-width: 0; }
-  .gp-school-name { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.2px; color: #0f1e3d; text-transform: uppercase; }
-  .gp-school-tagline { margin: 1px 0 6px; font-size: 10.5px; font-style: italic; color: #6b7280; }
-  .gp-school-meta { font-size: 10px; color: #4b5563; display: flex; flex-wrap: wrap; gap: 4px 14px; }
-
-  .gp-pass-box { flex-shrink: 0; border: 1.5px solid #0f1e3d; border-radius: 10px; padding: 8px 14px; text-align: center; min-width: 118px; }
-  .gp-pass-box .gp-pb-label { font-size: 8px; font-weight: 800; letter-spacing: .06em; color: #6b7280; }
-  .gp-pass-box .gp-pb-value { font-size: 12px; font-weight: 800; color: #dc2626; margin: 1px 0 6px; }
-  .gp-pass-box .gp-pb-value.gp-pb-date { color: #0f1e3d; margin-bottom: 0; }
-
-  .gp-title-banner { text-align: center; background: #0f1e3d; color: #fff; font-size: 17px; font-weight: 800; letter-spacing: .15em; padding: 9px; margin: 16px 22px 0; border-radius: 8px; }
-
-  .gp-section { padding: 16px 22px 0; }
-  .gp-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #e5e7eb; }
-  .gp-row:last-child { border-bottom: none; }
-  .gp-num { flex-shrink: 0; width: 20px; height: 20px; border-radius: 5px; background: #0f1e3d; color: #fff; font-size: 10.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-  .gp-row-label { flex-shrink: 0; width: 130px; font-size: 12px; font-weight: 700; color: #374151; }
-  .gp-row-value { flex: 1; font-size: 12.5px; font-weight: 700; color: #111827; border-bottom: 1px solid #d1d5db; padding-bottom: 3px; }
-
-  .gp-band { background: #0f1e3d; color: #fff; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 7px; margin: 18px 0 0; }
-
-  .gp-two-col { display: flex; gap: 22px; padding: 12px 22px 0; }
-  .gp-field { flex: 1; }
-  .gp-field-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; margin-bottom: 3px; }
-  .gp-field-value { font-size: 12.5px; font-weight: 700; color: #111827; border-bottom: 1px solid #d1d5db; padding-bottom: 4px; min-height: 15px; }
-
-  .gp-reason-row { padding: 14px 22px 0; font-size: 11.5px; color: #374151; }
-  .gp-reason-title { font-weight: 700; margin-bottom: 8px; }
-  .gp-checks { display: flex; flex-wrap: wrap; gap: 14px 20px; margin-bottom: 10px; }
-  .gp-check { display: inline-flex; align-items: center; gap: 6px; }
-  .gp-box { width: 13px; height: 13px; border: 1.5px solid #6b7280; border-radius: 3px; display: inline-block; }
-  .gp-reason-details { border-bottom: 1px solid #d1d5db; padding-bottom: 4px; font-size: 12px; font-weight: 700; color: #111827; min-height: 16px; }
-
-  .gp-instructions { padding: 14px 22px 4px; display: flex; justify-content: space-between; gap: 12px; }
-  .gp-instructions ul { margin: 0; padding-left: 16px; font-size: 11px; color: #374151; line-height: 1.9; }
-  .gp-instructions .gp-badge-icon { font-size: 38px; opacity: .12; flex-shrink: 0; }
-
-  .gp-signatures { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; padding: 16px 22px 6px; }
-  .gp-sign-box { border: 1px solid #d1d5db; border-radius: 8px; padding: 20px 8px 8px; text-align: center; position: relative; min-height: 66px; }
-  .gp-sign-box .gp-sign-title { position: absolute; top: 7px; left: 8px; right: 8px; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: #6b7280; text-align: left; }
-  .gp-sign-line { border-top: 1px solid #9ca3af; font-size: 9px; color: #6b7280; padding-top: 3px; }
-  .gp-stamp { position: absolute; bottom: 8px; right: 8px; width: 34px; height: 34px; border: 1.5px dashed #1e3a8a; border-radius: 50%; color: #1e3a8a; font-size: 6px; font-weight: 800; display: flex; align-items: center; justify-content: center; text-align: center; transform: rotate(-12deg); opacity: .55; }
-
-  .gp-footer { padding: 4px 22px 18px; font-size: 10px; color: #6b7280; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-  .gp-thankyou { font-family: Georgia, serif; font-style: italic; font-size: 15px; color: #0f1e3d; }
-</style>
-
-  <!-- ══ Header ══ -->
-  <div class="gp-header">
-    <div class="gp-logo"><img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.parentElement.textContent='{{schoolInitials}}'"></div>
-    <div class="gp-school-block">
-      <h1 class="gp-school-name">{{schoolName}}</h1>
-      <div class="gp-school-tagline">{{schoolTagline}}</div>
-      <div class="gp-school-meta">
-        <span>📍 {{schoolAddress}}</span>
-        <span>✉ {{schoolEmail}}</span>
-      </div>
-    </div>
-    <div class="gp-pass-box">
-      <div class="gp-pb-label">GATE PASS NO.</div>
-      <div class="gp-pb-value">{{gatePassNo}}</div>
-      <div class="gp-pb-label">DATE</div>
-      <div class="gp-pb-value gp-pb-date">{{issueDate}}</div>
-    </div>
-  </div>
-
-  <div class="gp-title-banner">GATE PASS</div>
-
-  <!-- ══ Student Details ══ -->
-  <div class="gp-section">
-    <div class="gp-row"><span class="gp-num">1</span><span class="gp-row-label">Student</span><span class="gp-row-value">{{studentName}}</span></div>
-    <div class="gp-row"><span class="gp-num">2</span><span class="gp-row-label">Class &amp; Section</span><span class="gp-row-value">{{className}} - {{sectionName}}</span></div>
-    <div class="gp-row"><span class="gp-num">3</span><span class="gp-row-label">Roll No.</span><span class="gp-row-value">{{rollNo}}</span></div>
-    <div class="gp-row"><span class="gp-num">4</span><span class="gp-row-label">Contact Number</span><span class="gp-row-value">{{parentMobile}}</span></div>
-    <div class="gp-row"><span class="gp-num">5</span><span class="gp-row-label">Father's / Guardian's Name</span><span class="gp-row-value">{{parentName}}</span></div>
-  </div>
-
-  <!-- ══ Details of Leaving ══ -->
-  <div class="gp-band">Details of Leaving</div>
-  <div class="gp-two-col">
-    <div class="gp-field"><div class="gp-field-label">Date</div><div class="gp-field-value">{{leavingDate}}</div></div>
-    <div class="gp-field"><div class="gp-field-label">Time</div><div class="gp-field-value">{{leavingTime}}</div></div>
-  </div>
-
-  <div class="gp-reason-row">
-    <div class="gp-reason-title">Reason</div>
-    <div class="gp-checks">
-      <span class="gp-check"><span class="gp-box"></span> Medical</span>
-      <span class="gp-check"><span class="gp-box"></span> Personal</span>
-      <span class="gp-check"><span class="gp-box"></span> Family Function</span>
-      <span class="gp-check"><span class="gp-box"></span> Emergency</span>
-      <span class="gp-check"><span class="gp-box"></span> Others</span>
-    </div>
-    <div class="gp-field-label" style="margin-top:4px;">Details</div>
-    <div class="gp-reason-details">{{reasonDetails}}</div>
-  </div>
-
-  <!-- ══ Authorised Pickup ══ -->
-  <div class="gp-band">Person Authorised to Pick Up</div>
-  <div class="gp-two-col" style="padding-bottom:4px;">
-    <div class="gp-field"><div class="gp-field-label">Name</div><div class="gp-field-value">{{pickupPersonName}}</div></div>
-    <div class="gp-field"><div class="gp-field-label">Relation</div><div class="gp-field-value">{{pickupRelation}}</div></div>
-  </div>
-  <div class="gp-two-col" style="padding-top:10px;">
-    <div class="gp-field"><div class="gp-field-label">Contact No.</div><div class="gp-field-value">{{pickupContact}}</div></div>
-    <div class="gp-field"><div class="gp-field-label">ID Proof</div><div class="gp-field-value">{{pickupIdProof}}</div></div>
-  </div>
-
-  <!-- ══ Instructions ══ -->
-  <div class="gp-band" style="margin-top:18px;">Instructions</div>
-  <div class="gp-instructions">
-    <ul>
-      <li>Student must be picked up by the authorised person only.</li>
-      <li>This Gate Pass is valid only for the date and time mentioned above.</li>
-      <li>Student must report back to school on the next working day with a valid explanation.</li>
-    </ul>
-    <div class="gp-badge-icon">🏫</div>
-  </div>
-
-  <!-- ══ Signatures ══ -->
-  <div class="gp-signatures">
-    <div class="gp-sign-box"><span class="gp-sign-title">Class Teacher</span><div class="gp-sign-line">Signature</div></div>
-    <div class="gp-sign-box"><span class="gp-sign-title">HOD / Coordinator</span><div class="gp-sign-line">Signature</div></div>
-    <div class="gp-sign-box"><span class="gp-sign-title">Admin Office</span><div class="gp-sign-line">Signature</div><div class="gp-stamp">RECEIVED</div></div>
-    <div class="gp-sign-box"><span class="gp-sign-title">Security</span><div class="gp-sign-line">Signature</div></div>
-  </div>
-
-  <div class="gp-footer">
-    <span><b>Note:</b> Students are not allowed to leave the school campus without a valid Gate Pass.</span>
-    <span class="gp-thankyou">Thank You!</span>
-  </div>
-
+    stub: `<div class="gp-premium"> 
+<style> 
+  .gp-premium { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; max-width: 700px; margin: 0 auto; border: 2px solid #0f1e3d; border-radius: 14px; overflow: hidden; background: #ffffff; color: #1f2937; box-shadow: 0 12px 32px rgba(15,30,61,0.14); } 
+ 
+  .gp-header { display: flex; align-items: center; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid #e5e7eb; } 
+  .gp-logo { width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg,#0f1e3d,#1e3a8a); color: #fbbf24; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; border: 2px solid #fbbf24; overflow: hidden; } 
+  .gp-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; } 
+  .gp-school-block { flex: 1; min-width: 0; } 
+  .gp-school-name { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.2px; color: #0f1e3d; text-transform: uppercase; } 
+  .gp-school-tagline { margin: 1px 0 6px; font-size: 10.5px; font-style: italic; color: #6b7280; } 
+  .gp-school-meta { font-size: 10px; color: #4b5563; display: flex; flex-wrap: wrap; gap: 4px 14px; } 
+ 
+  .gp-pass-box { flex-shrink: 0; border: 1.5px solid #0f1e3d; border-radius: 10px; padding: 8px 14px; text-align: center; min-width: 118px; } 
+  .gp-pass-box .gp-pb-label { font-size: 8px; font-weight: 800; letter-spacing: .06em; color: #6b7280; } 
+  .gp-pass-box .gp-pb-value { font-size: 12px; font-weight: 800; color: #dc2626; margin: 1px 0 6px; } 
+  .gp-pass-box .gp-pb-value.gp-pb-date { color: #0f1e3d; margin-bottom: 0; } 
+ 
+  .gp-title-banner { text-align: center; background: #0f1e3d; color: #fff; font-size: 17px; font-weight: 800; letter-spacing: .15em; padding: 9px; margin: 16px 22px 0; border-radius: 8px; } 
+ 
+  .gp-section { padding: 16px 22px 0; } 
+  .gp-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #e5e7eb; } 
+  .gp-row:last-child { border-bottom: none; } 
+  .gp-num { flex-shrink: 0; width: 20px; height: 20px; border-radius: 5px; background: #0f1e3d; color: #fff; font-size: 10.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; } 
+  .gp-row-label { flex-shrink: 0; width: 130px; font-size: 12px; font-weight: 700; color: #374151; } 
+  .gp-row-value { flex: 1; font-size: 12.5px; font-weight: 700; color: #111827; border-bottom: 1px solid #d1d5db; padding-bottom: 3px; } 
+ 
+  .gp-band { background: #0f1e3d; color: #fff; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 7px; margin: 18px 0 0; } 
+ 
+  .gp-two-col { display: flex; gap: 22px; padding: 12px 22px 0; } 
+  .gp-field { flex: 1; } 
+  .gp-field-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; margin-bottom: 3px; } 
+  .gp-field-value { font-size: 12.5px; font-weight: 700; color: #111827; border-bottom: 1px solid #d1d5db; padding-bottom: 4px; min-height: 15px; } 
+ 
+  .gp-reason-row { padding: 14px 22px 0; font-size: 11.5px; color: #374151; } 
+  .gp-reason-title { font-weight: 700; margin-bottom: 8px; } 
+  .gp-checks { display: flex; flex-wrap: wrap; gap: 14px 20px; margin-bottom: 10px; } 
+  .gp-check { display: inline-flex; align-items: center; gap: 6px; } 
+  .gp-box { width: 13px; height: 13px; border: 1.5px solid #6b7280; border-radius: 3px; display: inline-block; } 
+  .gp-reason-details { border-bottom: 1px solid #d1d5db; padding-bottom: 4px; font-size: 12px; font-weight: 700; color: #111827; min-height: 16px; } 
+ 
+  .gp-instructions { padding: 14px 22px 4px; display: flex; justify-content: space-between; gap: 12px; } 
+  .gp-instructions ul { margin: 0; padding-left: 16px; font-size: 11px; color: #374151; line-height: 1.9; } 
+  .gp-instructions .gp-badge-icon { font-size: 38px; opacity: .12; flex-shrink: 0; } 
+ 
+  /* ══ Signatures ══ */
+  .gp-signatures { 
+    display: grid; 
+    grid-template-columns: repeat(4, minmax(0, 1fr)); 
+    gap: 10px; 
+    padding: 16px 22px 6px; 
+  } 
+  
+  .gp-sign-box { 
+    border: 1px solid #d1d5db; 
+    border-radius: 8px; 
+    padding: 20px 8px 8px; 
+    text-align: center; 
+    position: relative; 
+    min-height: 66px;
+    min-width: 0;
+  } 
+  
+  .gp-sign-box .gp-sign-title { 
+    position: absolute; 
+    top: 7px; 
+    left: 5px; 
+    right: 5px; 
+    font-size: 7.5px; 
+    font-weight: 800; 
+    text-transform: uppercase; 
+    letter-spacing: 0;
+    color: #6b7280; 
+    text-align: center;
+    white-space: nowrap;
+    overflow: visible;
+  } 
+  
+  .gp-sign-line { 
+    border-top: 1px solid #9ca3af; 
+    font-size: 9px; 
+    color: #6b7280; 
+    padding-top: 3px; 
+  } 
+  
+  .gp-stamp { 
+    position: absolute; 
+    bottom: 8px; 
+    right: 8px; 
+    width: 34px; 
+    height: 34px; 
+    border: 1.5px dashed #1e3a8a; 
+    border-radius: 50%; 
+    color: #1e3a8a; 
+    font-size: 6px; 
+    font-weight: 800; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    text-align: center; 
+    transform: rotate(-12deg); 
+    opacity: .55; 
+  } 
+ 
+  .gp-footer { padding: 4px 22px 18px; font-size: 10px; color: #6b7280; display: flex; justify-content: space-between; align-items: center; gap: 10px; } 
+  .gp-thankyou { font-family: Georgia, serif; font-style: italic; font-size: 15px; color: #0f1e3d; } 
+</style> 
+ 
+  <!-- ══ Header ══ --> 
+  <div class="gp-header"> 
+    <div class="gp-logo"><img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.parentElement.textContent='{{schoolInitials}}'"></div> 
+    <div class="gp-school-block"> 
+      <h1 class="gp-school-name">{{schoolName}}</h1> 
+      <div class="gp-school-meta"> 
+        <span>📍 {{schoolAddress}}</span> 
+      </div> 
+    </div> 
+    <div class="gp-pass-box"> 
+      <div class="gp-pb-label">GATE PASS NO.</div> 
+      <div class="gp-pb-value">{{gatePassNo}}</div> 
+      <div class="gp-pb-label">DATE</div> 
+      <div class="gp-pb-value gp-pb-date">{{issueDate}}</div> 
+    </div> 
+  </div> 
+ 
+  <div class="gp-title-banner">GATE PASS</div> 
+ 
+  <!-- ══ Student Details ══ --> 
+  <div class="gp-section"> 
+    <div class="gp-row"><span class="gp-num">1</span><span class="gp-row-label">Student</span><span class="gp-row-value">{{studentName}}</span></div> 
+    <div class="gp-row"><span class="gp-num">2</span><span class="gp-row-label">Class &amp; Section</span><span class="gp-row-value">{{className}} - {{sectionName}}</span></div> 
+    <div class="gp-row"><span class="gp-num">3</span><span class="gp-row-label">Roll No.</span><span class="gp-row-value">{{rollNo}}</span></div> 
+    <div class="gp-row"><span class="gp-num">4</span><span class="gp-row-label">Contact Number</span><span class="gp-row-value">{{parentMobile}}</span></div> 
+    <div class="gp-row"><span class="gp-num">5</span><span class="gp-row-label">Father's / Guardian's Name</span><span class="gp-row-value">{{parentName}}</span></div> 
+  </div> 
+ 
+  <!-- ══ Details of Leaving ══ --> 
+  <div class="gp-band">Details of Leaving</div> 
+  <div class="gp-two-col"> 
+    <div class="gp-field"><div class="gp-field-label">Date</div><div class="gp-field-value"></div></div> 
+    <div class="gp-field"><div class="gp-field-label">Time</div><div class="gp-field-value"></div></div> 
+  </div> 
+ 
+  <div class="gp-reason-row"> 
+    <div class="gp-reason-title">Reason</div> 
+    <div class="gp-checks"> 
+      <span class="gp-check"><span class="gp-box"></span> Medical</span> 
+      <span class="gp-check"><span class="gp-box"></span> Personal</span> 
+      <span class="gp-check"><span class="gp-box"></span> Family Function</span> 
+      <span class="gp-check"><span class="gp-box"></span> Emergency</span> 
+      <span class="gp-check"><span class="gp-box"></span> Others</span> 
+    </div> 
+    <div class="gp-field-label" style="margin-top:4px;">Details</div> 
+    <div class="gp-reason-details"></div> 
+  </div> 
+ 
+  <!-- ══ Authorised Pickup ══ --> 
+  <div class="gp-band">Person Authorised to Pick Up</div> 
+  <div class="gp-two-col" style="padding-bottom:4px;"> 
+    <div class="gp-field"><div class="gp-field-label">Name</div><div class="gp-field-value"></div></div> 
+    <div class="gp-field"><div class="gp-field-label">Relation</div><div class="gp-field-value"></div></div> 
+  </div> 
+  <div class="gp-two-col" style="padding-top:10px;"> 
+    <div class="gp-field"><div class="gp-field-label">Contact No.</div><div class="gp-field-value"></div></div> 
+    <div class="gp-field"><div class="gp-field-label">ID Proof</div><div class="gp-field-value"></div></div> 
+  </div> 
+ 
+  <!-- ══ Instructions ══ --> 
+  <div class="gp-band" style="margin-top:18px;">Instructions</div> 
+  <div class="gp-instructions"> 
+    <ul> 
+      <li>Student must be picked up by the authorised person only.</li> 
+      <li>This Gate Pass is valid only for the date and time mentioned above.</li> 
+      <li>Student must report back to school on the next working day with a valid explanation.</li> 
+    </ul> 
+    <div class="gp-badge-icon">🏫</div> 
+  </div> 
+ 
+  <!-- ══ Signatures ══ --> 
+  <div class="gp-signatures"> 
+    <div class="gp-sign-box"><span class="gp-sign-title">Class Teacher</span><div class="gp-sign-line">Signature</div></div> 
+    <div class="gp-sign-box"><span class="gp-sign-title">HOD / Coordinator</span><div class="gp-sign-line">Signature</div></div> 
+    <div class="gp-sign-box"><span class="gp-sign-title">Admin Office</span><div class="gp-sign-line">Signature</div><div class="gp-stamp">RECEIVED</div></div> 
+    <div class="gp-sign-box"><span class="gp-sign-title">Security</span><div class="gp-sign-line">Signature</div></div> 
+  </div> 
+ 
+  <div class="gp-footer"> 
+    <span><b>Note:</b> Students are not allowed to leave the school campus without a valid Gate Pass.</span> 
+    <span class="gp-thankyou">Thank You!</span> 
+  </div> 
+ 
 </div>`,
   },
   CYCLE_STAND_PASS: {
