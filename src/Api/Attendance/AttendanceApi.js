@@ -153,12 +153,33 @@ export const unmarkAttendance = async (attendanceId, reason) => {
 };
 
 /** Process group photo attendance */
-export const groupMarkAttendance = async ({ classId, sectionId, image, gps_latitude, gps_longitude }) => {
+export const groupMarkAttendance = async ({
+  classId,
+  sectionId,
+  image,
+  gps_latitude,
+  gps_longitude,
+  gpsLatitude,
+  gpsLongitude,
+}) => {
   const formData = new FormData();
   formData.append("image", image);
 
-  const query = new URLSearchParams({ class_id: classId, section_id: sectionId, ...(gps_latitude && { gps_latitude }), ...(gps_longitude && { gps_longitude }) }).toString();
-  const res = await authFetch(`${API_ENDPOINTS.ATTENDANCE_GROUP_MARK}?${query}`, { method: "POST", body: formData });
+  const lat = gps_latitude || gpsLatitude || "";
+  const lng = gps_longitude || gpsLongitude || "";
+
+  const queryParams = new URLSearchParams({
+    class_id: classId,
+    section_id: sectionId,
+  });
+
+  if (lat) queryParams.append("gps_latitude", lat);
+  if (lng) queryParams.append("gps_longitude", lng);
+
+  const res = await authFetch(`${API_ENDPOINTS.ATTENDANCE_GROUP_MARK}?${queryParams.toString()}`, {
+    method: "POST",
+    body: formData,
+  });
 
   if (!res.ok) throw new Error(await res.text() || "Failed to process group photo");
   return await res.json();
