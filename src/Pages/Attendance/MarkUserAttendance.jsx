@@ -56,10 +56,12 @@ const MarkUserAttendance = () => {
   };
 
   const captureImage = useCallback(async () => {
-    const { gpsLatitude, gpsLongitude } = getSchoolLocation();
     if (!webcamRef.current || isCapturing) return;
 
     setIsCapturing(true);
+
+    // Resolve accurate live coordinates
+    const { gpsLatitude, gpsLongitude } = await getSchoolLocation();
 
     const imageSrc = webcamRef.current.getScreenshot();
     if (!imageSrc) {
