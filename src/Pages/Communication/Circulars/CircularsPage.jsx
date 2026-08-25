@@ -86,7 +86,7 @@ function resolveAuthor(c, userNameById) {
 
 // ── Mobile Card Row ────────────────────────────────────────────────────────────
 
-function MobileCircularCard({ c, actionId, canApprove, onApprove, onReject, onPublish, onDelete, onView, userNameById }) {
+function MobileCircularCard({ c, actionId, canApprove, canDelete, onApprove, onReject, onPublish, onDelete, onView, userNameById }) {
   const author = resolveAuthor(c, userNameById);
   const status = c.status?.toUpperCase();
 
@@ -156,7 +156,8 @@ function MobileCircularCard({ c, actionId, canApprove, onApprove, onReject, onPu
               <IconBtn icon={Send} title="Publish" color="#2563eb" hoverBg="#eff6ff" onClick={() => onPublish(c.id)} />
           )}
           <IconBtn icon={Eye} title="View" color="#2563eb" hoverBg="#eff6ff" onClick={() => onView(c.id)} />
-          {status === 'PUBLISHED' && (
+          {/* ── ROLE GUARD: archive only for users with delete permission (e.g. Global Admin) ── */}
+          {canDelete && status === 'PUBLISHED' && (
               <IconBtn icon={Archive} title="Archive" color="#6b7280" hoverBg="#f3f4f6" onClick={() => onDelete(c.id)} />
           )}
         </div>
@@ -172,6 +173,7 @@ export default function CircularsPage() {
   const { hasPermission } = useAuth();
   const canApprove = hasPermission(P.CIRCULAR_APPROVE);
   const canCreate = hasPermission(P.CIRCULAR_CREATE);
+  const canDelete = hasPermission(P.CIRCULAR_DELETE);
 
   // TODO: once you tell me the Users/Staff lookup function name, wire it in
   // here to build { [userId]: name } and pass it down as userNameById so
@@ -636,7 +638,8 @@ export default function CircularsPage() {
                               <IconBtn icon={Send} title="Publish" color="#2563eb" hoverBg="#eff6ff" onClick={() => handlePublish(c.id)} />
                           )}
                           <IconBtn icon={Eye} title="View" color="#2563eb" hoverBg="#eff6ff" onClick={() => setSelectedCircularId(c.id)} />
-                          {status === 'PUBLISHED' && (
+                          {/* ── ROLE GUARD: archive only for users with delete permission (e.g. Global Admin) ── */}
+                          {canDelete && status === 'PUBLISHED' && (
                               <IconBtn icon={Trash} title="Archive" color="#eff6ff" hoverBg="#dc262675" onClick={() => handleDelete(c.id)} />
                           )}
                         </div>
@@ -671,6 +674,7 @@ export default function CircularsPage() {
                         c={c}
                         actionId={actionId}
                         canApprove={canApprove}
+                        canDelete={canDelete}
                         onApprove={handleApprove}
                         onReject={handleReject}
                         onPublish={handlePublish}
