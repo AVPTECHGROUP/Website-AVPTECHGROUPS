@@ -1,6 +1,6 @@
 import { authFetch } from "../../Authfetch/Authfetch";
 import { toast } from "react-toastify";
-import { getCurrUserDetails } from "../../utils/getCurrUserDetails";
+import { getCurrUserDetails } from "../../utils/getCurrUserDetails/GetCurrUserDetails";
 import {API_ENDPOINTS} from "../../Constants/Endpoints";
 
 /** * Safely extracts an array from various common API response wrappers.
@@ -73,17 +73,21 @@ class SectionSubjectService {
     } catch { return []; }
   }
 
-  /** Fetches sections belonging to a specific class. */
+  /**
+   * Fetches sections belonging to a specific class.
+   *
+   * NOTE: the per-class routes (API_ENDPOINTS.sectionsByClass /
+   * `${classById}/sections`) don't return data from this backend — the only
+   * endpoint confirmed to work is the flat `GET /api/v1/sections` list,
+   * where every record carries its own `classId`. So we fetch the flat
+   * list once and filter client-side by classId. This keeps the same
+   * return shape (array of section objects) all existing callers expect.
+   */
   async getSectionsByClass(classId) {
     try {
-      const json = await this.#reqWithFallback(
-        "GET",
-        API_ENDPOINTS.sectionsByClass(classId),
-        `${API_ENDPOINTS.classById(classId)}/sections`, // Legacy fallback
-        null,
-        true
-      );
-      return toArray(json);
+      const json = await this.#req("GET", API_ENDPOINTS.SECTIONS, null, true);
+      const all = toArray(json);
+      return all.filter((s) => String(s.classId) === String(classId));
     } catch { return []; }
   }
 
@@ -108,11 +112,11 @@ class SectionSubjectService {
   async getActiveSubjectsBySection(sectionId) {
     try {
       const json = await this.#reqWithFallback(
-        "GET",
-        API_ENDPOINTS.activeSectionSubjects(sectionId),
-        `${API_ENDPOINTS.sectionById(sectionId)}/subjects`, // Legacy fallback
-        null,
-        true
+          "GET",
+          API_ENDPOINTS.activeSectionSubjects(sectionId),
+          `${API_ENDPOINTS.sectionById(sectionId)}/subjects`, // Legacy fallback
+          null,
+          true
       );
       return toArray(json);
     } catch { return []; }

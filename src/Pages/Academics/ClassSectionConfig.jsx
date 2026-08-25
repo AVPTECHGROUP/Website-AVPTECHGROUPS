@@ -15,7 +15,7 @@ import {
   getSectionsByClass, createSection, updateSection, deleteSection,
   getTeachersDropdown,
 } from '../../Api/Academics/ClassSectionAPI';
-import { getCurrUserDetails } from '../../utils/GetCurrUserDetails';
+import {getCurrUserDetails} from "../../utils/getCurrUserDetails/index.js";
 import { CLASS_SEC_CONSTS, COMMON_STATUS } from "../../Constants/StringConstants/AcademicsConstants";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -5,7 +5,11 @@ const RoleProtectedRoute = ({ allowedRoles, fallback, children }) => {
   const { role } = useAuth();
 
   if (!role) return <Navigate to="/login" replace />;
-  if (!allowedRoles.includes(role)) return fallback ?? <Navigate to="/dashboard" replace />;
+
+  if (!allowedRoles.includes(role)) {
+    if (fallback) return fallback;
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return children ?? <Outlet />;
 };

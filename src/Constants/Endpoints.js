@@ -157,7 +157,9 @@ export const API_ENDPOINTS = {
   FEE_COLLECTIONS_BULK: `${BASE_URL_V1}/fee/collections/bulk`,
   FEE_COLLECTIONS_HISTORY: `${BASE_URL_V1}/fee/collections/history`,
   FEE_COLLECTIONS_OUTSTANDING: `${BASE_URL_V1}/fee/collections/outstanding`,
+  DELETE_FEE_COLLECTION: (id) => `${BASE_URL_V1}/fee/collections/${id}`,
   feeReceiptById: (id) => `${BASE_URL_V1}/fee/collections/receipt/${id}`,
+  FEE_COLLECTIONS_CANCELLED: `${BASE_URL_V1}/fee/collections/cancelled`,
 
   // ─── Fee Dashboard ───
   FEE_DASHBOARD_PERIODS: `${BASE_URL_V1}/fee/dashboard/active-periods`,
@@ -324,6 +326,13 @@ export const API_ENDPOINTS = {
   teacherActivate: (id) => `${BASE_URL_V1}/teachers/${id}/activate`,
   teacherDeactivate: (id) => `${BASE_URL_V1}/teachers/${id}/deactivate`,
 
+  // ─── Payroll (frontend wrappers expect these; backend may implement) ───
+  PAYROLL_ADVANCES: `${BASE_URL_V1}/payroll/advances`,
+  payrollAdvanceByUser: (userId) => `${BASE_URL_V1}/payroll/advances/user/${userId}`,
+  payrollAdvanceById: (id) => `${BASE_URL_V1}/payroll/advances/${id}`,
+  payrollTeacherSalarySlip: (teacherId, month, year) => `${BASE_URL_V1}/payroll/teachers/${teacherId}/salary-slip?month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}`,
+  PAYROLL_DASHBOARD: `${BASE_URL_V1}/payroll/dashboard/summary`,
+
   teacherAssignments: (id) => `${BASE_URL_V1}/teachers/${id}/assignments`,
   teacherActiveAssignments: (id) => `${BASE_URL_V1}/teachers/${id}/assignments/active`,
   teacherAssignmentById: (id) => `${BASE_URL_V1}/teachers/assignments/${id}`,
@@ -372,8 +381,16 @@ export const API_ENDPOINTS = {
   transportBillingMonthOverride: (billingId) =>
     `${BASE_URL_V1}/fee/transport-billing/${billingId}/month-override`,
 
+  transportBillingBulkMonthOverride:
+    `${BASE_URL_V1}/fee/transport-billing/bulk-month-override`,
+
   transportBillingPay: (billingId) =>
     `${BASE_URL_V1}/fee/transport-billing/${billingId}/pay`,
+
+
+  // Demo leads
+  LEAD_STATS: `${BASE_URL_V1}/leads/stats`,
+  LEADS: `${BASE_URL_V1}/leads`,
 
   // ─── User Management ───
   USERS: `${BASE_URL_V1}/users`,
@@ -390,8 +407,6 @@ export const API_ENDPOINTS = {
   userResetPassword: (id) => `${BASE_URL_V1}/users/${id}/reset-password`,
   userSetPassword: (id) => `${BASE_URL_V1}/users/${id}/set-password`,
 
-  // Add to your API_ENDPOINTS object:
-
   // ─── Roles & Permissions ─────────────────────────────────────────────────────
   ROLES: `${BASE_URL_V1}/roles`,
   ROLES_SUMMARY: `${BASE_URL_V1}/roles/summary`,
@@ -402,4 +417,8 @@ export const API_ENDPOINTS = {
   // Dynamic endpoints
   roleById: (roleId) => `${BASE_URL_V1}/roles/${roleId}`,
   rolePermissionsById: (roleId) => `${BASE_URL_V1}/roles/${roleId}/permissions`,
-}; 
+
+  // ─── Public (no auth) ────────────────────────────────────────────────────────
+  // "Book Your Free Demo" landing page form
+  DEMO_REQUEST: `${BASE_URL_V1}/public/demo-request`,
+};

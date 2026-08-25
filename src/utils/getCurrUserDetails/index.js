@@ -1,3 +1,3 @@
-import { getCurrUserDetails } from "../GetCurrUserDetails";
+import {getCurrUserDetails} from "./GetCurrUserDetails.js";
 
 export { getCurrUserDetails };

@@ -1,20 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, IndianRupee, User, Camera, X, Image as ImageIcon, RefreshCcw } from 'lucide-react';
+import { ChevronLeft, IndianRupee, User, Camera, X, Image as ImageIcon, RefreshCcw, Landmark } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { createTeachers, upsertTeacherSalary } from '../../Api/Teachers/TeachersAPI';
 import { getListOfValues } from "../../Api/Lov/ListOfValues.js";
 import PersonalDetailsTab from '../../Components/Teacher/AddTabComponents/AddPersonalInfo';
 import SalaryDetailsTab from '../../Components/Teacher/AddTabComponents/AddSalaryDetails';
+import BankDetailsTab from '../../Components/Teacher/AddTabComponents/AddBankDetails';
 import TEACHER_MODULE_STRINGS from '../../Constants/StringConstants/TeacherConstants';
 
 // ── Local-date helpers ───────────────────────────────────────────────────
-// `new Date().toISOString()` converts the current instant to UTC, which
-// shifts the calendar date backwards for anyone in a UTC+ timezone (e.g.
-// IST, UTC+5:30) during the first ~5.5 hours of their local day. That was
-// causing today's own joining date (and DOB) to be flagged as "in the
-// future" / invalid. These helpers stay entirely in local-date-string
-// space instead — same approach as EditTeachersDetails.jsx.
 function getTodayLocalISO() {
     const d = new Date();
     const year = d.getFullYear();
@@ -23,10 +18,6 @@ function getTodayLocalISO() {
     return `${year}-${month}-${day}`;
 }
 
-// `dateStr` is already a "YYYY-MM-DD" string coming from <input type="date">,
-// so a plain string comparison against today's local date is safe here and
-// avoids re-parsing through the Date constructor (which reintroduces the
-// same UTC/local mismatch).
 function isFutureDate(dateStr) {
     if (!dateStr) return false;
     return dateStr > getTodayLocalISO();
@@ -41,8 +32,10 @@ function AddNewTeacher() {
     const [imagePreview, setImagePreview] = useState(null);
     const [errors, setErrors] = useState({});
     const [salaryErrors, setSalaryErrors] = useState({});
+    const [bankErrors, setBankErrors] = useState({});
     const fileInputRef = useRef(null);
     const salarySectionRef = useRef(null);
+    const bankSectionRef = useRef(null);
     const [designationList, setDesignationList] = useState([]);
 
     useEffect(() => {
@@ -84,7 +77,6 @@ function AddNewTeacher() {
                 video: { facingMode: mode }
             });
             streamRef.current = stream;
-            // Short delay to ensure videoRef is rendered in the DOM
             setTimeout(() => {
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
@@ -128,7 +120,7 @@ function AddNewTeacher() {
             if (blob) {
                 const file = new File([blob], "camera_capture.jpg", { type: "image/jpeg" });
                 handleImageChange({ target: { files: [file] } });
-                closePhotoMenu(); // Close the modal and stop camera
+                closePhotoMenu();
             }
         }, "image/jpeg", 0.9);
     };
@@ -142,6 +134,11 @@ function AddNewTeacher() {
             return true;
         }
     })();
+
+    // Ordered list of tabs the user must move through. Bank Details always
+    // comes last, after Salary when payroll is enabled, or right after
+    // Personal when it isn't.
+    const tabs = isPayrollEnabled ? ['personal', 'salary', 'bank'] : ['personal', 'bank'];
 
     const [formData, setFormData] = useState({
         name: "",
@@ -175,7 +172,16 @@ function AddNewTeacher() {
         section: '',
         primarySubject: '',
         additionalSubjects: '',
-        isClassTeacher: false
+        isClassTeacher: false,
+        // Bank Details
+        accountHolderName: '',
+        accountNumber: '',
+        bankName: '',
+        ifscCode: '',
+        branchName: '',
+        branchAddress: '',
+        iban: '',
+        swiftCode: '',
     });
 
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -185,6 +191,7 @@ function AddNewTeacher() {
         setFormData(prev => ({ ...prev, [name]: value }));
         setErrors(prev => ({ ...prev, [name]: '' }));
         setSalaryErrors(prev => ({ ...prev, [name]: '' }));
+        setBankErrors(prev => ({ ...prev, [name]: '' }));
     };
 
     const handleImageChange = (e) => {
@@ -221,19 +228,9 @@ function AddNewTeacher() {
         if (!formData.email) newErrors.email = strings.ADD_TEACHER.VALIDATION.EMAIL_REQUIRED;
         else if (!EMAIL_REGEX.test(formData.email)) newErrors.email = strings.ADD_TEACHER.VALIDATION.EMAIL_INVALID;
 
-        // Fixed: was `new Date(formData.dob) >= new Date().setHours(0,0,0,0)`,
-        // which parses the dob string as UTC midnight and compares it against
-        // a local-midnight Date object — the same UTC/local mismatch as the
-        // joining-date bug below. formData.dob is already a "YYYY-MM-DD"
-        // string from <input type="date">, so a plain string comparison
-        // against today's local date is safe and unambiguous.
         if (!formData.dob) newErrors.dob = strings.ADD_TEACHER.VALIDATION.DOB_REQUIRED;
         else if (formData.dob >= getTodayLocalISO()) newErrors.dob = strings.ADD_TEACHER.VALIDATION.DOB_INVALID;
 
-        // Fixed: was comparing against `new Date().toISOString().split("T")[0]`,
-        // which is UTC's calendar date, not the user's local date. For anyone
-        // in a UTC+ timezone (e.g. IST) this flagged today's own joining date
-        // as "in the future" during the first ~5.5 hours of the local day.
         if (!formData.joiningDate) {
             newErrors.joiningDate = strings.ADD_TEACHER.VALIDATION.JOINING_REQUIRED;
         } else if (isFutureDate(formData.joiningDate)) {
@@ -243,7 +240,6 @@ function AddNewTeacher() {
         if (!formData.designation) {
             newErrors.designation = "Designation is required";
         }
-
 
         if (!formData.loginEmail) {
             newErrors.loginEmail = strings.ADD_TEACHER.VALIDATION.LOGIN_EMAIL_REQUIRED;
@@ -267,14 +263,41 @@ function AddNewTeacher() {
         return Object.keys(newErrors).length === 0;
     };
 
+    // Bank Details are optional — this only validates format when a value
+    // has actually been entered, it never blocks submission on its own.
+    const validateBankDetails = () => {
+        const newErrors = {};
+        if (formData.ifscCode && !/^[A-Za-z]{4}0[A-Za-z0-9]{6}$/.test(formData.ifscCode.trim())) {
+            newErrors.ifscCode = "Enter a valid 11-character IFSC code";
+        }
+        if (formData.accountNumber && !/^\d{6,20}$/.test(formData.accountNumber.trim())) {
+            newErrors.accountNumber = "Account number should be 6-20 digits";
+        }
+        setBankErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     const handleNext = () => {
         const isValid = validatePersonalDetails();
         if (!isValid) {
             toast.error(strings.ADD_TEACHER.ERRORS.FORM_INCOMPLETE);
             return;
         }
-        setActiveTab('salary');
-        setTimeout(() => salarySectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+        const currentIndex = tabs.indexOf('personal');
+        const nextTab = tabs[currentIndex + 1];
+        setActiveTab(nextTab);
+        const ref = nextTab === 'salary' ? salarySectionRef : bankSectionRef;
+        setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    };
+
+    const handleSalaryNext = () => {
+        const isValid = validateSalaryDetails();
+        if (!isValid) {
+            toast.error(strings.ADD_TEACHER.ERRORS.SALARY_INCOMPLETE);
+            return;
+        }
+        setActiveTab('bank');
+        setTimeout(() => bankSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     };
 
     const handleSubmit = async (e) => {
@@ -289,8 +312,15 @@ function AddNewTeacher() {
             const isSalaryValid = validateSalaryDetails();
             if (!isSalaryValid) {
                 toast.error(strings.ADD_TEACHER.ERRORS.SALARY_INCOMPLETE);
+                setActiveTab('salary');
                 return;
             }
+        }
+        const isBankValid = validateBankDetails();
+        if (!isBankValid) {
+            toast.error("Please correct the bank details.");
+            setActiveTab('bank');
+            return;
         }
 
         setIsSubmitting(true);
@@ -309,6 +339,16 @@ function AddNewTeacher() {
                     experienceYears: Number(formData.experience || 1),
                     joiningDate: formData.joiningDate,
                     designation: formData.designation
+                },
+                bankDetails: {
+                    accountHolderName: formData.accountHolderName || "",
+                    accountNumber: formData.accountNumber || "",
+                    bankName: formData.bankName || "",
+                    ifscCode: formData.ifscCode || "",
+                    branchName: formData.branchName || "",
+                    branchAddress: formData.branchAddress || "",
+                    iban: formData.iban || "",
+                    swiftCode: formData.swiftCode || "",
                 },
                 accountStatus: "ACTIVE",
             };
@@ -333,10 +373,6 @@ function AddNewTeacher() {
                     const grossSalary = baseSalary + hra + ta + da + sa + oa + pf;
                     const totalDeductions = profTax + incomeTax + otherDed + leaveDeduction;
                     const netSalary = grossSalary - totalDeductions;
-                    // Fixed: was `new Date().toISOString().split('T')[0]` (UTC
-                    // calendar date). Now uses the same local-date helper as
-                    // EditTeachersDetails.jsx so effectiveFrom lines up with
-                    // the user's actual local "today".
                     const today = getTodayLocalISO();
                     const effectiveTo = `${new Date().getFullYear()}-12-31`;
 
@@ -398,6 +434,19 @@ function AddNewTeacher() {
                                         <span className="sm:hidden">Salary</span>
                                     </button>
                                 )}
+                                <button type="button" onClick={() => {
+                                    const personalValid = validatePersonalDetails();
+                                    if (!personalValid) { toast.error(strings.ADD_TEACHER.COMPLETE_PERSONAL); setActiveTab('personal'); return; }
+                                    if (isPayrollEnabled) {
+                                        const salaryValid = validateSalaryDetails();
+                                        if (!salaryValid) { toast.error(strings.ADD_TEACHER.ERRORS.SALARY_INCOMPLETE); setActiveTab('salary'); return; }
+                                    }
+                                    setActiveTab('bank');
+                                }} className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'bank' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                    <Landmark size={18} />
+                                    <span className="hidden sm:inline">Bank Details</span>
+                                    <span className="sm:hidden">Bank</span>
+                                </button>
                             </nav>
                         </div>
 
@@ -470,6 +519,12 @@ function AddNewTeacher() {
                                     <SalaryDetailsTab formData={formData} setFormData={setFormData} handleInputChange={handleInputChange} errors={salaryErrors} setSalaryErrors={setSalaryErrors} />
                                 </div>
                             )}
+
+                            {activeTab === 'bank' && (
+                                <div ref={bankSectionRef}>
+                                    <BankDetailsTab formData={formData} handleInputChange={handleInputChange} errors={bankErrors} />
+                                </div>
+                            )}
                         </div>
 
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
@@ -478,19 +533,16 @@ function AddNewTeacher() {
                                     {strings.COMMON.DISCARD_CHANGES}
                                 </button>
                                 {activeTab === 'personal' && (
-                                    isPayrollEnabled ? (
-                                        <button type="button" onClick={handleNext} className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors">
-                                            {strings.COMMON.NEXT}
-                                        </button>
-                                    ) : (
-                                        <button disabled={isSubmitting} type="submit" className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
-                                            {isSubmitting ? (
-                                                <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>{strings.ADD_TEACHER.SUBMIT_LOADING}</span>
-                                            ) : strings.COMMON.SAVE_DETAILS}
-                                        </button>
-                                    )
+                                    <button type="button" onClick={handleNext} className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors">
+                                        {strings.COMMON.NEXT}
+                                    </button>
                                 )}
                                 {activeTab === 'salary' && isPayrollEnabled && (
+                                    <button type="button" onClick={handleSalaryNext} className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors">
+                                        {strings.COMMON.NEXT}
+                                    </button>
+                                )}
+                                {activeTab === 'bank' && (
                                     <button disabled={isSubmitting} type="submit" className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
                                         {isSubmitting ? (
                                             <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>{strings.ADD_TEACHER.SUBMIT_LOADING}</span>
@@ -506,7 +558,6 @@ function AddNewTeacher() {
                 {showPhotoMenu && (
                     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
                         <div className="bg-white w-full sm:w-[500px] rounded-xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                            {/* Header */}
                             <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50">
                                 <div className="flex items-center gap-3">
                                     {showCamera && (
@@ -543,7 +594,6 @@ function AddNewTeacher() {
                                 </div>
                             </div>
 
-                            {/* Body */}
                             <div className="p-4">
                                 {!showCamera ? (
                                     <div className="space-y-3">

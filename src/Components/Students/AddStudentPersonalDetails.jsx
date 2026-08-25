@@ -194,7 +194,7 @@ const AddStudentPersonalDetails = ({ formData, setFormData, handleInputChange, e
 
                     <div>
                         <label className='block font-semibold text-gray-600 text-sm mb-2'>
-                            Category<span className="text-red-600 ml-1">*</span>
+                            Category
                         </label>
                         <select name="category" value={formData.category || ''} onChange={handleInputChange} required
                             className={inputClass('category')}>

@@ -1,5 +1,5 @@
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
-import { jwtDecode } from './GetCurrUserDetails';
+import {jwtDecode} from "./getCurrUserDetails/GetCurrUserDetails.js";
 
 const Protectedroutes = () => {
   const location = useLocation();

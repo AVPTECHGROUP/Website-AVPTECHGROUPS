@@ -1,13 +1,29 @@
 import { authFetch } from "../../Authfetch/Authfetch";
 import { API_ENDPOINTS } from "../../Constants/Endpoints";
 
-/** Filters out undefined, null, and empty string values to build params */
+/**
+ * Filters out undefined, null, and empty string values to build params.
+ *
+ * FIX: now also accepts ARRAY values (e.g. sort: ['updatedAt,desc',
+ * 'id,desc']) and appends each entry under the same key — this is Spring
+ * Data's actual convention for multi-field sort on a Pageable param
+ * (`?sort=updatedAt,desc&sort=id,desc`, NOT a single comma-joined string).
+ * Confirmed against the real /v1/fee/collections/cancelled response, whose
+ * `pageable.sort` shows exactly this two-field default (updatedAt DESC,
+ * then id DESC as a tiebreaker) even when the request sent an empty sort.
+ * Scalar values behave exactly as before — this is purely additive.
+ */
 const buildQueryParams = (params) => {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      searchParams.append(key, value);
+    if (value === undefined || value === null || value === '') return;
+    if (Array.isArray(value)) {
+      value.forEach((v) => {
+        if (v !== undefined && v !== null && v !== '') searchParams.append(key, v);
+      });
+      return;
     }
+    searchParams.append(key, value);
   });
   return searchParams.toString();
 };
@@ -61,9 +77,19 @@ export const getFeeCollectionHistory = async ({ fromDate, toDate, classId, perio
  * page/size (pageable, sent as flat query params — Spring's Pageable binds
  * page/size/sort from query string, the "pageable" object in Swagger UI is
  * just its editor representation).
+ *
+ * FIX (bug reported: "after cancelling a payment I have to go find the
+ * reinstated balance in Outstanding & Overdue"): confirmed via a real
+ * response that this endpoint's `pageable.sort` comes back EMPTY by
+ * default — unlike /fee/collections/cancelled, which defaults to
+ * `[updatedAt DESC, id DESC]`. With no sort at all, a just-reinstated
+ * record has no predictable position after a refetch. `sort` is now an
+ * accepted param (string or array — buildQueryParams above already
+ * handles both) so the caller can explicitly request the same ordering
+ * convention as the cancelled endpoint.
  */
-export const getOutstandingFees = async ({ classId, periodId, status, page = 0, size = 20 } = {}) => {
-  const qs = buildQueryParams({ classId, periodId, status, page, size });
+export const getOutstandingFees = async ({ classId, periodId, status, sort, page = 0, size = 20 } = {}) => {
+  const qs = buildQueryParams({ classId, periodId, status, sort, page, size });
   const res = await authFetch(`${API_ENDPOINTS.FEE_COLLECTIONS_OUTSTANDING}${qs ? '?' + qs : ''}`, { method: "GET" });
 
   if (!res.ok) throw new Error(await res.text() || "Failed to fetch outstanding fees");
@@ -106,4 +132,86 @@ export const getFeeReceiptById = async (id) => {
   // Check all known shapes instead of assuming only json.timestamp exists.
   const timestamp = json?.timestamp || data?.timestamp || data?.generatedAt || data?.createdAt || '';
   return { data, timestamp };
+};
+
+export const deleteFeeCollection = async (paymentId) => {
+  if (!paymentId) {
+    throw new Error("Payment ID is required");
+  }
+
+  const res = await authFetch(
+      API_ENDPOINTS.DELETE_FEE_COLLECTION(paymentId),
+      {
+        method: "DELETE",
+      }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(
+        data?.message || "Failed to delete fee collection"
+    );
+  }
+
+  return data;
+};
+
+/**
+ * FIX: `sort` can now be either a single string ("updatedAt,desc") or an
+ * array of strings (["updatedAt,desc", "id,desc"]) — buildQueryParams
+ * above handles both. Confirmed against the real API response: the
+ * backend's own default sort for this endpoint is exactly
+ * ["updatedAt,desc", "id,desc"] (updatedAt as the primary key, id as a
+ * tiebreaker for records updated in the same instant) — CancelledFeeCollections.jsx
+ * now sends that same two-field sort explicitly instead of relying on the
+ * backend default, so ordering stays correct even if the backend's default
+ * ever changes independently of the frontend.
+ */
+export const getCancelledFeeCollections = async ({
+                                                   fromDate,
+                                                   toDate,
+                                                   studentId,
+                                                   classId,
+                                                   periodId,
+                                                   page = 0,
+                                                   size = 10,
+                                                   sort,
+                                                 } = {}) => {
+  const qs = buildQueryParams({
+    fromDate,
+    toDate,
+    studentId,
+    classId,
+    periodId,
+    page,
+    size,
+    sort,
+  });
+
+  const res = await authFetch(
+      `${API_ENDPOINTS.FEE_COLLECTIONS_CANCELLED}${qs ? "?" + qs : ""}`,
+      {
+        method: "GET",
+      }
+  );
+
+  if (!res.ok) {
+    throw new Error(
+        (await res.text()) || "Failed to fetch cancelled fee collections"
+    );
+  }
+
+  const data = await res.json();
+  const pageObj = data?.data || {};
+
+  return {
+    records: Array.isArray(pageObj.content) ? pageObj.content : [],
+    pagination: {
+      totalPages: pageObj.totalPages || 0,
+      totalElements: pageObj.totalElements || 0,
+      size: pageObj.size || size,
+      number: pageObj.number ?? page,
+    },
+  };
 };

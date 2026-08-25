@@ -1,6 +1,7 @@
 import {
   FileText, CreditCard, Ticket, Award, Receipt, IndianRupee,
   FileOutput, ShieldCheck, ArrowRightLeft, ClipboardCheck, DoorOpen,
+  Bike, UserCheck,
 } from 'lucide-react'
 // Keys must match backend `templateType` enum values used by
 // /v1/print-templates (see Constants/Endpoints.js -> PRINT_TEMPLATES).
@@ -9,6 +10,10 @@ import {
 // and ELIGIBILITY_CERTIFICATE are NEW keys — the backend `templateType`
 // enum + validation on POST/PUT /v1/print-templates must be updated to
 // accept these 4 values, same as it already accepts CERTIFICATE.
+//
+// NOTE: SALARY_SLIP is also a NEW key — backend `templateType` enum +
+// validation on POST/PUT /v1/print-templates must be updated to accept
+// this value too, same as above.
 export const TEMPLATE_TYPES = {
   REPORT_CARD: {
     key: 'REPORT_CARD',
@@ -408,8 +413,6 @@ export const TEMPLATE_TYPES = {
       <div class="gp-school-tagline">{{schoolTagline}}</div>
       <div class="gp-school-meta">
         <span>📍 {{schoolAddress}}</span>
-        <span>📞 {{schoolPhone}}</span>
-        <span>🌐 {{schoolWebsite}}</span>
         <span>✉ {{schoolEmail}}</span>
       </div>
     </div>
@@ -486,6 +489,318 @@ export const TEMPLATE_TYPES = {
     <span><b>Note:</b> Students are not allowed to leave the school campus without a valid Gate Pass.</span>
     <span class="gp-thankyou">Thank You!</span>
   </div>
+
+</div>`,
+  },
+  CYCLE_STAND_PASS: {
+    key: 'CYCLE_STAND_PASS',
+    label: 'Cycle Stand Pass Templates',
+    shortLabel: 'Cycle Stand Pass',
+    icon: Bike,
+    stub: `<div class="cyc-card">
+<style>
+  .cyc-card {
+    font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+    max-width: 460px;
+    margin: 0 auto;
+    border-radius: 20px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(2, 132, 199, 0.12);
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
+  }
+
+  /* ══ Blue Gradient Header ══ */
+  .cyc-header {
+    background: linear-gradient(90deg, #0284c7 0%, #0f766e 100%);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #ffffff;
+  }
+  .cyc-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .cyc-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 800;
+    color: #ffffff;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+  }
+  .cyc-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .cyc-school-name {
+    font-size: 17px;
+    font-weight: 800;
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: -0.2px;
+  }
+  .cyc-subtitle {
+    font-size: 11.5px;
+    opacity: 0.9;
+    margin: 2px 0 0 0;
+    font-weight: 500;
+  }
+  .cyc-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 6px 13px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  /* ══ Card Body ══ */
+  .cyc-body {
+    padding: 18px 20px;
+    display: flex;
+    gap: 18px;
+    align-items: center;
+  }
+  .cyc-photo {
+    width: 95px;
+    height: 105px;
+    border-radius: 16px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .cyc-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .cyc-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .cyc-student-name {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 6px 0;
+    line-height: 1.25;
+  }
+  .cyc-detail {
+    font-size: 13px;
+    color: #334155;
+    margin: 3px 0;
+  }
+  .cyc-detail strong {
+    color: #0f172a;
+  }
+  .cyc-code-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 4px 12px;
+    background: #dcfce7;
+    border-radius: 999px;
+    color: #15803d;
+    font-weight: 800;
+    font-size: 12.5px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ══ Card Footer ══ */
+  .cyc-footer {
+    border-top: 1px dashed #cbd5e1;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    font-size: 12.5px;
+  }
+  .cyc-session {
+    font-weight: 700;
+    color: #0284c7;
+  }
+  .cyc-manual-stand {
+    font-weight: 700;
+    color: #0284c7;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cyc-blank-line {
+    display: inline-block;
+    width: 100px;
+    border-bottom: 1.5px solid #0284c7;
+    height: 14px;
+  }
+</style>
+
+  <!-- Header -->
+  <div class="cyc-header">
+    <div class="cyc-header-left">
+      <div class="cyc-logo">
+        <img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.parentElement.textContent='{{schoolInitials}}'">
+      </div>
+      <div>
+        <h1 class="cyc-school-name">{{schoolName}}</h1>
+        <div class="cyc-subtitle">Bicycle Parking Pass</div>
+      </div>
+    </div>
+    <div class="cyc-badge">CYCLE PASS</div>
+  </div>
+
+  <!-- Body -->
+  <div class="cyc-body">
+    <div class="cyc-photo">
+      <img src="{{studentPhoto}}" alt="{{studentName}}" onerror="this.style.display='none'">
+    </div>
+    <div class="cyc-info">
+      <h2 class="cyc-student-name">{{studentName}}</h2>
+      <div class="cyc-detail"><strong>Roll No:</strong> {{rollNo}}</div>
+      <div class="cyc-detail"><strong>Class:</strong> {{className}} - {{sectionName}}</div>
+      <div class="cyc-code-pill">
+        <span>🚲</span>
+        <span>{{passNo}}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="cyc-footer">
+    <div class="cyc-session">Session {{academicSession}}</div>
+    <div class="cyc-manual-stand">
+      <span>Stand Name / No:</span>
+      <span class="cyc-blank-line"></span>
+    </div>
+  </div>
+</div>`,
+  },
+  VISITOR_PASS: {
+    key: 'VISITOR_PASS',
+    label: "Visitor's Pass Templates",
+    shortLabel: "Visitor's Pass",
+    icon: UserCheck,
+    // Blue-themed print-and-fill pass. Vehicle Details and Remarks are
+    // optional-on-paper sections (staff fill only if applicable), so no
+    // {{#xxxRows}} conditionals needed — always rendered like GATE_PASS.
+    stub: `<div class="vp-premium">
+<style>
+  .vp-premium { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; max-width: 700px; margin: 0 auto; border: 2px solid #1e3a8a; border-radius: 14px; overflow: hidden; background: #ffffff; color: #1f2937; box-shadow: 0 12px 32px rgba(30,58,138,0.14); }
+
+  .vp-header { display: flex; align-items: center; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid #e5e7eb; }
+  .vp-logo { width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg,#1e3a8a,#2563eb); color: #fbbf24; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; border: 2px solid #fbbf24; overflow: hidden; }
+  .vp-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .vp-school-block { flex: 1; min-width: 0; }
+  .vp-school-name { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.2px; color: #1e3a8a; text-transform: uppercase; }
+  .vp-school-meta { font-size: 10px; color: #4b5563; display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; }
+
+  .vp-pass-box { flex-shrink: 0; border: 1.5px solid #1e3a8a; border-radius: 10px; padding: 8px 14px; text-align: center; min-width: 118px; }
+  .vp-pass-box .vp-pb-label { font-size: 8px; font-weight: 800; letter-spacing: .06em; color: #6b7280; }
+  .vp-pass-box .vp-pb-value { font-size: 12px; font-weight: 800; color: #1e3a8a; margin: 1px 0 0; }
+
+  .vp-title-banner { text-align: center; background: #1e3a8a; color: #fff; font-size: 17px; font-weight: 800; letter-spacing: .15em; padding: 9px; margin: 16px 22px 0; border-radius: 8px; }
+
+  .vp-band { background: #1e3a8a; color: #fff; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 7px; margin: 18px 0 0; }
+
+  .vp-section { padding: 16px 22px 0; }
+  .vp-two-col { display: flex; gap: 22px; padding: 16px 22px 0; }
+  .vp-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #e5e7eb; }
+  .vp-row:last-child { border-bottom: none; }
+  .vp-num { flex-shrink: 0; width: 20px; height: 20px; border-radius: 5px; background: #1e3a8a; color: #fff; font-size: 10.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .vp-row-label { flex-shrink: 0; width: 140px; font-size: 12px; font-weight: 700; color: #374151; }
+  .vp-row-value { flex: 1; font-size: 12.5px; font-weight: 700; color: #111827; border-bottom: 1px solid #d1d5db; padding-bottom: 3px; }
+
+  .vp-field { flex: 1; }
+  .vp-field-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; margin-bottom: 3px; }
+  .vp-field-value { font-size: 12.5px; font-weight: 700; color: #111827; border-bottom: 1px solid #d1d5db; padding-bottom: 4px; min-height: 15px; }
+
+  .vp-signatures { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; padding: 16px 22px 18px; }
+  .vp-sign-box { border: 1px solid #d1d5db; border-radius: 8px; padding: 20px 8px 8px; text-align: center; position: relative; min-height: 66px; }
+  .vp-sign-box .vp-sign-title { position: absolute; top: 7px; left: 8px; right: 8px; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: #6b7280; text-align: left; }
+  .vp-sign-line { border-top: 1px solid #9ca3af; font-size: 9px; color: #6b7280; padding-top: 3px; }
+
+  .vp-footer { text-align: center; background: #1e3a8a; color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; padding: 10px; margin-top: 4px; }
+</style>
+
+  <!-- ══ Header ══ -->
+  <div class="vp-header">
+    <div class="vp-logo"><img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.parentElement.textContent='{{schoolInitials}}'"></div>
+    <div class="vp-school-block">
+      <h1 class="vp-school-name">{{schoolName}}</h1>
+    </div>
+    <div class="vp-pass-box">
+      <div class="vp-pb-label">PASS NO.</div>
+      <div class="vp-pb-value">{{passNo}}</div>
+    </div>
+  </div>
+
+  <div class="vp-title-banner">VISITOR PASS</div>
+
+  <!-- ══ Visitor Details ══ -->
+  <div class="vp-band">Visitor Details</div>
+  <div class="vp-section">
+    <div class="vp-row"><span class="vp-num">1</span><span class="vp-row-label">Visitor Name</span><span class="vp-row-value">{{visitorName}}</span></div>
+    <div class="vp-row"><span class="vp-num">2</span><span class="vp-row-label">Mobile Number</span><span class="vp-row-value">{{visitorMobile}}</span></div>
+    <div class="vp-row"><span class="vp-num">3</span><span class="vp-row-label">ID Proof Type</span><span class="vp-row-value">{{idProofType}}</span></div>
+    <div class="vp-row"><span class="vp-num">4</span><span class="vp-row-label">ID Proof Number</span><span class="vp-row-value">{{idProofNumber}}</span></div>
+  </div>
+
+  <!-- ══ Visit Details ══ -->
+  <div class="vp-band">Visit Details</div>
+  <div class="vp-section">
+    <div class="vp-row"><span class="vp-num">1</span><span class="vp-row-label">Purpose of Visit</span><span class="vp-row-value">{{purposeOfVisit}}</span></div>
+    <div class="vp-row"><span class="vp-num">2</span><span class="vp-row-label">Person to Meet</span><span class="vp-row-value">{{personToMeet}}</span></div>
+    <div class="vp-row"><span class="vp-num">3</span><span class="vp-row-label">Student / Employee</span><span class="vp-row-value">{{studentOrEmployeeName}}</span></div>
+    <div class="vp-row"><span class="vp-num">4</span><span class="vp-row-label">Class / Section / Dept</span><span class="vp-row-value">{{classSectionDept}}</span></div>
+  </div>
+
+  <!-- ══ Vehicle Details ══ -->
+  <div class="vp-band">Vehicle Details (If Any)</div>
+  <div class="vp-section">
+    <div class="vp-row" style="border-bottom:none;"><span class="vp-num">1</span><span class="vp-row-label">Vehicle Number</span><span class="vp-row-value">{{vehicleNumber}}</span></div>
+  </div>
+
+  <!-- ══ Remarks / Items Carried ══ -->
+  <div class="vp-band">Remarks / Items Carried (If Any)</div>
+  <div class="vp-section">
+    <div class="vp-row" style="border-bottom:none;"><span class="vp-num">1</span><span class="vp-row-label">Remarks</span><span class="vp-row-value">{{remarks}}</span></div>
+  </div>
+
+  <!-- ══ Date & Time ══ -->
+  <div class="vp-band">Date &amp; Time</div>
+  <div class="vp-two-col">
+    <div class="vp-field"><div class="vp-field-label">Date of Visit</div><div class="vp-field-value">{{dateOfVisit}}</div></div>
+    <div class="vp-field"><div class="vp-field-label">Entry Time</div><div class="vp-field-value">{{entryTime}}</div></div>
+    <div class="vp-field"><div class="vp-field-label">Expected Exit Time</div><div class="vp-field-value">{{expectedExitTime}}</div></div>
+  </div>
+
+  <!-- ══ Authorization ══ -->
+  <div class="vp-band" style="margin-top:18px;">Authorization</div>
+  <div class="vp-signatures">
+    <div class="vp-sign-box"><span class="vp-sign-title">Visitor Signature</span><div class="vp-sign-line">Signature</div></div>
+    <div class="vp-sign-box"><span class="vp-sign-title">Authorized By</span><div class="vp-sign-line">Signature</div></div>
+    <div class="vp-sign-box"><span class="vp-sign-title">Security Guard</span><div class="vp-sign-line">Signature</div></div>
+  </div>
+
+  <div class="vp-footer">🛡 PLEASE DISPLAY THIS PASS WHILE ON CAMPUS 🛡</div>
 
 </div>`,
   },
@@ -871,6 +1186,170 @@ export const TEMPLATE_TYPES = {
     </div>
     <div class="fr2-note">This is a computer-generated receipt and does not require a signature.</div>
   </div>
+
+</div>
+</body>
+</html>`,
+  },
+
+  SALARY_SLIP: {
+    key: 'SALARY_SLIP',
+    label: 'Salary Slip Templates',
+    shortLabel: 'Salary Slip',
+    icon: Receipt,
+    // Fully data-driven, same convention as FEE_RECEIPT / REPORT_CARD —
+    // every value below is a {{mergeField}} resolved from the payroll
+    // API response for a single teacher + salary month. Backend needs a
+    // buildSalarySlipMergeData() (mirroring buildFeeReceiptMergeData())
+    // that pre-formats all amounts (e.g. "₹30,000.00") server-side, so
+    // the template stays purely presentational.
+    //
+    // Repeating sections (engine has no {{#if}}, so single/multi-item
+    // arrays double as both "list" and "conditional row"):
+    //   {{#earnings}}    → one row per earning component (Basic, HRA,
+    //                      Conveyance, Academic Allowance, Other, etc.)
+    //   {{#deductions}}  → one row per deduction component (Unpaid Leave,
+    //                      Unauthorized Absence, Late Mark Penalty, PF,
+    //                      Professional Tax, TDS, Loan, Other, etc.)
+    // Both arrays are entirely backend-driven — add/remove a salary
+    // component on the backend and this table updates automatically,
+    // no template edit needed (same pattern as subjectMarks/components).
+    stub: `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Salary Slip</title></head>
+<body style="margin:0;padding:14px;background:#eef2f7;">
+<div class="ss-wrap">
+<style>
+  .ss-wrap { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; max-width: 720px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 12px 32px rgba(15,23,42,0.12); color: #1f2937; border: 1px solid #e5e7eb; }
+
+  .ss-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: linear-gradient(135deg,#1e293b,#334155); color: #fff; padding: 18px 22px; }
+  .ss-header-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .ss-logo { width: 46px; height: 46px; border-radius: 10px; background: rgba(255,255,255,.18); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; font-weight: 800; font-size: 15px; border: 1.5px solid rgba(255,255,255,.5); }
+  .ss-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .ss-school-name { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -.1px; }
+  .ss-school-meta { margin: 2px 0 0; font-size: 10px; opacity: .85; line-height: 1.5; }
+  .ss-badge-box { flex-shrink: 0; text-align: right; }
+  .ss-badge { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+  .ss-badge-sub { font-size: 9.5px; opacity: .8; margin-top: 2px; }
+
+  .ss-band { background: #1e293b; color: #fff; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 7px 22px; }
+
+  .ss-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-bottom: 1px solid #e5e7eb; }
+  .ss-info-col { padding: 12px 22px; }
+  .ss-info-col:first-child { border-right: 1px solid #e5e7eb; }
+  .ss-kv-row { display: flex; gap: 6px; font-size: 11.5px; margin-bottom: 5px; }
+  .ss-kv-row .ss-k { font-weight: 700; min-width: 110px; color: #6b7280; flex-shrink: 0; }
+  .ss-kv-row .ss-v { color: #111827; font-weight: 600; }
+
+  .ss-attendance { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: #e5e7eb; }
+  .ss-att-cell { background: #f8fafc; padding: 10px 8px; text-align: center; }
+  .ss-att-label { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #64748b; margin-bottom: 2px; }
+  .ss-att-value { font-size: 15px; font-weight: 800; color: #111827; }
+  .ss-att-status { grid-column: span 4; background: #eef2ff; padding: 7px; text-align: center; font-size: 10.5px; font-weight: 700; color: #4338ca; }
+
+  table.ss-items { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  table.ss-items td { padding: 7px 22px; border-bottom: 1px solid #f1f2f6; }
+  table.ss-items td:last-child { text-align: right; font-weight: 600; }
+  table.ss-items tr.ss-total-row td { font-weight: 800; border-top: 2px solid #1e293b; border-bottom: none; padding-top: 10px; }
+  .ss-earn-amt { color: #15803d; }
+  .ss-ded-amt { color: #b91c1c; }
+
+  .ss-net-band { display: flex; justify-content: space-between; align-items: center; background: #1e293b; color: #fff; padding: 14px 22px; margin-top: 4px; }
+  .ss-net-label { font-size: 13px; font-weight: 800; }
+  .ss-net-value { font-size: 19px; font-weight: 800; }
+  .ss-net-words { padding: 10px 22px; font-size: 10.5px; font-style: italic; color: #4b5563; border-bottom: 1px solid #e5e7eb; }
+
+  .ss-signatures { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; padding: 18px 22px; }
+  .ss-sign-box { border-top: 1px solid #9ca3af; text-align: center; padding-top: 6px; font-size: 10px; color: #4b5563; }
+  .ss-sign-box b { display: block; font-size: 10.5px; color: #111827; margin-top: 2px; }
+
+  .ss-footer { text-align: center; font-size: 9.5px; color: #9ca3af; background: #fafafa; border-top: 1px solid #f1f2f6; padding: 8px 22px; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .ss-wrap { box-shadow: none; border: 1px solid #ccc; }
+  }
+</style>
+
+  <!-- ══ Header ══ -->
+  <div class="ss-header">
+    <div class="ss-header-left">
+      <div class="ss-logo"><img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.src='{{schoolLogoFallback}}'"></div>
+      <div>
+        <h1 class="ss-school-name">{{schoolName}}</h1>
+        <div class="ss-school-meta">{{schoolAddress}}</div>
+        <div class="ss-school-meta">{{schoolPhone}} &middot; {{schoolEmail}}</div>
+      </div>
+    </div>
+    <div class="ss-badge-box">
+      <div class="ss-badge">Salary Slip</div>
+      <div class="ss-badge-sub">{{salaryMonth}}</div>
+    </div>
+  </div>
+
+  <!-- ══ Employee Details ══ -->
+  <div class="ss-band">Employee Details</div>
+  <div class="ss-info-grid">
+    <div class="ss-info-col">
+      <div class="ss-kv-row"><span class="ss-k">Employee Name</span><span class="ss-v">{{employeeName}}</span></div>
+      <div class="ss-kv-row"><span class="ss-k">Employee ID</span><span class="ss-v">{{employeeId}}</span></div>
+      <div class="ss-kv-row"><span class="ss-k">Designation</span><span class="ss-v">{{designation}}</span></div>
+      <div class="ss-kv-row"><span class="ss-k">Department</span><span class="ss-v">{{department}}</span></div>
+    </div>
+    <div class="ss-info-col">
+      <div class="ss-kv-row"><span class="ss-k">Date of Joining</span><span class="ss-v">{{dateOfJoining}}</span></div>
+      <div class="ss-kv-row"><span class="ss-k">Salary Month</span><span class="ss-v">{{salaryMonth}}</span></div>
+      <div class="ss-kv-row"><span class="ss-k">Payment Date</span><span class="ss-v">{{paymentDate}}</span></div>
+      <div class="ss-kv-row"><span class="ss-k">Payment Mode</span><span class="ss-v">{{paymentMode}}</span></div>
+    </div>
+  </div>
+
+  <!-- ══ Attendance Summary ══ -->
+  <div class="ss-band">Attendance Summary</div>
+  <div class="ss-attendance">
+    <div class="ss-att-cell"><div class="ss-att-label">Working Days</div><div class="ss-att-value">{{workingDays}}</div></div>
+    <div class="ss-att-cell"><div class="ss-att-label">Present Days</div><div class="ss-att-value">{{presentDays}}</div></div>
+    <div class="ss-att-cell"><div class="ss-att-label">Paid Leave</div><div class="ss-att-value">{{paidLeaveDays}}</div></div>
+    <div class="ss-att-cell"><div class="ss-att-label">Unpaid Leave</div><div class="ss-att-value">{{unpaidLeaveDays}}</div></div>
+    <div class="ss-att-cell"><div class="ss-att-label">Unauthorized Absence</div><div class="ss-att-value">{{unauthorizedAbsenceDays}}</div></div>
+    <div class="ss-att-cell"><div class="ss-att-label">Half Day</div><div class="ss-att-value">{{halfDayCount}}</div></div>
+    <div class="ss-att-cell"><div class="ss-att-label">Late Marks</div><div class="ss-att-value">{{lateMarksCount}}</div></div>
+    <div class="ss-att-cell"><div class="ss-att-label">Status</div><div class="ss-att-value" style="font-size:11px;">{{attendanceStatus}}</div></div>
+  </div>
+
+  <!-- ══ Earnings ══ -->
+  <div class="ss-band">Earnings</div>
+  <table class="ss-items">
+    {{#earnings}}
+    <tr><td>{{label}}</td><td class="ss-earn-amt">{{amountFormatted}}</td></tr>
+    {{/earnings}}
+    <tr class="ss-total-row"><td>Gross Salary</td><td class="ss-earn-amt">{{grossSalaryFormatted}}</td></tr>
+  </table>
+
+  <!-- ══ Deductions ══ -->
+  <div class="ss-band">Deductions</div>
+  <table class="ss-items">
+    {{#deductions}}
+    <tr><td>{{label}}</td><td class="ss-ded-amt">{{amountFormatted}}</td></tr>
+    {{/deductions}}
+    <tr class="ss-total-row"><td>Total Deductions</td><td class="ss-ded-amt">{{totalDeductionsFormatted}}</td></tr>
+  </table>
+
+  <!-- ══ Net Pay ══ -->
+  <div class="ss-net-band">
+    <span class="ss-net-label">Net Salary Payable</span>
+    <span class="ss-net-value">{{netSalaryFormatted}}</span>
+  </div>
+  <div class="ss-net-words">Net Salary in Words: {{netSalaryInWords}}</div>
+
+  <!-- ══ Signatures ══ -->
+  <div class="ss-signatures">
+    <div class="ss-sign-box">Prepared By<b>HR / Accounts</b></div>
+    <div class="ss-sign-box">Verified By<b>School Administration</b></div>
+    <div class="ss-sign-box">Authorized By<b>Principal</b></div>
+  </div>
+
+  <div class="ss-footer">Payroll Status: {{payrollStatus}} &middot; Generated On: {{generatedAt}} &middot; This is a computer-generated salary slip.</div>
 
 </div>
 </body>
