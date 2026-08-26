@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, IndianRupee, User, Camera, X, Image as ImageIcon, RefreshCcw, Landmark } from 'lucide-react';
+import { ChevronLeft, IndianRupee, User, Camera, X, Image as ImageIcon, RefreshCcw } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { createTeachers, upsertTeacherSalary } from '../../Api/Teachers/TeachersAPI';
 import { getListOfValues } from "../../Api/Lov/ListOfValues.js";
 import PersonalDetailsTab from '../../Components/Teacher/AddTabComponents/AddPersonalInfo';
 import SalaryDetailsTab from '../../Components/Teacher/AddTabComponents/AddSalaryDetails';
-import BankDetailsTab from '../../Components/Teacher/AddTabComponents/AddBankDetails';
 import TEACHER_MODULE_STRINGS from '../../Constants/StringConstants/TeacherConstants';
 
 // ── Local-date helpers ───────────────────────────────────────────────────
@@ -32,10 +31,8 @@ function AddNewTeacher() {
     const [imagePreview, setImagePreview] = useState(null);
     const [errors, setErrors] = useState({});
     const [salaryErrors, setSalaryErrors] = useState({});
-    const [bankErrors, setBankErrors] = useState({});
     const fileInputRef = useRef(null);
     const salarySectionRef = useRef(null);
-    const bankSectionRef = useRef(null);
     const [designationList, setDesignationList] = useState([]);
 
     useEffect(() => {
@@ -50,7 +47,7 @@ function AddNewTeacher() {
 
         fetchDesignation();
     }, []);
-    // Feature Flag Check for Payroll
+
     // --- CAMERA & POPUP STATE ---
     const [showPhotoMenu, setShowPhotoMenu] = useState(false);
     const [showCamera, setShowCamera] = useState(false);
@@ -135,10 +132,10 @@ function AddNewTeacher() {
         }
     })();
 
-    // Ordered list of tabs the user must move through. Bank Details always
-    // comes last, after Salary when payroll is enabled, or right after
-    // Personal when it isn't.
-    const tabs = isPayrollEnabled ? ['personal', 'salary', 'bank'] : ['personal', 'bank'];
+    // Ordered list of tabs the user must move through. Bank Details has
+    // been removed — Salary (when payroll is enabled) is now the final step.
+    const tabs = isPayrollEnabled ? ['personal', 'salary'] : ['personal'];
+    const isLastTab = activeTab === tabs[tabs.length - 1];
 
     const [formData, setFormData] = useState({
         name: "",
@@ -173,15 +170,6 @@ function AddNewTeacher() {
         primarySubject: '',
         additionalSubjects: '',
         isClassTeacher: false,
-        // Bank Details
-        accountHolderName: '',
-        accountNumber: '',
-        bankName: '',
-        ifscCode: '',
-        branchName: '',
-        branchAddress: '',
-        iban: '',
-        swiftCode: '',
     });
 
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -191,7 +179,6 @@ function AddNewTeacher() {
         setFormData(prev => ({ ...prev, [name]: value }));
         setErrors(prev => ({ ...prev, [name]: '' }));
         setSalaryErrors(prev => ({ ...prev, [name]: '' }));
-        setBankErrors(prev => ({ ...prev, [name]: '' }));
     };
 
     const handleImageChange = (e) => {
@@ -263,41 +250,14 @@ function AddNewTeacher() {
         return Object.keys(newErrors).length === 0;
     };
 
-    // Bank Details are optional — this only validates format when a value
-    // has actually been entered, it never blocks submission on its own.
-    const validateBankDetails = () => {
-        const newErrors = {};
-        if (formData.ifscCode && !/^[A-Za-z]{4}0[A-Za-z0-9]{6}$/.test(formData.ifscCode.trim())) {
-            newErrors.ifscCode = "Enter a valid 11-character IFSC code";
-        }
-        if (formData.accountNumber && !/^\d{6,20}$/.test(formData.accountNumber.trim())) {
-            newErrors.accountNumber = "Account number should be 6-20 digits";
-        }
-        setBankErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
     const handleNext = () => {
         const isValid = validatePersonalDetails();
         if (!isValid) {
             toast.error(strings.ADD_TEACHER.ERRORS.FORM_INCOMPLETE);
             return;
         }
-        const currentIndex = tabs.indexOf('personal');
-        const nextTab = tabs[currentIndex + 1];
-        setActiveTab(nextTab);
-        const ref = nextTab === 'salary' ? salarySectionRef : bankSectionRef;
-        setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
-    };
-
-    const handleSalaryNext = () => {
-        const isValid = validateSalaryDetails();
-        if (!isValid) {
-            toast.error(strings.ADD_TEACHER.ERRORS.SALARY_INCOMPLETE);
-            return;
-        }
-        setActiveTab('bank');
-        setTimeout(() => bankSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+        setActiveTab('salary');
+        setTimeout(() => salarySectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     };
 
     const handleSubmit = async (e) => {
@@ -316,12 +276,6 @@ function AddNewTeacher() {
                 return;
             }
         }
-        const isBankValid = validateBankDetails();
-        if (!isBankValid) {
-            toast.error("Please correct the bank details.");
-            setActiveTab('bank');
-            return;
-        }
 
         setIsSubmitting(true);
         const loadingToast = toast.loading(strings.ADD_TEACHER.LOADING);
@@ -339,16 +293,6 @@ function AddNewTeacher() {
                     experienceYears: Number(formData.experience || 1),
                     joiningDate: formData.joiningDate,
                     designation: formData.designation
-                },
-                bankDetails: {
-                    accountHolderName: formData.accountHolderName || "",
-                    accountNumber: formData.accountNumber || "",
-                    bankName: formData.bankName || "",
-                    ifscCode: formData.ifscCode || "",
-                    branchName: formData.branchName || "",
-                    branchAddress: formData.branchAddress || "",
-                    iban: formData.iban || "",
-                    swiftCode: formData.swiftCode || "",
                 },
                 accountStatus: "ACTIVE",
             };
@@ -434,19 +378,6 @@ function AddNewTeacher() {
                                         <span className="sm:hidden">Salary</span>
                                     </button>
                                 )}
-                                <button type="button" onClick={() => {
-                                    const personalValid = validatePersonalDetails();
-                                    if (!personalValid) { toast.error(strings.ADD_TEACHER.COMPLETE_PERSONAL); setActiveTab('personal'); return; }
-                                    if (isPayrollEnabled) {
-                                        const salaryValid = validateSalaryDetails();
-                                        if (!salaryValid) { toast.error(strings.ADD_TEACHER.ERRORS.SALARY_INCOMPLETE); setActiveTab('salary'); return; }
-                                    }
-                                    setActiveTab('bank');
-                                }} className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'bank' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                                    <Landmark size={18} />
-                                    <span className="hidden sm:inline">Bank Details</span>
-                                    <span className="sm:hidden">Bank</span>
-                                </button>
                             </nav>
                         </div>
 
@@ -519,12 +450,6 @@ function AddNewTeacher() {
                                     <SalaryDetailsTab formData={formData} setFormData={setFormData} handleInputChange={handleInputChange} errors={salaryErrors} setSalaryErrors={setSalaryErrors} />
                                 </div>
                             )}
-
-                            {activeTab === 'bank' && (
-                                <div ref={bankSectionRef}>
-                                    <BankDetailsTab formData={formData} handleInputChange={handleInputChange} errors={bankErrors} />
-                                </div>
-                            )}
                         </div>
 
                         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
@@ -532,17 +457,12 @@ function AddNewTeacher() {
                                 <button type="button" onClick={handleDiscard} className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                                     {strings.COMMON.DISCARD_CHANGES}
                                 </button>
-                                {activeTab === 'personal' && (
+                                {activeTab === 'personal' && isPayrollEnabled && (
                                     <button type="button" onClick={handleNext} className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors">
                                         {strings.COMMON.NEXT}
                                     </button>
                                 )}
-                                {activeTab === 'salary' && isPayrollEnabled && (
-                                    <button type="button" onClick={handleSalaryNext} className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors">
-                                        {strings.COMMON.NEXT}
-                                    </button>
-                                )}
-                                {activeTab === 'bank' && (
+                                {isLastTab && (
                                     <button disabled={isSubmitting} type="submit" className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
                                         {isSubmitting ? (
                                             <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>{strings.ADD_TEACHER.SUBMIT_LOADING}</span>
