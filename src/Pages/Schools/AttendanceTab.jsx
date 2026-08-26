@@ -191,6 +191,12 @@ export default function AttendanceTab({ schoolId, schoolName }) {
             };
             await updateAttendanceConfig(schoolId, payload);
 
+            // Sync updated configuration to localStorage immediately
+            localStorage.setItem("attendanceConfig", JSON.stringify({
+                schoolLatitude: payload.schoolLatitude,
+                schoolLongitude: payload.schoolLongitude,
+            }));
+
             try {
                 const fresh = await getAttendanceConfig(schoolId);
                 const ac = fresh?.data;

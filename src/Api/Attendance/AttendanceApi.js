@@ -34,11 +34,16 @@ export const enrollUserFaces = async ({ userId, userType, classId, sectionId, im
 };
 
 /** Mark attendance via staff face */
-export const markAttendanceByStafffFace = async ({ imageFile, gpsLatitude = "28.6139", gpsLongitude = "77.209" }) => {
+export const markAttendanceByStafffFace = async ({ imageFile, gpsLatitude = "", gpsLongitude = "" }) => {
   const formData = new FormData();
   formData.append("image", imageFile);
 
-  const url = `${API_ENDPOINTS.ATTENDANCE_MARK}?gps_latitude=${gpsLatitude}&gps_longitude=${gpsLongitude}`;
+  const queryParams = new URLSearchParams();
+  if (gpsLatitude) queryParams.append("gps_latitude", gpsLatitude);
+  if (gpsLongitude) queryParams.append("gps_longitude", gpsLongitude);
+
+  const queryString = queryParams.toString();
+  const url = queryString ? `${API_ENDPOINTS.ATTENDANCE_MARK}?${queryString}` : API_ENDPOINTS.ATTENDANCE_MARK;
   const res = await authFetch(url, { method: "POST", body: formData });
 
   if (!res.ok) throw new Error(await res.text() || "Face verification failed");
@@ -46,11 +51,19 @@ export const markAttendanceByStafffFace = async ({ imageFile, gpsLatitude = "28.
 };
 
 /** Mark attendance via student face */
-export const markAttendanceByFace = async ({ imageFile, user_type, class_id, section_id, gpsLatitude = "28.6139", gpsLongitude = "77.209" }) => {
+export const markAttendanceByFace = async ({ imageFile, user_type, class_id, section_id, gpsLatitude = "", gpsLongitude = "" }) => {
   const formData = new FormData();
   formData.append("image", imageFile);
 
-  const url = `${API_ENDPOINTS.ATTENDANCE_MARK}?user_type=${user_type}&class_id=${class_id}&section_id=${section_id}&gps_latitude=${gpsLatitude}&gps_longitude=${gpsLongitude}`;
+  const queryParams = new URLSearchParams({
+    ...(user_type && { user_type }),
+    ...(class_id && { class_id }),
+    ...(section_id && { section_id }),
+  });
+  if (gpsLatitude) queryParams.append("gps_latitude", gpsLatitude);
+  if (gpsLongitude) queryParams.append("gps_longitude", gpsLongitude);
+
+  const url = `${API_ENDPOINTS.ATTENDANCE_MARK}?${queryParams.toString()}`;
   const res = await authFetch(url, { method: "POST", body: formData });
 
   if (!res.ok) throw new Error(await res.text() || "Face verification failed");
@@ -58,10 +71,9 @@ export const markAttendanceByFace = async ({ imageFile, user_type, class_id, sec
 };
 
 /** Request manual attendance review */
-/** Request manual attendance review */
 export const requestManualAttendance = async ({
-  gpsLatitude = 28.6139,
-  gpsLongitude = 77.209,
+  gpsLatitude = "",
+  gpsLongitude = "",
   ...payload
 }) => {
   if (!payload.userId || !payload.userType || !payload.userName) throw new Error("User details required");
@@ -141,12 +153,33 @@ export const unmarkAttendance = async (attendanceId, reason) => {
 };
 
 /** Process group photo attendance */
-export const groupMarkAttendance = async ({ classId, sectionId, image, gps_latitude, gps_longitude }) => {
+export const groupMarkAttendance = async ({
+  classId,
+  sectionId,
+  image,
+  gps_latitude,
+  gps_longitude,
+  gpsLatitude,
+  gpsLongitude,
+}) => {
   const formData = new FormData();
   formData.append("image", image);
 
-  const query = new URLSearchParams({ class_id: classId, section_id: sectionId, ...(gps_latitude && { gps_latitude }), ...(gps_longitude && { gps_longitude }) }).toString();
-  const res = await authFetch(`${API_ENDPOINTS.ATTENDANCE_GROUP_MARK}?${query}`, { method: "POST", body: formData });
+  const lat = gps_latitude || gpsLatitude || "";
+  const lng = gps_longitude || gpsLongitude || "";
+
+  const queryParams = new URLSearchParams({
+    class_id: classId,
+    section_id: sectionId,
+  });
+
+  if (lat) queryParams.append("gps_latitude", lat);
+  if (lng) queryParams.append("gps_longitude", lng);
+
+  const res = await authFetch(`${API_ENDPOINTS.ATTENDANCE_GROUP_MARK}?${queryParams.toString()}`, {
+    method: "POST",
+    body: formData,
+  });
 
   if (!res.ok) throw new Error(await res.text() || "Failed to process group photo");
   return await res.json();
@@ -313,7 +346,6 @@ export const bulkManualStaffAttendance = async (payload) => {
   if (!res.ok) throw new Error(data?.message || "Failed to bulk mark staff attendance");
   return data;
 };
-
 
 // Attendance Summary
 export const getAttendanceSummary = async ({

@@ -97,12 +97,15 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
     useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
 
     const submitScan = useCallback(async (imageBlob) => {
-        const { gpsLatitude, gpsLongitude } = getSchoolLocation();
         if (!selectedClass?.id || !selectedSection?.id) {
             alert(UI_STRINGS.ALERTS.WAIT_BEFORE_PROCEEDING);
             return;
         }
+
         setScanState({ ...INITIAL_SCAN_STATE, status: "scanning" });
+
+        // ✅ Live GPS location ko properly await karein
+        const { gpsLatitude, gpsLongitude } = await getSchoolLocation();
 
         try {
             const res = await markAttendanceByFace({
@@ -152,7 +155,10 @@ export default function IndividualFaceScanView({ onBack, selectedClass, selected
         const { FaceLandmarker, FilesetResolver } = await import(/* @vite-ignore */ MEDIAPIPE_CDN);
         const fs = await FilesetResolver.forVisionTasks(WASM_BASE);
         const lm = await FaceLandmarker.createFromOptions(fs, {
-            baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" }, outputFaceBlendshapes: true, runningMode: "VIDEO", numFaces: 1,
+            baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
+            outputFaceBlendshapes: true,
+            runningMode: "VIDEO",
+            numFaces: 1,
         });
         landmarkerRef.current = lm;
         return lm;
