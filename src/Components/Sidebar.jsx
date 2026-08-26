@@ -108,16 +108,16 @@ const menuSections = [
           { label: 'Leave Config', route: '/leaves/leaveConfig', permission: P.LEAVE_DELETE },
         ]
       },
-      {
-        id: 'payroll', icon: Wallet, label: 'Payroll', route: '/payroll/myPayroll',
-        permission: P.PAYROLL_VIEW,
-        featureFlag: 'payrollEnabled',
-        subItems: [
-          { label: 'Manage Payroll', route: '/payroll', permission: P.PAYROLL_MANAGE },
-          { label: 'My Payroll', route: '/payroll/myPayroll', permission: P.PAYROLL_VIEW },
-          { label: 'Payroll Config', route: '/payroll/payrollConfig', permission: P.PAYROLL_CONFIG },
-        ]
-      }
+      // {
+      //   id: 'payroll', icon: Wallet, label: 'Payroll', route: '/payroll/myPayroll',
+      //   permission: P.PAYROLL_VIEW,
+      //   featureFlag: 'payrollEnabled',
+      //   subItems: [
+      //     { label: 'Manage Payroll', route: '/payroll', permission: P.PAYROLL_MANAGE },
+      //     { label: 'My Payroll', route: '/payroll/myPayroll', permission: P.PAYROLL_VIEW },
+      //     { label: 'Payroll Config', route: '/payroll/payrollConfig', permission: P.PAYROLL_CONFIG },
+      //   ]
+      // }
     ]
   },
   {
