@@ -218,6 +218,7 @@ const menuSections = [
           { label: 'Visitor Pass Templates', route: '/templates/visitorPass', icon: UserCheck },
           { label: 'Cycle Stand Templates', route: '/templates/cycleStandPass', icon: Bike },
           { label: 'Salary Slip Templates', route: '/templates/salarySlip', icon: Wallet },
+          {label:'No Dues Templates' , route:'/templates/noDues' , icon:Mail}
         ]
       }
     ]
