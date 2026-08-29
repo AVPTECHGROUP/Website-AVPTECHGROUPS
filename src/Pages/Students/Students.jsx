@@ -12,6 +12,7 @@ import {
     Info,
     ChevronDown,
     Upload,
+    Loader2,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import CardComponent from '../../Components/CommonComp/CardComponent';
@@ -33,6 +34,7 @@ const Student = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
     const [noUserFound, setNoUserFound] = useState(false);
     const [page, setPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -139,8 +141,8 @@ const Student = () => {
                                 `https://ui-avatars.com/api/?name=${encodeURIComponent(stu.fullName)}&background=random`,
                             name: stu.fullName || `${stu.firstName} ${stu.lastName}`,
                             admissionNumber: stu.admissionNumber,
-                            mobile: stu.personalDetails?.mobile || 'N/A',
-                            email: stu.personalDetails?.email || 'N/A',
+                            mobile: stu.personalDetails?.mobile || stu.mobile || 'N/A',
+                            email: stu.personalDetails?.email || stu.email || 'N/A',
                             status: stu.status,
                             className: stu.className || '',
                             sectionName: stu.sectionName || '',
@@ -189,13 +191,13 @@ const Student = () => {
             acc.push(btn(num));
             return acc;
         }, []);
-    };  
+    };
 
     const PrevBtn = () => (
         <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1 || loading || !!error}
-            className="flex items-center justify-center w-7 h-7 rounded hover:bg-gray-100 text-gray-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center justify-center w-7 h-7 rounded hover:bg-gray-100 text-gray-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         >
             <ChevronLeft className="w-4 h-4" />
         </button>
@@ -205,7 +207,7 @@ const Student = () => {
         <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages || loading || !!error}
-            className="flex items-center justify-center w-7 h-7 rounded hover:bg-gray-100 text-gray-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center justify-center w-7 h-7 rounded hover:bg-gray-100 text-gray-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         >
             <ChevronRight className="w-4 h-4" />
         </button>
@@ -249,48 +251,181 @@ const Student = () => {
         );
     };
 
-    // ── CSV EXPORT ──────────────────────────────────────────────────────────────
+    // ── FULL CSV EXPORT (ALL STUDENTS & ALL IMPORTANT FIELDS) ────────────────────
     const csvCell = (val) => {
-        const str = val == null ? '' : String(val).trim();
-        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-            return `"${str.replace(/"/g, '""')}"`;
-        }
-        return str;
+        if (val === null || val === undefined) return '""';
+        const str = typeof val === 'boolean' ? (val ? 'Yes' : 'No') : String(val).trim();
+        return `"${str.replace(/"/g, '""')}"`;
     };
 
-    const handleExportStudentsCSV = () => {
-        if (students.length === 0) {
-            toast.info(SL.EXPORT_EMPTY);
+    const handleExportStudentsCSV = async () => {
+        if (totalElements === 0) {
+            toast.info(SL.EXPORT_EMPTY || "No students available to export");
             return;
         }
-        const HEADERS = SL.TABLE_HEADERS.filter(h => h !== 'Actions');
-        const dataRows = students.map((s) => [
-            csvCell(s.name || 'Unknown'),
-            csvCell(s.admissionNumber || 'N/A'),
-            csvCell(s.mobile || 'N/A'),
-            csvCell(s.email || 'N/A'),
-            csvCell(s.className || 'N/A'),
-            csvCell(s.sectionName || 'N/A'),
-            csvCell(s.status || 'N/A'),
-        ].join(','));
-        const csvString = [HEADERS.join(','), ...dataRows].join('\n');
-        const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        const date = new Date().toISOString().slice(0, 10);
-        anchor.href = url;
-        anchor.download = `students_page${page}of${totalPages}_${rowsPerPage}rows_${date}.csv`;
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
-        URL.revokeObjectURL(url);
-        toast.success(
-            SL.EXPORT_SUCCESS
-                .replace('{count}', students.length)
-                .replace('{plural}', students.length !== 1 ? 's' : '')
-                .replace('{page}', page)
-                .replace('{totalPages}', totalPages)
-        );
+
+        setIsExporting(true);
+        const exportToast = toast.loading("Fetching all student records for export...");
+
+        try {
+            const hasFilters =
+                debouncedSearch.trim() !== '' ||
+                selectedSectionId !== '' ||
+                statusFilter !== '';
+
+            const fetchLimit = Math.max(totalElements, 5000);
+            let response;
+
+            if (hasFilters) {
+                const filters = {
+                    ...(debouncedSearch.trim() && { searchTerm: debouncedSearch.trim() }),
+                    ...(selectedSectionId && { sectionId: Number(selectedSectionId) }),
+                    ...(statusFilter && { status: statusFilter }),
+                };
+                response = await searchStudents(filters, 0, fetchLimit, ['id']);
+            } else {
+                response = await getStudents(0, fetchLimit, 'id');
+            }
+
+            const allStudents = response?.data || [];
+
+            if (allStudents.length === 0) {
+                toast.dismiss(exportToast);
+                toast.warning("No student records found to export.");
+                return;
+            }
+
+            const CSV_HEADERS = [
+                "Admission No",
+                "Roll No",
+                "Full Name",
+                "First Name",
+                "Last Name",
+                "Class",
+                "Section",
+                "Academic Year",
+                "Admission Date",
+                "Status",
+                "Gender",
+                "Date of Birth",
+                "Blood Group",
+                "Category",
+                "Religion",
+                "Mobile",
+                "WhatsApp No",
+                "Email",
+                "Current Address",
+                "Permanent Address",
+                "Transport Required",
+                "Hostel Required",
+                "Hostel Room No",
+                "Student House",
+                "Previous School",
+                "Emergency Contact Name",
+                "Emergency Contact Relation",
+                "Emergency Contact No",
+                "Father Name",
+                "Father Occupation",
+                "Father Phone",
+                "Father Email",
+                "Mother Name",
+                "Mother Occupation",
+                "Mother Phone",
+                "Mother Email",
+                "Guardian Name",
+                "Guardian Relation",
+                "Guardian Phone",
+                "Guardian Email",
+                "Guardian Address",
+                "Bank Name",
+                "Bank Account No",
+                "Bank IFSC Code",
+                "APAAR ID",
+                "ABC ID",
+                "PEN Number",
+                "SSM ID",
+                "Family ID",
+                "Remarks"
+            ];
+
+            const dataRows = allStudents.map((stu) => {
+                const pd = stu.personalDetails || {};
+                return [
+                    csvCell(stu.admissionNumber),
+                    csvCell(stu.rollNumber),
+                    csvCell(stu.fullName || `${stu.firstName || ''} ${stu.lastName || ''}`.trim()),
+                    csvCell(stu.firstName),
+                    csvCell(stu.lastName),
+                    csvCell(stu.className),
+                    csvCell(stu.sectionName),
+                    csvCell(stu.academicYear),
+                    csvCell(stu.admissionDate),
+                    csvCell(stu.status),
+                    csvCell(pd.gender || stu.gender),
+                    csvCell(pd.dateOfBirth || stu.dob),
+                    csvCell(stu.bloodGroup),
+                    csvCell(stu.category),
+                    csvCell(stu.religion),
+                    csvCell(pd.mobile || stu.mobile),
+                    csvCell(stu.whatsappNumber),
+                    csvCell(pd.email || stu.email),
+                    csvCell(stu.currentAddress || pd.address),
+                    csvCell(stu.permanentAddress || pd.address),
+                    csvCell(stu.transportRequired),
+                    csvCell(stu.hostelRequired),
+                    csvCell(stu.hostelRoomDescription),
+                    csvCell(stu.studentHouse),
+                    csvCell(stu.previousSchool),
+                    csvCell(pd.emergencyContactName || stu.emergencyContactName),
+                    csvCell(pd.emergencyContactRelation || stu.emergencyContactRelation),
+                    csvCell(pd.emergencyContact || stu.emergencyContact),
+                    csvCell(stu.fatherName),
+                    csvCell(stu.fatherOccupation),
+                    csvCell(stu.fatherPhone),
+                    csvCell(stu.fatherEmail),
+                    csvCell(stu.motherName),
+                    csvCell(stu.motherOccupation),
+                    csvCell(stu.motherPhone),
+                    csvCell(stu.motherEmail),
+                    csvCell(stu.guardianName),
+                    csvCell(stu.guardianRelation),
+                    csvCell(stu.guardianPhone),
+                    csvCell(stu.guardianEmail),
+                    csvCell(stu.guardianAddress),
+                    csvCell(stu.bankName),
+                    csvCell(stu.bankAccountNumber),
+                    csvCell(stu.bankIfscCode),
+                    csvCell(stu.aparId),
+                    csvCell(stu.abcId),
+                    csvCell(stu.penNumber),
+                    csvCell(stu.ssmId),
+                    csvCell(stu.familyId),
+                    csvCell(stu.remarks)
+                ].join(',');
+            });
+
+            const csvString = [CSV_HEADERS.map(csvCell).join(','), ...dataRows].join('\n');
+            const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            const dateStr = new Date().toISOString().slice(0, 10);
+
+            anchor.href = url;
+            anchor.download = `All_Students_Export_${allStudents.length}_Records_${dateStr}.csv`;
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            URL.revokeObjectURL(url);
+
+            toast.dismiss(exportToast);
+            toast.success(`Successfully exported all ${allStudents.length} student records to CSV!`);
+        } catch (err) {
+            console.error("Export CSV Error:", err);
+            toast.dismiss(exportToast);
+            toast.error(err.message || "Failed to export all student data.");
+        } finally {
+            setIsExporting(false);
+        }
     };
 
     return (
@@ -350,7 +485,7 @@ const Student = () => {
                         {searchInput && (
                             <button
                                 onClick={handleClearSearch}
-                                className="w-4 h-4 rounded-full bg-gray-300 hover:bg-gray-400 flex items-center justify-center shrink-0 text-gray-600 text-xs font-bold"
+                                className="w-4 h-4 rounded-full bg-gray-300 hover:bg-gray-400 flex items-center justify-center shrink-0 text-gray-600 text-xs font-bold cursor-pointer"
                             >
                                 ×
                             </button>
@@ -398,7 +533,7 @@ const Student = () => {
                     <div className="flex items-center gap-2 w-full lg:w-auto lg:shrink-0">
                         <button
                             onClick={() => navigate('/students/addStudents')}
-                            className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-blue-600 hover:bg-blue-700 active:scale-[0.97] text-white transition-all whitespace-nowrap cursor-pointer"
+                            className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-blue-600 hover:bg-blue-700 active:scale-[0.97] text-white transition-all whitespace-nowrap cursor-pointer shadow-sm"
                         >
                             <UserPlus className="w-4 h-4" />
                             {SL.ACTIONS.ADD_STUDENT}
@@ -406,10 +541,20 @@ const Student = () => {
 
                         <button
                             onClick={handleExportStudentsCSV}
-                            className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 active:scale-[0.97] transition-all whitespace-nowrap cursor-pointer"
+                            disabled={isExporting || totalElements === 0}
+                            className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 active:scale-[0.97] transition-all whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                         >
-                            <Upload className="w-4 h-4 text-gray-500" />
-                            {SL.ACTIONS.EXPORT_CSV}
+                            {isExporting ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                                    <span>Exporting All...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Upload className="w-4 h-4 text-gray-500" />
+                                    <span>{SL.ACTIONS.EXPORT_CSV}</span>
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>
@@ -428,7 +573,7 @@ const Student = () => {
                             </div>
                             <p className="text-gray-900 font-semibold mb-1">{SL.ERROR}</p>
                             <p className="text-gray-500 text-sm mb-4">{error}</p>
-                            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">
+                            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm cursor-pointer">
                                 {SL.RETRY}
                             </button>
                         </div>
@@ -485,14 +630,14 @@ const Student = () => {
                                     {hasPermission(P.STUDENT_EDIT) && (
                                         <button
                                             onClick={() => navigate(`/students/editStudent/${student.id}`)}
-                                            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100"
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 cursor-pointer"
                                         >
                                             <UserPenIcon className="w-3.5 h-3.5" /> {SL.EDIT}
                                         </button>
                                     )}
                                     <button
                                         onClick={() => navigate(`/students/${student.id}`)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-orange-50 text-orange-600 hover:bg-orange-100"
+                                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-orange-50 text-orange-600 hover:bg-orange-100 cursor-pointer"
                                     >
                                         <Info className="w-3.5 h-3.5" /> {SL.VIEW}
                                     </button>
@@ -537,7 +682,7 @@ const Student = () => {
                                             </div>
                                             <p className="font-semibold text-gray-900 mb-1">{SL.ERROR}</p>
                                             <p className="text-gray-500 text-sm mb-4">{error}</p>
-                                            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">
+                                            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm cursor-pointer">
                                                 {SL.RETRY}
                                             </button>
                                         </td>

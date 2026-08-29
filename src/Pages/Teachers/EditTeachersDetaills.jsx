@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, IndianRupee, User, Camera, X, Landmark } from 'lucide-react';
+import { ChevronLeft, IndianRupee, User, Camera, X } from 'lucide-react';
 import { getTeacherById, updateTeacher, upsertTeacherSalary } from '../../Api/Teachers/TeachersAPI';
 import PersonalDetailsTab from '../../Components/Teacher/EditTabComponents/PersonalDetailsTab';
 import SalaryStructureTab from '../../Components/Teacher/EditTabComponents/SalaryStructureTab';
-import BankDetailsTab from '../../Components/Teacher/EditTabComponents/BankDetailsTab';
 import { toast } from 'react-toastify';
 import TEACHER_MODULE_STRINGS from '../../Constants/StringConstants/TeacherConstants';
-import {getListOfValues} from "../../Api/Lov/ListOfValues.js";
+import { getListOfValues } from "../../Api/Lov/ListOfValues.js";
 
 // ── Local-date helpers ───────────────────────────────────────────────────
 function getTodayLocalISO() {
@@ -31,13 +30,11 @@ function EditTeachersDetails() {
     const [activeTab, setActiveTab] = useState('personal');
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [isSavingBank, setIsSavingBank] = useState(false);
     const [profileImage, setProfileImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [existingImageUrl, setExistingImageUrl] = useState(null);
     const fileInputRef = useRef(null);
     const [designationList, setDesignationList] = useState([]);
-    const [bankErrors, setBankErrors] = useState({});
 
     // Feature Flag Check for Payroll
     const isPayrollEnabled = (() => {
@@ -91,15 +88,6 @@ function EditTeachersDetails() {
         otherDeductions: '',
         lateArrivalPenalty: '',
         salaryId: null,
-        // Bank Details
-        accountHolderName: '',
-        accountNumber: '',
-        bankName: '',
-        ifscCode: '',
-        branchName: '',
-        branchAddress: '',
-        iban: '',
-        swiftCode: '',
     });
 
     function formatToInputDate(dateStr) {
@@ -121,7 +109,6 @@ function EditTeachersDetails() {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        setBankErrors(prev => ({ ...prev, [name]: '' }));
     };
 
     useEffect(() => {
@@ -150,15 +137,6 @@ function EditTeachersDetails() {
             role: teacher.designation || 'Teacher',
             category: teacher.category || '',
             accountStatus: teacher.accountAccessStatus === 'ALLOWED',
-            // Bank Details — backend returns these nested under bankDetails
-            accountHolderName: teacher.bankDetails?.accountHolderName || '',
-            accountNumber: teacher.bankDetails?.accountNumber || '',
-            bankName: teacher.bankDetails?.bankName || '',
-            ifscCode: teacher.bankDetails?.ifscCode || '',
-            branchName: teacher.bankDetails?.branchName || '',
-            branchAddress: teacher.bankDetails?.branchAddress || '',
-            iban: teacher.bankDetails?.iban || '',
-            swiftCode: teacher.bankDetails?.swiftCode || '',
         }));
         if (teacher.profileImageUrl) {
             setExistingImageUrl(teacher.profileImageUrl);
@@ -182,31 +160,8 @@ function EditTeachersDetails() {
             designation: formData.role,
             category: formData.category,
         },
-        bankDetails: {
-            accountHolderName: formData.accountHolderName || '',
-            accountNumber: formData.accountNumber || '',
-            bankName: formData.bankName || '',
-            ifscCode: formData.ifscCode || '',
-            branchName: formData.branchName || '',
-            branchAddress: formData.branchAddress || '',
-            iban: formData.iban || '',
-            swiftCode: formData.swiftCode || '',
-        },
         accountAccessStatus: formData.accountStatus ? 'ALLOWED' : 'BLOCKED',
     });
-
-    // Bank Details are optional — only validated for format when filled in.
-    const validateBankDetails = () => {
-        const newErrors = {};
-        if (formData.ifscCode && !/^[A-Za-z]{4}0[A-Za-z0-9]{6}$/.test(formData.ifscCode.trim())) {
-            newErrors.ifscCode = "Enter a valid 11-character IFSC code";
-        }
-        if (formData.accountNumber && !/^\d{6,20}$/.test(formData.accountNumber.trim())) {
-            newErrors.accountNumber = "Account number should be 6-20 digits";
-        }
-        setBankErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
 
     const handleSavePersonal = async () => {
         if (isFutureDate(formData.joiningDate)) {
@@ -221,11 +176,6 @@ function EditTeachersDetails() {
             toast.success(strings.EDIT_TEACHER.PERSONAL_SAVE_SUCCESS);
             if (profileImage) {
                 toast.info(strings.EDIT_TEACHER.PHOTO_REFRESH_NOTICE, { autoClose: 4000 });
-            }
-            // Bank Details always follows when payroll is disabled, so this
-            // "Save" (not "Save & Next") no longer exits the flow on its own.
-            if (!isPayrollEnabled) {
-                setActiveTab('bank');
             }
         } catch (err) {
             console.error(err);
@@ -250,7 +200,7 @@ function EditTeachersDetails() {
                 setActiveTab('salary');
             } else {
                 toast.success(strings.EDIT_TEACHER.PERSONAL_SAVE_SUCCESS);
-                setActiveTab('bank');
+                navigate('/teachers');
             }
         } catch (err) {
             console.error(err);
@@ -336,36 +286,13 @@ function EditTeachersDetails() {
 
             toast.dismiss(loadingToast);
             toast.success(strings.EDIT_TEACHER.SALARY_SAVE_SUCCESS);
-            // Bank Details is the final step now, so move there instead of leaving.
-            setActiveTab('bank');
+            navigate('/teachers');
         } catch (err) {
             console.error("Salary Catch Error:", err);
             toast.dismiss(loadingToast);
             toast.error(err?.message || strings.EDIT_TEACHER.SALARY_SAVE_ERROR);
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    const handleSaveBank = async () => {
-        const isValid = validateBankDetails();
-        if (!isValid) {
-            toast.error("Please correct the bank details.");
-            return;
-        }
-        setIsSavingBank(true);
-        const loadingToast = toast.loading('Saving bank details...');
-        try {
-            await updateTeacher(id, buildTeacherPayload(), profileImage);
-            toast.dismiss(loadingToast);
-            toast.success('Bank details saved successfully.');
-            navigate('/teachers');
-        } catch (err) {
-            console.error(err);
-            toast.dismiss(loadingToast);
-            toast.error('Failed to save bank details. Please try again.');
-        } finally {
-            setIsSavingBank(false);
         }
     };
 
@@ -467,18 +394,6 @@ function EditTeachersDetails() {
                                     <span className="sm:hidden">Salary</span>
                                 </button>
                             )}
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('bank')}
-                                className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'bank'
-                                    ? 'border-blue-600 text-blue-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                }`}
-                            >
-                                <Landmark size={18} />
-                                <span className="hidden sm:inline">Bank Details</span>
-                                <span className="sm:hidden">Bank</span>
-                            </button>
                         </nav>
                     </div>
 
@@ -589,14 +504,6 @@ function EditTeachersDetails() {
                                 teacherId={id}
                             />
                         )}
-
-                        {activeTab === 'bank' && (
-                            <BankDetailsTab
-                                formData={formData}
-                                handleInputChange={handleInputChange}
-                                errors={bankErrors}
-                            />
-                        )}
                     </div>
 
                     {activeTab === 'salary' && isPayrollEnabled && (
@@ -625,38 +532,6 @@ function EditTeachersDetails() {
                                         </>
                                     ) : (
                                         'Save Salary'
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'bank' && (
-                        <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
-                            <div className="flex flex-col sm:flex-row justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={handleDiscard}
-                                    className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                                >
-                                    {strings.COMMON.DISCARD_CHANGES}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleSaveBank}
-                                    disabled={isSavingBank}
-                                    className={`px-6 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${isSavingBank
-                                        ? 'bg-blue-300 cursor-not-allowed text-white'
-                                        : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'
-                                    }`}
-                                >
-                                    {isSavingBank ? (
-                                        <>
-                                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                            Saving...
-                                        </>
-                                    ) : (
-                                        'Save Bank Details'
                                     )}
                                 </button>
                             </div>

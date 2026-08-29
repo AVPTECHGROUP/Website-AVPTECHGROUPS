@@ -1,30 +1,45 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, User, Camera, X, Image as ImageIcon, RefreshCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Users, Camera, X, FileBadge2, Landmark, Image as ImageIcon, RefreshCcw } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { getStudentById, updateStudent } from '../../Api/Students/StudentsApi';
+import AddStudentPersonalDetails from '../../Components/Students/AddStudentPersonalDetails';
+import AddStudentIdentityDocuments from '../../Components/Students/AddStudentIdenetityDocuments';
+import AddStudentFamilyDetails from '../../Components/Students/AddStudentFamilyDetails';
+import AddStudentOtherDetails from '../../Components/Students/AddStudentOtherDetails';
+import { getStudentById, updateStudent, uploadStudentDocument, uploadParentPhoto } from '../../Api/Students/StudentsApi';
 import { getAllSections } from '../../Api/Teachers/TeachersAPI';
 import STUDENT_MODULE_STRINGS from '../../Constants/StringConstants/StudentsConst';
 
 const ES = STUDENT_MODULE_STRINGS.EDIT_STUDENT;
+const AS = STUDENT_MODULE_STRINGS.ADD_STUDENT;
 const C = STUDENT_MODULE_STRINGS.COMMON;
-const PF = STUDENT_MODULE_STRINGS.PERSONAL_FORM;
-const FF = STUDENT_MODULE_STRINGS.FAMILY_FORM;
-const G = STUDENT_MODULE_STRINGS.GENDER;
+const TAB_ORDER = ['personal', 'identity', 'family', 'other'];
+
+const TAB_LABELS = {
+  personal: 'Personal Details',
+  identity: 'Identity & Documents',
+  family: 'Family Details',
+  other: 'Other Details',
+};
 
 function EditStudentDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [formErrors, setFormErrors] = useState({});
   const [sections, setSections] = useState([]);
   const [sectionsLoading, setSectionsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('personal');
+  const [guardianSource, setGuardianSource] = useState(null);
 
+  // Profile Image & Deletion State
   const [profileImage, setProfileImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [existingImageUrl, setExistingImageUrl] = useState(null);
+  const [isImageRemoved, setIsImageRemoved] = useState(false);
   const fileInputRef = useRef(null);
+  const formTopRef = useRef(null);
 
   // --- CAMERA & POPUP STATE ---
   const [showPhotoMenu, setShowPhotoMenu] = useState(false);
@@ -94,21 +109,153 @@ function EditStudentDetails() {
       }
     }, "image/jpeg", 0.9);
   };
-  // ----------------------------
+
+  const [documents, setDocuments] = useState({
+    birthCertificate: null, transferCertificate: null, reportCard: null, studentAadhaarDoc: null,
+    fatherAadhaarDoc: null, motherAadhaarDoc: null, fatherPhoto: null, motherPhoto: null, guardianPhoto: null, genericDocuments: [],
+  });
+
+  const [formData, setFormData] = useState({
+    firstName: '', lastName: '', gender: '', email: '', mobile: '', address: '', dob: '', admissionNumber: '',
+    admissionDate: '', academicYear: '', academicYearId: '', rollNumber: '',
+    status: 'ACTIVE', bloodGroup: '', previousSchool: '', profileImageUrl: '', sectionId: '', fatherName: '', fatherOccupation: '',
+    fatherPhone: '', fatherEmail: '', motherName: '', motherOccupation: '', motherPhone: '', motherEmail: '', guardianName: '',
+    guardianRelation: '', guardianPhone: '', guardianEmail: '', emergencyContact: '', hostelRequired: false, transportRequired: false,
+    category: 'GENERAL', religion: 'HINDU', whatsappNumber: '', sameAsMobile: false, studentHouse: '', abcId: '', isTransferStudent: false,
+    studentAadhaar: '', aparId: '', pen: '', familyId: '', ssmId: '', fatherAadhaar: '', motherAadhaar: '', guardianAddress: '',
+    guardianOccupation: '', sameAsCurrentAddress: false, siblings: [], hostelRoomNumber: '', bankAccountNumber: '', bankName: '',
+    ifscCode: '', remarks: '',
+  });
+
+  // Sections Load
+  useEffect(() => {
+    const fetchSections = async () => {
+      try {
+        const res = await getAllSections();
+        if (res?.success && Array.isArray(res.data)) {
+          setSections(res.data.filter(sec => sec.status === 'ACTIVE'));
+        } else toast.error(ES.ERRORS?.SECTION_LOAD_FAILED || "Failed to load sections");
+      } catch (err) {
+        console.error(err);
+        toast.error(ES.ERRORS?.SECTION_LOAD_RETRY || "Error loading sections");
+      } finally { setSectionsLoading(false); }
+    };
+    fetchSections();
+  }, []);
+
+  // Student Data Fetch & Form Population
+  useEffect(() => {
+    const fetchStudent = async () => {
+      try {
+        setIsLoading(true);
+        const student = await getStudentById(id);
+        if (!student) throw new Error("Student data not found");
+
+        const photoUrl = student.profileImageUrl || student.personalDetails?.profileImageUrl || '';
+        if (photoUrl) {
+          setExistingImageUrl(photoUrl);
+          setIsImageRemoved(false);
+        } else {
+          setExistingImageUrl(null);
+          setIsImageRemoved(false);
+        }
+
+        const pd = student.personalDetails || {};
+
+        let fName = student.firstName || pd.firstName || '';
+        let lName = student.lastName || pd.lastName || '';
+        if (!fName && !lName && (student.fullName || pd.fullName)) {
+          const parts = (student.fullName || pd.fullName).trim().split(' ');
+          fName = parts[0] || '';
+          lName = parts.slice(1).join(' ').trim();
+        }
+
+        const secId = student.sectionId ?? student.section?.id ?? '';
+        const mobileNum = pd.mobile || student.mobile || '';
+        const whatsappNum = student.whatsappNumber || '';
+
+        setFormData({
+          firstName: fName,
+          lastName: lName,
+          gender: (pd.gender || student.gender || 'MALE').toUpperCase(),
+          email: pd.email || student.email || '',
+          mobile: mobileNum,
+          address: student.currentAddress || pd.address || '',
+          dob: pd.dateOfBirth || student.dob || '',
+          admissionNumber: student.admissionNumber || '',
+          admissionDate: student.admissionDate || '',
+          academicYear: student.academicYear || '',
+          academicYearId: student.academicYearId ? String(student.academicYearId) : '',
+          rollNumber: student.rollNumber || '',
+          status: student.status || 'ACTIVE',
+          bloodGroup: student.bloodGroup || '',
+          previousSchool: student.previousSchool || '',
+          profileImageUrl: photoUrl,
+          sectionId: secId ? String(secId) : '',
+          category: student.category || 'GENERAL',
+          religion: student.religion || 'HINDU',
+          whatsappNumber: whatsappNum,
+          sameAsMobile: !!(mobileNum && whatsappNum && mobileNum === whatsappNum),
+          studentHouse: student.studentHouse || '',
+          abcId: student.abcId || '',
+          isTransferStudent: Boolean(student.isTransferStudent),
+          studentAadhaar: student.aadhaarNumber || student.studentAadhaar || '',
+          aparId: student.aparId || '',
+          pen: student.penNumber || student.pen || '',
+          familyId: student.familyId || '',
+          ssmId: student.ssmId || '',
+          fatherName: student.fatherName || '',
+          fatherOccupation: student.fatherOccupation || '',
+          fatherPhone: student.fatherPhone || '',
+          fatherEmail: student.fatherEmail || '',
+          fatherAadhaar: student.fatherAadhaar || '',
+          motherName: student.motherName || '',
+          motherOccupation: student.motherOccupation || '',
+          motherPhone: student.motherPhone || '',
+          motherEmail: student.motherEmail || '',
+          motherAadhaar: student.motherAadhaar || '',
+          guardianName: student.guardianName || '',
+          guardianRelation: student.guardianRelation || '',
+          guardianPhone: student.guardianPhone || '',
+          guardianEmail: student.guardianEmail || '',
+          guardianAddress: student.guardianAddress || '',
+          guardianOccupation: student.guardianOccupation || '',
+          sameAsCurrentAddress: Boolean(student.guardianAddress && student.guardianAddress === (student.currentAddress || pd.address)),
+          emergencyContact: pd.emergencyContact || student.emergencyContact || '',
+          siblings: Array.isArray(student.siblings) ? student.siblings : [],
+          hostelRequired: Boolean(student.hostelRequired),
+          hostelRoomNumber: student.hostelRoomDescription || student.hostelRoomNumber || '',
+          transportRequired: Boolean(student.transportRequired),
+          bankAccountNumber: student.bankAccountNumber || '',
+          bankName: student.bankName || '',
+          ifscCode: student.bankIfscCode || student.ifscCode || '',
+          remarks: student.remarks || '',
+        });
+
+        if (student.guardianName && student.fatherName && student.guardianName === student.fatherName) {
+          setGuardianSource('father');
+        } else if (student.guardianName && student.motherName && student.guardianName === student.motherName) {
+          setGuardianSource('mother');
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error(ES.ERRORS?.LOAD_FAILED || "Failed to load student details");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    if (id) fetchStudent();
+  }, [id]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-    if (!validTypes.includes(file.type)) {
-      toast.error(ES.ERRORS?.PHOTO_TYPE || 'Only JPG/PNG images allowed');
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error(ES.ERRORS?.PHOTO_SIZE || 'File size must be under 10MB');
-      return;
-    }
+    if (!validTypes.includes(file.type)) { toast.error(AS.ERRORS.PHOTO_TYPE); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(AS.ERRORS.PHOTO_SIZE); return; }
+
     setProfileImage(file);
+    setIsImageRemoved(false);
     const reader = new FileReader();
     reader.onloadend = () => setImagePreview(reader.result);
     reader.readAsDataURL(file);
@@ -118,635 +265,434 @@ function EditStudentDetails() {
     setProfileImage(null);
     setImagePreview(null);
     setExistingImageUrl(null);
+    setIsImageRemoved(true);
+    setFormData(prev => ({ ...prev, profileImageUrl: '' }));
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const displayedImage = imagePreview || existingImageUrl;
-
-  useEffect(() => {
-    const fetchSections = async () => {
-      try {
-        const res = await getAllSections();
-        if (res?.success && Array.isArray(res.data)) {
-          const activeSections = res.data.filter(sec => sec.status === 'ACTIVE');
-          setSections(activeSections);
-        } else {
-          toast.error(ES.ERRORS?.SECTION_LOAD_FAILED || "Failed to load sections");
-        }
-      } catch (err) {
-        console.error('fetchSections error:', err);
-        toast.error(ES.ERRORS?.SECTION_LOAD_RETRY || "Failed to load sections");
-      } finally {
-        setSectionsLoading(false);
-      }
-    };
-    fetchSections();
-  }, []);
-
-  useEffect(() => {
-    const fetchStudent = async () => {
-      try {
-        setLoading(true);
-        const student = await getStudentById(id);
-
-        if (student?.profileImageUrl) setExistingImageUrl(student.profileImageUrl);
-
-        const pd = student?.personalDetails || {};
-
-        let firstName = student?.firstName || pd.firstName || '';
-        let lastName = student?.lastName || pd.lastName || '';
-        if (!firstName && !lastName) {
-          const fullName = student?.fullName || pd.fullName || '';
-          const parts = fullName.trim().split(' ');
-          firstName = parts[0] || '';
-          lastName = parts.slice(1).join(' ').trim();
-        }
-
-        const sectionId = student?.sectionId ?? student?.section?.id ?? '';
-
-        setFormData({
-          firstName,
-          lastName,
-          gender: (pd.gender || student?.gender || '').toString().toUpperCase(),
-          email: pd.email || student?.email || '',
-          mobile: pd.mobile || student?.mobile || '',
-          address: student?.currentAddress || pd.address || '',
-          dob: pd.dateOfBirth || student?.dob || '',
-          admissionNumber: student?.admissionNumber || '',
-          admissionDate: student?.admissionDate || '',
-          rollNumber: student?.rollNumber || '',
-          sectionId,
-          status: student?.status || 'ACTIVE',
-          category: student?.category || 'GENERAL',
-          studentHouse: student?.studentHouse || '',
-          fatherName: student?.fatherName || '',
-          fatherPhone: student?.fatherPhone || '',
-          motherName: student?.motherName || '',
-          emergencyContact: pd.emergencyContact || student?.guardianPhone || '',
-          hostelRequired: Boolean(student?.hostelRequired),
-          hostelRoomDescription: student?.hostelRoomDescription || '',
-          transportRequired: Boolean(student?.transportRequired),
-          aadhaarNumber: student?.aadhaarNumber || '',
-          aparId: student?.aparId || '',
-          penNumber: student?.penNumber || '',
-          bankName: student?.bankName || '',
-          bankAccountNumber: student?.bankAccountNumber || '',
-          bankIfscCode: student?.bankIfscCode || '',
-        });
-      } catch (err) {
-        toast.error(ES.ERRORS?.LOAD_FAILED || "Failed to load student details");
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (id) fetchStudent();
-  }, [id]);
+  const displayedImage = imagePreview || (!isImageRemoved ? existingImageUrl : null);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    let { name, value } = e.target;
+    const numericFields = ['mobile', 'whatsappNumber', 'fatherPhone', 'motherPhone', 'guardianPhone', 'emergencyContact', 'studentAadhaar', 'fatherAadhaar', 'motherAadhaar', 'bankAccountNumber'];
+    if (numericFields.includes(name)) value = value.replace(/\D/g, '');
     setFormData(prev => ({ ...prev, [name]: value }));
+    if (formErrors[name]) setFormErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
   };
 
-  const validateForm = () => {
-    const mobileRegex = /^[0-9]{10}$/;
+  const handleGuardianSource = (source) => {
+    const newSource = guardianSource === source ? null : source;
+    setGuardianSource(newSource);
+    if (newSource === 'father') {
+      if (!formData.fatherName) { toast.warning("Please fill Father's details first"); return; }
+      setFormData(prev => ({ ...prev, guardianName: prev.fatherName, guardianRelation: 'Father', guardianPhone: prev.fatherPhone, guardianEmail: prev.fatherEmail }));
+    } else if (newSource === 'mother') {
+      if (!formData.motherName) { toast.warning("Please fill Mother's details first"); return; }
+      setFormData(prev => ({ ...prev, guardianName: prev.motherName, guardianRelation: 'Mother', guardianPhone: prev.motherPhone, guardianEmail: prev.motherEmail }));
+    } else {
+      setFormData(prev => ({ ...prev, guardianName: '', guardianRelation: '', guardianPhone: '', guardianEmail: '' }));
+    }
+    setFormErrors(prev => { const n = { ...prev }; delete n.guardianName; delete n.guardianRelation; delete n.guardianPhone; delete n.guardianEmail; return n; });
+  };
 
-    if (!formData.rollNumber?.trim()) {
-      toast.error(ES.ERRORS?.ROLL_REQUIRED || "Roll Number is required");
-      return false;
-    }
-    if (!formData.sectionId) {
-      toast.error(ES.ERRORS?.SECTION_REQUIRED || "Section is required");
-      return false;
-    }
-    if (formData.hostelRequired && !formData.hostelRoomDescription?.trim()) {
-      toast.error("Hostel Room Number is required when hostel accommodation is enabled");
-      return false;
-    }
-    if (!mobileRegex.test(formData.mobile)) {
-      toast.error(ES.ERRORS?.MOBILE_INVALID || "Mobile number must be 10 digits");
-      return false;
-    }
-    if (formData.emergencyContact && !mobileRegex.test(formData.emergencyContact)) {
-      toast.error(ES.ERRORS?.EMERGENCY_INVALID || "Emergency contact must be 10 digits");
-      return false;
-    }
-    if (formData.fatherPhone && !mobileRegex.test(formData.fatherPhone)) {
-      toast.error(ES.ERRORS?.FATHER_PHONE_INVALID || "Father phone must be 10 digits");
-      return false;
-    }
-    if (formData.email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email)) {
-        toast.error(ES.ERRORS?.EMAIL_INVALID || "Invalid email address");
-        return false;
-      }
+  const handleDocumentChange = (key, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    if (!validTypes.includes(file.type)) { toast.error('Only PDF, JPG or PNG files allowed'); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error('File size must be under 10MB'); return; }
+    setDocuments(prev => ({ ...prev, [key]: file }));
+    if (formErrors[key]) setFormErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
+  };
+
+  const handleDocumentRemove = (key) => setDocuments(prev => ({ ...prev, [key]: null }));
+  const handleGenericDocAdd = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setDocuments(prev => ({ ...prev, genericDocuments: [...prev.genericDocuments, ...files.map(f => ({ id: `${Date.now()}-${f.name}`, file: f }))] }));
+    e.target.value = '';
+  };
+  const handleGenericDocRemove = (id) => setDocuments(prev => ({ ...prev, genericDocuments: prev.genericDocuments.filter(d => d.id !== id) }));
+  const handleAddSibling = () => setFormData(prev => ({ ...prev, siblings: [...prev.siblings, { id: Date.now(), name: '', className: '' }] }));
+  const handleSiblingChange = (id, field, value) => setFormData(prev => ({ ...prev, siblings: prev.siblings.map(s => s.id === id ? { ...s, [field]: value } : s) }));
+  const handleRemoveSibling = (id) => setFormData(prev => ({ ...prev, siblings: prev.siblings.filter(s => s.id !== id) }));
+
+  const phoneRegex = /^[6-9]\d{9}$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const aadhaarRegex = /^\d{12}$/;
+
+  const validatePersonalDetails = (silent = false) => {
+    const fail = (msg) => { if (!silent) toast.error(msg); return false; };
+    if (!formData.firstName.trim()) return fail("First name is required.");
+    if (!formData.gender) return fail("Gender is required.");
+    if (!formData.mobile) return fail("Mobile number is required.");
+    if (!phoneRegex.test(formData.mobile)) return fail("Mobile number must be a valid 10-digit number.");
+    if (!formData.dob) return fail("Date of birth is required.");
+    if (!formData.admissionDate) return fail("Admission date is required.");
+    if (!formData.address?.trim()) return fail("Address is required.");
+    if (!formData.rollNumber?.trim()) return fail(AS.ERRORS?.ROLL_REQUIRED || "Roll number is required.");
+    if (!formData.sectionId) return fail(AS.ERRORS?.SECTION_REQUIRED || "Section is required.");
+    if (formData.whatsappNumber && !phoneRegex.test(formData.whatsappNumber)) return fail("WhatsApp number must be a valid 10-digit number.");
+    if (formData.email && !emailRegex.test(formData.email)) return fail(AS.ERRORS?.EMAIL_INVALID || "Please enter a valid email address.");
+    return true;
+  };
+
+  const validateIdentityDetails = (silent = false) => {
+    const fail = (msg) => { if (!silent) toast.error(msg); return false; };
+    if (formData.studentAadhaar && !aadhaarRegex.test(formData.studentAadhaar)) return fail("Student Aadhaar Number must be exactly 12 numeric digits.");
+    return true;
+  };
+
+  const validateFamilyDetails = (silent = false) => {
+    const fail = (msg) => { if (!silent) toast.error(msg); return false; };
+    if (formData.fatherPhone && !phoneRegex.test(formData.fatherPhone)) return fail("Father's Phone must be a valid 10-digit number.");
+    if (formData.fatherEmail && !emailRegex.test(formData.fatherEmail)) return fail("Father's Email is invalid.");
+    if (formData.fatherAadhaar && !aadhaarRegex.test(formData.fatherAadhaar)) return fail("Father's Aadhaar must be 12 digits.");
+    if (formData.motherPhone && !phoneRegex.test(formData.motherPhone)) return fail("Mother's Phone must be valid.");
+    if (formData.motherEmail && !emailRegex.test(formData.motherEmail)) return fail("Mother's Email is invalid.");
+    if (formData.motherAadhaar && !aadhaarRegex.test(formData.motherAadhaar)) return fail("Mother's Aadhaar must be 12 digits.");
+    if (formData.guardianPhone && !phoneRegex.test(formData.guardianPhone)) return fail("Guardian's Phone must be valid.");
+    if (formData.guardianEmail && !emailRegex.test(formData.guardianEmail)) return fail("Guardian's Email is invalid.");
+    if (formData.emergencyContact && !phoneRegex.test(formData.emergencyContact)) return fail("Emergency Contact must be valid.");
+    return true;
+  };
+
+  const validateOtherDetails = (silent = false) => {
+    const fail = (msg) => { if (!silent) toast.error(msg); return false; };
+    if (formData.hostelRequired && !formData.hostelRoomNumber?.trim()) return fail("Hostel Room Number is required.");
+    if (formData.bankAccountNumber) {
+      if (formData.bankAccountNumber.length < 9 || formData.bankAccountNumber.length > 18) return fail("Bank Account Number must be between 9 and 18 digits.");
     }
     return true;
   };
 
-  const buildUpdatePayload = () => {
-    const firstName = formData.firstName.trim();
-    const lastName = formData.lastName.trim();
-    const fullName = `${firstName} ${lastName}`.trim();
+  const validateTab = (tab, silent = false) => {
+    if (tab === 'personal') return validatePersonalDetails(silent);
+    if (tab === 'identity') return validateIdentityDetails(silent);
+    if (tab === 'family') return validateFamilyDetails(silent);
+    if (tab === 'other') return validateOtherDetails(silent);
+    return true;
+  };
 
-    return {
-      firstName,
-      lastName,
-      fullName,
-      rollNumber: formData.rollNumber.trim() || null,
-      sectionId: Number(formData.sectionId),
-      status: formData.status,
-      category: formData.category || 'GENERAL',
-      studentHouse: formData.studentHouse.trim() || null,
-      hostelRequired: Boolean(formData.hostelRequired),
-      hostelRoomDescription: formData.hostelRequired ? (formData.hostelRoomDescription.trim() || null) : null,
-      transportRequired: Boolean(formData.transportRequired),
-      fatherName: formData.fatherName.trim() || null,
-      fatherPhone: formData.fatherPhone || null,
-      motherName: formData.motherName.trim() || null,
-      currentAddress: formData.address.trim() || null,
-      permanentAddress: formData.address.trim() || null,
-      aadhaarNumber: formData.aadhaarNumber.trim() || null,
-      aparId: formData.aparId.trim() || null,
-      penNumber: formData.penNumber.trim() || null,
-      bankName: formData.bankName.trim() || null,
-      bankAccountNumber: formData.bankAccountNumber.trim() || null,
-      bankIfscCode: formData.bankIfscCode.trim() || null,
-      personalDetails: {
+  const scrollToTop = () => formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  const handleNextTab = () => {
+    if (!validateTab(activeTab)) return;
+    const idx = TAB_ORDER.indexOf(activeTab);
+    if (idx < TAB_ORDER.length - 1) { setActiveTab(TAB_ORDER[idx + 1]); scrollToTop(); }
+  };
+
+  const handleBackTab = () => {
+    const idx = TAB_ORDER.indexOf(activeTab);
+    if (idx > 0) { setActiveTab(TAB_ORDER[idx - 1]); scrollToTop(); }
+  };
+
+  const handleTabClick = (tab) => {
+    const targetIdx = TAB_ORDER.indexOf(tab);
+    const currentIdx = TAB_ORDER.indexOf(activeTab);
+
+    if (targetIdx <= currentIdx) {
+      setActiveTab(tab);
+      scrollToTop();
+      return;
+    }
+
+    if (!validateTab(activeTab)) return;
+
+    if (targetIdx > currentIdx + 1) {
+      const nextTabKey = TAB_ORDER[currentIdx + 1];
+      toast.error(`Please review "${TAB_LABELS[nextTabKey]}" first.`);
+      setActiveTab(nextTabKey);
+      scrollToTop();
+      return;
+    }
+
+    setActiveTab(tab);
+    scrollToTop();
+  };
+
+  const handleUpdateStudent = async () => {
+    if (!validatePersonalDetails()) { setActiveTab('personal'); scrollToTop(); return; }
+    if (!validateIdentityDetails()) { setActiveTab('identity'); scrollToTop(); return; }
+    if (!validateFamilyDetails()) { setActiveTab('family'); scrollToTop(); return; }
+    if (!validateOtherDetails()) { setActiveTab('other'); scrollToTop(); return; }
+
+    setIsSubmitting(true);
+    const loadingToast = toast.loading(ES.LOADING || "Updating student...");
+
+    try {
+      const firstName = formData.firstName.trim();
+      const lastName = formData.lastName.trim();
+      const fullName = `${firstName} ${lastName}`.trim();
+
+      const isExplicitlyRemovingPhoto = isImageRemoved && !profileImage;
+      const updatedPhotoUrl = isExplicitlyRemovingPhoto ? "" : (existingImageUrl || "");
+
+      const apiPayload = {
+        admissionNumber: formData.admissionNumber.trim(),
+        rollNumber: formData.rollNumber.trim() || null,
         firstName,
         lastName,
         fullName,
-        mobile: formData.mobile,
-        email: formData.email.trim() || null,
-        gender: formData.gender,
-        dateOfBirth: formData.dob,
-        address: formData.address.trim() || null,
-        emergencyContact: formData.emergencyContact || null,
-      },
-    };
-  };
+        profileImageUrl: updatedPhotoUrl,
+        removeProfileImage: isExplicitlyRemovingPhoto,
+        deleteProfileImage: isExplicitlyRemovingPhoto,
+        isImageRemoved: isExplicitlyRemovingPhoto,
+        removePhoto: isExplicitlyRemovingPhoto,
+        deletePhoto: isExplicitlyRemovingPhoto,
+        sectionId: Number(formData.sectionId),
+        admissionDate: formData.admissionDate,
+        academicYearId: formData.academicYearId ? Number(formData.academicYearId) : null,
+        academicYear: formData.academicYear || "2025-2026",
+        status: formData.status || "ACTIVE",
+        bloodGroup: formData.bloodGroup || null,
+        previousSchool: formData.previousSchool?.trim() || null,
+        transportRequired: Boolean(formData.transportRequired),
+        hostelRequired: Boolean(formData.hostelRequired),
+        category: (formData.category || "GENERAL").toUpperCase(),
+        religion: formData.religion ? formData.religion.toUpperCase() : "HINDU",
+        whatsappNumber: formData.whatsappNumber || formData.mobile || null,
+        studentHouse: formData.studentHouse?.trim() || null,
+        aadhaarNumber: formData.studentAadhaar?.trim() || null,
+        abcId: formData.abcId?.trim() || null,
+        aparId: formData.aparId?.trim() || null,
+        fatherName: formData.fatherName?.trim() || null,
+        fatherOccupation: formData.fatherOccupation?.trim() || null,
+        fatherPhone: formData.fatherPhone || null,
+        fatherEmail: formData.fatherEmail?.trim() || null,
+        fatherAadhaar: formData.fatherAadhaar?.trim() || null,
+        motherName: formData.motherName?.trim() || null,
+        motherOccupation: formData.motherOccupation?.trim() || null,
+        motherPhone: formData.motherPhone || null,
+        motherEmail: formData.motherEmail?.trim() || null,
+        motherAadhaar: formData.motherAadhaar?.trim() || null,
+        guardianName: formData.guardianName?.trim() || null,
+        guardianRelation: formData.guardianRelation || null,
+        guardianPhone: formData.guardianPhone || null,
+        guardianEmail: formData.guardianEmail?.trim() || null,
+        guardianAddress: formData.guardianAddress?.trim() || null,
+        guardianOccupation: formData.guardianOccupation?.trim() || null,
+        currentAddress: formData.address?.trim() || null,
+        permanentAddress: formData.address?.trim() || null,
+        hostelRoomDescription: formData.hostelRequired ? (formData.hostelRoomNumber?.trim() || null) : null,
+        bankAccountNumber: formData.bankAccountNumber?.trim() || null,
+        bankName: formData.bankName?.trim() || null,
+        bankIfscCode: formData.ifscCode?.trim() || null,
+        penNumber: formData.pen?.trim() || null,
+        ssmId: formData.ssmId?.trim() || null,
+        familyId: formData.familyId?.trim() || null,
+        remarks: formData.remarks || null,
+        personalDetails: {
+          firstName,
+          lastName,
+          fullName,
+          profileImageUrl: updatedPhotoUrl,
+          removeProfileImage: isExplicitlyRemovingPhoto,
+          deleteProfileImage: isExplicitlyRemovingPhoto,
+          isImageRemoved: isExplicitlyRemovingPhoto,
+          mobile: formData.mobile,
+          email: formData.email?.trim() || null,
+          gender: (formData.gender || "MALE").toUpperCase(),
+          dateOfBirth: formData.dob,
+          address: formData.address?.trim() || null,
+          emergencyContact: formData.emergencyContact || formData.guardianPhone || formData.fatherPhone || null,
+        }
+      };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    setIsSubmitting(true);
-    const loadingToast = toast.loading(ES.LOADING || "Updating student...");
-    try {
-      const payload = buildUpdatePayload();
-      const res = await updateStudent(id, payload, profileImage);
+      const fileToSend = isExplicitlyRemovingPhoto ? null : profileImage;
+      const res = await updateStudent(id, apiPayload, fileToSend);
+
+      // Upload any newly selected documents
+      const uploadPromises = [];
+      if (documents.birthCertificate) uploadPromises.push(uploadStudentDocument(id, 'BIRTH_CERTIFICATE', documents.birthCertificate));
+      if (documents.studentAadhaarDoc) uploadPromises.push(uploadStudentDocument(id, 'STUDENT_AADHAAR', documents.studentAadhaarDoc));
+      if (documents.fatherAadhaarDoc) uploadPromises.push(uploadStudentDocument(id, 'FATHER_AADHAAR', documents.fatherAadhaarDoc));
+      if (documents.motherAadhaarDoc) uploadPromises.push(uploadStudentDocument(id, 'MOTHER_AADHAAR', documents.motherAadhaarDoc));
+      if (documents.fatherPhoto) uploadPromises.push(uploadParentPhoto(id, 'FATHER', documents.fatherPhoto));
+      if (documents.motherPhoto) uploadPromises.push(uploadParentPhoto(id, 'MOTHER', documents.motherPhoto));
+      if (documents.guardianPhoto) uploadPromises.push(uploadParentPhoto(id, 'GUARDIAN', documents.guardianPhoto));
+      if (uploadPromises.length > 0) await Promise.allSettled(uploadPromises);
+
       toast.dismiss(loadingToast);
       toast.success(res?.message || ES.SUCCESS || "Student updated successfully!");
-      if (profileImage) toast.info(ES.PROFILE_PHOTO?.REFRESH_NOTICE || "Photo updated", { autoClose: 4000 });
+      if (profileImage) {
+        toast.info(ES.PROFILE_PHOTO?.REFRESH_NOTICE || "Photo updated", { autoClose: 4000 });
+      } else if (isExplicitlyRemovingPhoto) {
+        toast.info("Profile photo removed successfully.", { autoClose: 3000 });
+      }
       navigate('/students');
-    } catch (error) {
+    } catch (err) {
       toast.dismiss(loadingToast);
-      toast.error(error.message || 'Failed to update student ❌');
+      toast.error(err.message || 'Failed to update student ❌');
+      console.error(err);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleCancel = () => navigate('/students');
+  const handleDiscard = () => navigate('/students');
+  const isFirstTab = activeTab === TAB_ORDER[0];
+  const isLastTab = activeTab === TAB_ORDER[TAB_ORDER.length - 1];
 
-  if (loading) {
+  const TABS = [
+    { key: 'personal', label: AS.TABS.PERSONAL, short: 'Personal', Icon: User },
+    { key: 'identity', label: 'Identity & Documents', short: 'Identity', Icon: FileBadge2 },
+    { key: 'family', label: AS.TABS.FAMILY, short: 'Family', Icon: Users },
+    { key: 'other', label: 'Other Details', short: 'Other', Icon: Landmark },
+  ];
+
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <p className="text-sm sm:text-xl">{C.LOADING}</p>
-        <div className="w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mt-2" />
+        <p className="text-sm sm:text-xl text-gray-600">{C.LOADING}</p>
+        <div className="w-7 h-7 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mt-3" />
       </div>
     );
   }
 
-  if (!formData) return null;
-
-  const inputClass = 'bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500';
-  const readOnlyClass = 'bg-gray-200 font-normal text-gray-600 border border-gray-300 p-2 px-4 w-full rounded-md cursor-not-allowed';
-  const labelClass = 'block font-semibold text-gray-600 text-sm mb-2';
-
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
+    <div ref={formTopRef} className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-4">
       <div className="mx-auto">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4"
-        >
+        <button onClick={() => navigate(-1)} className="flex items-center cursor-pointer bg-gray-600 p-2 rounded-xl text-white gap-2 hover:bg-gray-900 transition-colors mb-4">
           <ChevronLeft className="w-5 h-5" />
           <span className="hidden sm:inline">{C.BACK_TO_LIST}</span>
         </button>
-
         <div className="mb-6">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{ES.PAGE_TITLE}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+            {ES.PAGE_TITLE}: {formData.firstName} {formData.lastName}
+          </h1>
           <p className="text-sm sm:text-base text-gray-500">{ES.SUBTITLE}</p>
         </div>
-
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => e.preventDefault()}>
           <div className="bg-white rounded-lg shadow">
+            {/* Stepper Navigation */}
             <div className="border-b border-gray-200">
               <nav className="flex flex-wrap -mb-px">
-                <button
-                  type="button"
-                  className="flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 border-blue-600 text-blue-600"
-                >
-                  <User size={20} />
-                  <span className="hidden sm:inline">{ES.TAB}</span>
-                  <span className="sm:hidden">Details</span>
-                </button>
+                {TABS.map(({ key, label, short, Icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => handleTabClick(key)}
+                    className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                  >
+                    <Icon size={20} />
+                    <span className="hidden sm:inline">{label}</span>
+                    <span className="sm:hidden">{short}</span>
+                  </button>
+                ))}
               </nav>
             </div>
 
+            {/* Form Contents */}
             <div className="p-4 sm:p-6 lg:p-8">
-              <div className="space-y-6">
+              {activeTab === 'personal' && (
+                <>
+                  <div className="mb-6">
+                    <label className="block font-semibold text-gray-600 text-sm mb-3">
+                      {AS.PROFILE_PHOTO.LABEL}
+                    </label>
+                    <div className="flex items-center gap-5">
+                      <div className="relative shrink-0">
+                        <div className="w-20 h-20 rounded-full overflow-hidden bg-blue-100 border-2 border-blue-200 flex items-center justify-center">
+                          {displayedImage ? (
+                            <img
+                              src={displayedImage}
+                              alt="Preview"
+                              className="w-full h-full object-cover"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; setExistingImageUrl(null); }}
+                            />
+                          ) : (
+                            <User className="w-8 h-8 text-blue-400" />
+                          )}
+                        </div>
+                        <button type="button" onClick={() => setShowPhotoMenu(true)}
+                          className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors">
+                          <Camera className="w-3.5 h-3.5 text-white" />
+                        </button>
+                      </div>
 
-                {/* ── Profile Photo Upload ── */}
-                <div>
-                  <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
-                    <Camera className="text-blue-500 mr-3 w-6 h-6" />
-                    <h2 className="text-xl font-medium text-gray-700">{ES.PROFILE_PHOTO?.TITLE || "Profile Photo"}</h2>
-                  </div>
-                  <div className="flex items-center gap-5">
-                    <div className="relative shrink-0">
-                      <div className="w-20 h-20 rounded-full overflow-hidden bg-blue-100 border-2 border-blue-200 flex items-center justify-center">
-                        {displayedImage ? (
-                          <img
-                            src={displayedImage}
-                            alt="Profile"
-                            className="w-full h-full object-cover"
-                            onError={(e) => { e.currentTarget.style.display = 'none'; setExistingImageUrl(null); }}
-                          />
+                      <div className="flex-1">
+                        {!displayedImage ? (
+                          <button type="button" onClick={() => setShowPhotoMenu(true)}
+                            className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer">
+                            <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
+                            <p className="text-sm font-medium text-blue-600">{AS.PROFILE_PHOTO.CTA}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{AS.PROFILE_PHOTO.FORMAT_HELP}</p>
+                          </button>
                         ) : (
-                          <User className="w-8 h-8 text-blue-400" />
+                          <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex-1 min-w-0">
+                              {profileImage ? (
+                                <>
+                                  <p className="text-sm font-medium text-green-700 truncate">{profileImage.name}</p>
+                                  <p className="text-xs text-green-500 mt-0.5">{(profileImage.size / 1024).toFixed(1)} KB — New Selected</p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-sm font-medium text-green-700 truncate">Current Profile Photo</p>
+                                  <p className="text-xs text-green-500 mt-0.5">Click change to update or delete</p>
+                                </>
+                              )}
+                            </div>
+                            <div className="flex gap-2 shrink-0">
+                              <button type="button" onClick={() => setShowPhotoMenu(true)}
+                                className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors">
+                                {C.CHANGE || "Change"}
+                              </button>
+                              <button type="button" onClick={handleRemoveImage}
+                                className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
                         )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowPhotoMenu(true)}
-                        className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow transition-colors"
-                      >
-                        <Camera className="w-3.5 h-3.5 text-white" />
-                      </button>
                     </div>
-                    <div className="flex-1">
-                      {!displayedImage ? (
-                        <button
-                          type="button"
-                          onClick={() => setShowPhotoMenu(true)}
-                          className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg p-4 text-center transition-colors cursor-pointer"
-                        >
-                          <Camera className="w-5 h-5 text-blue-400 mx-auto mb-1" />
-                          <p className="text-sm font-medium text-blue-600">{ES.PROFILE_PHOTO?.CTA || "Upload Photo"}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{ES.PROFILE_PHOTO?.FORMAT_HELP || "PNG/JPG under 10MB"}</p>
-                        </button>
-                      ) : (
-                        <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex-1 min-w-0">
-                            {profileImage ? (
-                              <>
-                                <p className="text-sm font-medium text-green-700 truncate">{profileImage.name}</p>
-                                <p className="text-xs text-green-500 mt-0.5">
-                                  {(profileImage.size / 1024).toFixed(1)} KB — New Selected
-                                </p>
-                              </>
-                            ) : (
-                              <>
-                                <p className="text-sm font-medium text-green-700 truncate">Current Profile Photo</p>
-                                <p className="text-xs text-green-500 mt-0.5">Click change to update</p>
-                              </>
-                            )}
-                          </div>
-                          <div className="flex gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => setShowPhotoMenu(true)}
-                              className="text-xs px-2.5 py-1 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors"
-                            >
-                              {C.CHANGE || "Change"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleRemoveImage}
-                              className="w-7 h-7 flex items-center justify-center bg-white border border-red-200 text-red-500 rounded-md hover:bg-red-50 transition-colors"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                </div>
-
-                {/* Personal Details Section */}
-                <div>
-                  <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
-                    <i className="fa-solid fa-user text-xl lg:text-2xl text-blue-500 mr-3" />
-                    <h2 className="text-xl font-medium text-gray-700">{PF.SECTION_TITLE}</h2>
-                  </div>
-                  <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4">
-                    <div>
-                      <label className={labelClass}>First Name<span className="text-red-600 ml-1">*</span></label>
-                      <input type="text" name="firstName" value={formData.firstName} onChange={handleInputChange}
-                        placeholder="Enter first name" className={inputClass} required />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Last Name</label>
-                      <input type="text" name="lastName" value={formData.lastName} onChange={handleInputChange}
-                        placeholder="Enter last name" className={inputClass} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>{PF.GENDER}<span className="text-red-600 ml-1">*</span></label>
-                      <select name="gender" value={formData.gender} onChange={handleInputChange} className={inputClass} required>
-                        <option value="">{G.SELECT}</option>
-                        <option value="MALE">{G.MALE}</option>
-                        <option value="FEMALE">{G.FEMALE}</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className={labelClass}>{PF.DOB}<span className="text-gray-400 ml-1 text-xs">{C.READ_ONLY}</span></label>
-                      <input type="date" name="dob" value={formData.dob} className={readOnlyClass} disabled readOnly />
-                    </div>
-                    <div>
-                      <label className={labelClass}>{PF.ADMISSION_NUMBER}<span className="text-gray-400 ml-1 text-xs">{C.READ_ONLY}</span></label>
-                      <input type="text" name="admissionNumber" value={formData.admissionNumber} className={readOnlyClass} disabled readOnly />
-                    </div>
-                    <div>
-                      <label className={labelClass}>{PF.ROLL_NUMBER}<span className="text-red-600 ml-1">*</span></label>
-                      <input type="text" name="rollNumber" value={formData.rollNumber} onChange={handleInputChange}
-                        placeholder={PF.ROLL_PLACEHOLDER} className={inputClass} required />
-                    </div>
-                    <div>
-                      <label className={labelClass}>{PF.SECTION}<span className="text-red-600 ml-1">*</span></label>
-                      {sectionsLoading ? (
-                        <div className="bg-gray-100 border border-gray-300 p-2 px-4 w-full rounded-md text-gray-400 text-sm">
-                          {ES.SECTION_LOADING || "Loading sections..."}
-                        </div>
-                      ) : (
-                        <select name="sectionId" value={formData.sectionId} onChange={handleInputChange} className={inputClass} required>
-                          <option value="">{PF.SELECT_SECTION}</option>
-                          {sections.map((sec) => (
-                            <option key={sec.id} value={sec.id}>
-                              {sec.name} {sec.className ? `(${sec.className})` : ''}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                    <div>
-                      <label className={labelClass}>{PF.ADMISSION_DATE}<span className="text-gray-400 ml-1 text-xs">{C.READ_ONLY}</span></label>
-                      <input type="date" name="admissionDate" value={formData.admissionDate} className={readOnlyClass} disabled readOnly />
-                    </div>
-                    <div>
-                      <label className={labelClass}>{PF.STATUS}<span className="text-red-600 ml-1">*</span></label>
-                      <button
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, status: prev.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }))}
-                        className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.status === 'ACTIVE' ? 'bg-blue-500' : 'bg-gray-300'}`}
-                      >
-                        <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${formData.status === 'ACTIVE' ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </button>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {formData.status === 'ACTIVE'
-                          ? <span className="text-green-600 font-medium">● {PF.ACTIVE}</span>
-                          : <span className="text-red-600 font-medium">● {PF.INACTIVE}</span>}
-                      </p>
-                    </div>
-                    <div>
-                      <label className={labelClass}>{PF.MOBILE}<span className="text-red-600 ml-1">*</span></label>
-                      <input type="tel" name="mobile" value={formData.mobile} onChange={handleInputChange}
-                        placeholder="10 digit mobile number" maxLength={10} pattern="[0-9]{10}" className={inputClass} required />
-                      <p className="text-xs text-gray-500 mt-1">{PF.MOBILE_HELP}</p>
-                    </div>
-                    <div>
-                      <label className={labelClass}>
-                        {PF.EMAIL}
-                        <span className="text-gray-400 text-xs font-normal ml-2">({C.OPTIONAL})</span>
-                      </label>
-                      <input type="email" name="email" value={formData.email} onChange={handleInputChange}
-                        placeholder="Enter email address" className={inputClass} />
-                      <p className="text-xs text-gray-500 mt-1">{PF.EMAIL_HELP}</p>
-                    </div>
-                    <div>
-                      <label className={labelClass}>
-                        Category
-                        <span className="text-gray-400 text-xs font-normal ml-2">({C.OPTIONAL})</span>
-                      </label>
-                      <select name="category" value={formData.category} onChange={handleInputChange} className={inputClass}>
-                        <option value="GENERAL">GENERAL</option>
-                        <option value="OBC">OBC</option>
-                        <option value="SC">SC</option>
-                        <option value="ST">ST</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className={labelClass}>
-                        Student House
-                        <span className="text-gray-400 text-xs font-normal ml-2">({C.OPTIONAL})</span>
-                      </label>
-                      <input type="text" name="studentHouse" value={formData.studentHouse} onChange={handleInputChange}
-                        placeholder="e.g. Red House" className={inputClass} />
-                    </div>
-                    <div className="lg:col-span-2">
-                      <label className={labelClass}>
-                        {PF.ADDRESS}
-                        <span className="text-gray-400 text-xs font-normal ml-2">({C.OPTIONAL})</span>
-                      </label>
-                      <textarea rows={3} name="address" value={formData.address} onChange={handleInputChange}
-                        placeholder="Enter residential address" className={inputClass} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Identity & Banking Section */}
-                <div>
-                  <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
-                    <i className="fa-solid fa-id-card text-xl lg:text-2xl text-blue-500 mr-3" />
-                    <h2 className="text-xl font-medium text-gray-700">Identity &amp; Bank Details</h2>
-                  </div>
-                  <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4">
-                    <div>
-                      <label className={labelClass}>
-                        APAR ID
-                        <span className="text-gray-400 text-xs font-normal ml-2">({C.OPTIONAL})</span>
-                      </label>
-                      <input type="text" name="aparId" value={formData.aparId} onChange={handleInputChange}
-                        placeholder="Automated Permanent Academic Registry ID" className={inputClass} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>
-                        PEN Number
-                        <span className="text-gray-400 text-xs font-normal ml-2">({C.OPTIONAL})</span>
-                      </label>
-                      <input type="text" name="penNumber" value={formData.penNumber} onChange={handleInputChange}
-                        placeholder="Permanent Enrollment Number" className={inputClass} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>
-                        Bank Name
-                        <span className="text-gray-400 text-xs font-normal ml-2">({C.OPTIONAL})</span>
-                      </label>
-                      <input type="text" name="bankName" value={formData.bankName} onChange={handleInputChange}
-                        placeholder="Enter bank name" className={inputClass} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>
-                        Bank Account Number
-                        <span className="text-gray-400 text-xs font-normal ml-2">({C.OPTIONAL})</span>
-                      </label>
-                      <input type="text" name="bankAccountNumber" value={formData.bankAccountNumber} onChange={handleInputChange}
-                        placeholder="Enter bank account number" className={inputClass} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>
-                        IFSC Code
-                        <span className="text-gray-400 text-xs font-normal ml-2">({C.OPTIONAL})</span>
-                      </label>
-                      <input type="text" name="bankIfscCode" value={formData.bankIfscCode} onChange={(e) => setFormData(p => ({ ...p, bankIfscCode: e.target.value.toUpperCase() }))}
-                        placeholder="e.g. SBIN0001234" maxLength={11} className={inputClass} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Parent/Guardian Details Section */}
-                <div>
-                  <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
-                    <i className="fa-solid fa-users text-xl lg:text-2xl text-blue-500 mr-3" />
-                    <h2 className="text-xl font-medium text-gray-700">{FF.SECTION_TITLE}</h2>
-                  </div>
-                  <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4">
-                    <div>
-                      <label className={labelClass}>
-                        {FF.FATHER_NAME}
-                        <span className="text-gray-400 text-xs font-normal ml-2">({C.OPTIONAL})</span>
-                      </label>
-                      <input type="text" name="fatherName" value={formData.fatherName} onChange={handleInputChange}
-                        placeholder="Enter father's name" className={inputClass} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>
-                        {FF.FATHER_PHONE_NUMBER}
-                        <span className="text-gray-400 text-xs font-normal ml-2">({C.OPTIONAL})</span>
-                      </label>
-                      <input type="tel" name="fatherPhone" value={formData.fatherPhone} onChange={handleInputChange}
-                        placeholder="10 digit phone number" maxLength={10} pattern="[0-9]{10}" className={inputClass} />
-                      <p className="text-xs text-gray-500 mt-1">{PF.MOBILE_HELP_OPTIONAL}</p>
-                    </div>
-                    <div>
-                      <label className={labelClass}>
-                        {FF.MOTHER_NAME}
-                        <span className="text-gray-400 text-xs font-normal ml-2">({C.OPTIONAL})</span>
-                      </label>
-                      <input type="text" name="motherName" value={formData.motherName} onChange={handleInputChange}
-                        placeholder="Enter mother's name" className={inputClass} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>
-                        {FF.EMERGENCY_CONTACT}
-                        <span className="text-gray-400 text-xs font-normal ml-2">({C.OPTIONAL})</span>
-                      </label>
-                      <input type="tel" name="emergencyContact" value={formData.emergencyContact} onChange={handleInputChange}
-                        placeholder="10 digit emergency contact" maxLength={10} pattern="[0-9]{10}" className={inputClass} />
-                      <p className="text-xs text-gray-500 mt-1">{PF.MOBILE_HELP_OPTIONAL}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Additional Requirements Section */}
-                <div>
-                  <div className="flex justify-start items-center mb-4 pb-3 border-b border-gray-200">
-                    <i className="fa-solid fa-cog text-xl lg:text-2xl text-blue-500 mr-3" />
-                    <h2 className="text-xl font-medium text-gray-700">{PF.ADDITIONAL_REQUIREMENTS}</h2>
+                    <input ref={fileInputRef} type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleImageChange} className="hidden" />
                   </div>
 
-                  <div className="space-y-6">
-                    {/* Hostel Block */}
-                    <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-6">
-                      <div>
-                        <label className={labelClass}>{PF.HOSTEL_REQUIRED}</label>
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({
-                            ...prev,
-                            hostelRequired: !prev.hostelRequired,
-                            hostelRoomDescription: !prev.hostelRequired ? prev.hostelRoomDescription : ''
-                          }))}
-                          className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.hostelRequired ? 'bg-blue-500' : 'bg-gray-300'}`}
-                        >
-                          <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${formData.hostelRequired ? 'translate-x-6' : 'translate-x-0'}`} />
-                        </button>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {formData.hostelRequired ? 'Hostel accommodation enabled' : 'Hostel accommodation disabled'}
-                        </p>
-                      </div>
-
-                      {formData.hostelRequired && (
-                        <div>
-                          <label className={labelClass}>
-                            Hostel Room Number<span className="text-red-600 ml-1">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            name="hostelRoomDescription"
-                            value={formData.hostelRoomDescription}
-                            onChange={handleInputChange}
-                            placeholder="e.g. B-204"
-                            className={inputClass}
-                            required
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Transport Block */}
-                    <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-6">
-                      <div>
-                        <label className={labelClass}>{PF.TRANSPORT_REQUIRED}</label>
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, transportRequired: !prev.transportRequired }))}
-                          className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.transportRequired ? 'bg-blue-500' : 'bg-gray-300'}`}
-                        >
-                          <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${formData.transportRequired ? 'translate-x-6' : 'translate-x-0'}`} />
-                        </button>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {formData.transportRequired ? 'School transport enabled' : 'School transport disabled'}
-                        </p>
-                      </div>
+                  <AddStudentPersonalDetails formData={formData} setFormData={setFormData} handleInputChange={handleInputChange} errors={formErrors} sections={sections} sectionsLoading={sectionsLoading} />
+                  <div className="grid lg:grid-cols-2 sm:grid-cols-1 gap-4 mt-4">
+                    <div>
+                      <label htmlFor="rollNumber" className="block font-semibold text-gray-600 text-sm mb-2">
+                        {AS.ROLL_LABEL}<span className="text-red-600 ml-1">*</span>
+                      </label>
+                      <input type="text" id="rollNumber" name="rollNumber" value={formData.rollNumber} onChange={handleInputChange} placeholder={AS.ROLL_PLACEHOLDER}
+                        className="bg-gray-100 font-normal text-gray-800 border border-gray-300 p-2 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                   </div>
-
-                </div>
-
-              </div>
+                </>
+              )}
+              {activeTab === 'identity' && <AddStudentIdentityDocuments formData={formData} handleInputChange={handleInputChange} errors={formErrors} documents={documents} onDocumentChange={handleDocumentChange} onDocumentRemove={handleDocumentRemove} onGenericDocAdd={handleGenericDocAdd} onGenericDocRemove={handleGenericDocRemove} />}
+              {activeTab === 'family' && <AddStudentFamilyDetails formData={formData} setFormData={setFormData} handleInputChange={handleInputChange} errors={formErrors} setErrors={setFormErrors} guardianSource={guardianSource} onGuardianSource={handleGuardianSource} documents={documents} onDocumentChange={handleDocumentChange} onDocumentRemove={handleDocumentRemove} onAddSibling={handleAddSibling} onSiblingChange={handleSiblingChange} onRemoveSibling={handleRemoveSibling} />}
+              {activeTab === 'other' && <AddStudentOtherDetails formData={formData} setFormData={setFormData} handleInputChange={handleInputChange} errors={formErrors} />}
             </div>
 
-            {/* Footer Buttons */}
+            {/* Action Buttons */}
             <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50 rounded-b-lg">
               <div className="flex flex-col sm:flex-row justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                >
-                  {C.CANCEL}
+                <button type="button" onClick={handleDiscard} className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                  {C.DISCARD_CHANGES}
                 </button>
-                <button
-                  disabled={isSubmitting}
-                  type="submit"
-                  className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}
-                >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      {ES.LOADING || "Updating..."}
-                    </span>
-                  ) : ES.SUBMIT || "Update"}
-                </button>
+                {!isFirstTab && (
+                  <button type="button" onClick={handleBackTab} className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
+                    <ChevronLeft className="w-4 h-4" /> Back
+                  </button>
+                )}
+                {!isLastTab ? (
+                  <button type="button" onClick={handleNextTab} className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all bg-blue-500 hover:bg-blue-600 cursor-pointer text-white flex items-center gap-2">
+                    {AS.NEXT} <ChevronRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button disabled={isSubmitting} type="button" onClick={handleUpdateStudent} className={`px-6 py-2.5 text-sm font-medium rounded-lg transition-all ${isSubmitting ? 'bg-blue-300 cursor-not-allowed text-white' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer text-white'}`}>
+                    {isSubmitting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        {ES.LOADING || "Updating..."}
+                      </span>
+                    ) : (ES.SUBMIT || "Update Student")}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -756,7 +702,6 @@ function EditStudentDetails() {
         {showPhotoMenu && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
             <div className="bg-white w-full sm:w-[500px] rounded-xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-              {/* Header */}
               <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50">
                 <div className="flex items-center gap-3">
                   {showCamera && (
@@ -793,7 +738,6 @@ function EditStudentDetails() {
                 </div>
               </div>
 
-              {/* Body */}
               <div className="p-4">
                 {!showCamera ? (
                   <div className="space-y-3">
