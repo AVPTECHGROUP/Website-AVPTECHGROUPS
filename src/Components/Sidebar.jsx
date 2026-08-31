@@ -13,8 +13,8 @@ import {
 import { useState, useEffect, useContext, useRef, useMemo } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
 import { PERMISSIONS as P, SYSTEM_ROLES } from '../Constants/Permission'
-import OverdueFeeNotifications from "../Pages/FeeManagement/Overduefeenotification.jsx";
-import SalarySlip from "../Pages/Payroll/Salaryslipgenerator.jsx";
+
+
 
 const SCHOOL_SWITCHER_ROLES = SYSTEM_ROLES.SCHOOL_SWITCHER;
 
@@ -109,14 +109,10 @@ const menuSections = [
         ]
       },
       {
-        id: 'payroll', icon: Wallet, label: 'Payroll', route: '/payroll/myPayroll',
+        id: 'payroll', icon: Wallet, label: 'Payroll', route: '/payroll',
         permission: P.PAYROLL_VIEW,
         featureFlag: 'payrollEnabled',
-        subItems: [
-          { label: 'Manage Payroll', route: '/payroll', permission: P.PAYROLL_MANAGE },
-          { label: 'My Payroll', route: '/payroll/myPayroll', permission: P.PAYROLL_VIEW },
-          { label: 'Payroll Config', route: '/payroll/payrollConfig', permission: P.PAYROLL_CONFIG },
-        ]
+
       }
     ]
   },
