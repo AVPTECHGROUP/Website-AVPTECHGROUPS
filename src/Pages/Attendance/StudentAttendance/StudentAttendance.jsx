@@ -1,13 +1,13 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
     Camera, Users, ScanFace, PenLine, Download, BarChart2, List,
     ChevronDown, Search, CheckCircle2, Clock, XCircle, UserCheck,
-    Trash2, ChevronLeft, ChevronRight, Loader2,
-    BookOpen,
+    Trash2, ChevronLeft, ChevronRight, Loader2, BookOpen, FileSpreadsheet,
 } from "lucide-react";
 import UnmarkModal from "./UnmarkModel";
 import ManualMarkModal from "./ManualMarkModel";
 import SummaryView from "./SummaryView";
+import MonthlyAttendanceSheetModal from "./MonthlyAttendanceSheetModal";
 import { getClasses, getSectionsByClass } from "../../../Api/Teachers/TeachersAPI";
 import {
     getAttendanceRoster,
@@ -24,10 +24,8 @@ import {
     AVATAR_INITIALS_COLORS, FILTER_ALL_STUDENTS, FILTER_OPTIONS, UI_STRINGS,
 } from "../../../Constants/StringConstants/AttendanceConstants";
 
-
 const PAGES_PER_VIEW = 10;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 const getInitials = (fullName = "") => {
     const parts = fullName.trim().split(" ").filter(Boolean);
     if (parts.length === 0) return "??";
@@ -67,7 +65,6 @@ const shapeRosterStudent = (st) => {
     };
 };
 
-// ─── Style helpers ────────────────────────────────────────────────────────────
 const statusColor = (s) => {
     if (!s || s === STATUS_NOT_MARKED) return STATUS_COLOR_MAP.NOT_MARKED;
     if (s.includes(STATUS_PRESENT_MANUAL)) return STATUS_COLOR_MAP.PRESENT_MANUAL;
@@ -78,7 +75,7 @@ const statusColor = (s) => {
 };
 
 const statusIcon = (s) => {
-    if (!s || s === STATUS_NOT_MARKED) return <BookOpen className="w-3.5 h-3.5" />; // 
+    if (!s || s === STATUS_NOT_MARKED) return <BookOpen className="w-3.5 h-3.5" />;
     if (s.includes(STATUS_PRESENT)) return <CheckCircle2 className="w-3.5 h-3.5" />;
     if (s === STATUS_LATE) return <Clock className="w-3.5 h-3.5" />;
     if (s === STATUS_ABSENT) return <XCircle className="w-3.5 h-3.5" />;
@@ -91,12 +88,12 @@ const confidenceColor = (c) => {
     if (c >= CONFIDENCE_MEDIUM_THRESHOLD) return CONFIDENCE_COLOR_MAP.MEDIUM;
     return CONFIDENCE_COLOR_MAP.LOW;
 };
+
 const avatarColor = (initials = "??") => {
     const colors = AVATAR_INITIALS_COLORS;
     return colors[((initials.charCodeAt(0) || 0) + (initials.charCodeAt(1) || 0)) % colors.length];
 };
 
-// ─── SelectLoader ─────────────────────────────────────────────────────────────
 function SelectLoader() {
     return (
         <div className="h-9 w-32 rounded-lg bg-gray-200 shimmer">
@@ -105,7 +102,6 @@ function SelectLoader() {
     );
 }
 
-// ─── Stat Card Skeleton ───────────────────────────────────────────────────────
 function StatCardSkeleton() {
     return (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex items-center gap-3 animate-pulse">
@@ -118,7 +114,6 @@ function StatCardSkeleton() {
     );
 }
 
-// ─── ActionDropDownComp ───────────────────────────────────────────────────────
 function ActionDropDownComp({ onAction, actionOptions }) {
     return (
         <div className="flex justify-center w-full">
@@ -136,12 +131,11 @@ function ActionDropDownComp({ onAction, actionOptions }) {
     );
 }
 
-// ─── Roster Table ─────────────────────────────────────────────────────────────
-function RosterView({
+function DailyRosterView({
     students, loadingRoster, onUnmark, onMark, actionLoadingId,
     loadingClasses, loadingSections, classes, sections,
     selectedClass, selectedSection, handleClassChange, handleSectionChange,
-    date, setDate,
+    date, setDate, onOpenMonthlyModal
 }) {
     const [filter, setFilter] = useState(FILTER_ALL_STUDENTS);
     const [search, setSearch] = useState("");
@@ -183,279 +177,210 @@ function RosterView({
         </tr>
     );
 
-    const MobileCardSkeleton = () => (
-        <div className="p-4 animate-pulse">
-            <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-full bg-gray-200 shrink-0" />
-                    <div className="space-y-1.5">
-                        <div className="h-3.5 w-28 bg-gray-200 rounded" />
-                        <div className="h-3 w-20 bg-gray-200 rounded" />
-                    </div>
-                </div>
-                <div className="h-5 w-20 bg-gray-200 rounded-full" />
-            </div>
-            <div className="mt-3 h-8 bg-gray-200 rounded-lg" />
-        </div>
-    );
-
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="flex flex-col sm:flex-row gap-3 p-4 border-b border-gray-100 flex-wrap">
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gray-600">{UI_STRINGS.ROSTER.FILTER}</span>
+                    <button
+                        onClick={onOpenMonthlyModal}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#107c41] hover:bg-[#0b5c30] text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors shadow-sm"
+                    >
+                        <FileSpreadsheet className="w-4 h-4" /> Monthly Register Sheet
+                    </button>
+
                     <div className="relative">
-                        <select value={filter} onChange={(e) => { setFilter(e.target.value); setPage(1); }}
-                            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer bg-white">
+                        <select
+                            value={filter}
+                            onChange={(e) => { setFilter(e.target.value); setPage(1); }}
+                            className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-medium appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer bg-white"
+                        >
                             {FILTER_OPTIONS.map((f) => <option key={f}>{f}</option>)}
                         </select>
                         <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-2.5 pointer-events-none" />
                     </div>
                 </div>
+
                 <div className="relative flex-1 sm:max-w-xs">
                     <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
-                    <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                    <input
+                        value={search}
+                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                         placeholder={UI_STRINGS.ROSTER.SEARCH_PLACEHOLDER}
-                        className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+                        className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    />
                 </div>
+
                 <div className="flex flex-wrap items-center gap-2 ml-auto">
                     {loadingClasses ? <SelectLoader /> : (
                         <div className="relative">
-                            <select value={selectedClass?.id ?? ""} onChange={(e) => handleClassChange(e.target.value)}
-                                className="border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer shadow-sm">
+                            <select
+                                value={selectedClass?.id ?? ""}
+                                onChange={(e) => handleClassChange(e.target.value)}
+                                className="border border-gray-200 bg-white rounded-lg px-3 py-1.5 text-xs font-medium appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer shadow-sm"
+                            >
                                 {classes.length === 0 && <option value="">{UI_STRINGS.ROSTER.NO_CLASSES}</option>}
                                 {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                             <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-2.5 pointer-events-none" />
                         </div>
                     )}
+
                     {loadingSections ? <SelectLoader /> : (
                         <div className="relative">
-                            <select value={selectedSection?.id ?? ""} onChange={(e) => handleSectionChange(e.target.value)}
+                            <select
+                                value={selectedSection?.id ?? ""}
+                                onChange={(e) => handleSectionChange(e.target.value)}
                                 disabled={sections.length === 0}
-                                className="border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer shadow-sm disabled:opacity-60">
+                                className="border border-gray-200 bg-white rounded-lg px-3 py-1.5 text-xs font-medium appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer shadow-sm disabled:opacity-60"
+                            >
                                 {sections.length === 0 && <option value="">{UI_STRINGS.ROSTER.NO_SECTIONS}</option>}
                                 {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                             <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-2.5 pointer-events-none" />
                         </div>
                     )}
-                    <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-                        className="border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 shadow-sm cursor-pointer" />
+
+                    <input
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="border border-gray-200 bg-white rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-200 shadow-sm cursor-pointer"
+                    />
                 </div>
             </div>
 
             {loadingRoster ? (
-                <>
-                    <div className="hidden md:block overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                    <th className="px-4 py-3 text-left w-10">{UI_STRINGS.ROSTER.HEADERS[0]}</th>
-                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[1]}</th>
-                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[2]}</th>
-                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[3]}</th>
-                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[4]}</th>
-                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[5]}</th>
-                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[6]}</th>
-                                    <th className="px-4 py-3 text-center">{UI_STRINGS.ROSTER.HEADERS[7]}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {Array(6).fill(0).map((_, i) => <TableRowSkeleton key={i} />)}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div className="md:hidden divide-y divide-gray-100">
-                        {Array(4).fill(0).map((_, i) => <MobileCardSkeleton key={i} />)}
-                    </div>
-                </>
+                <div className="w-full overflow-x-auto">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                <th className="px-4 py-3 text-left w-10">#</th>
+                                <th className="px-4 py-3 text-left">Student</th>
+                                <th className="px-4 py-3 text-left">Roll</th>
+                                <th className="px-4 py-3 text-left">Status</th>
+                                <th className="px-4 py-3 text-left">Check In</th>
+                                <th className="px-4 py-3 text-left">Source</th>
+                                <th className="px-4 py-3 text-left">Confidence</th>
+                                <th className="px-4 py-3 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {Array(6).fill(0).map((_, i) => <TableRowSkeleton key={i} />)}
+                        </tbody>
+                    </table>
+                </div>
             ) : students.length === 0 ? (
                 <div className="p-10 text-center text-gray-400 text-sm">{UI_STRINGS.ROSTER.NO_STUDENTS}</div>
             ) : (
-                <>
-                    <div className="hidden md:block overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                    <th className="px-4 py-3 text-left w-10">{UI_STRINGS.ROSTER.HEADERS[0]}</th>
-                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[1]}</th>
-                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[2]}</th>
-                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[3]}</th>
-                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[4]}</th>
-                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[5]}</th>
-                                    <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[6]}</th>
-                                    <th className="px-4 py-3 text-center">{UI_STRINGS.ROSTER.HEADERS[7]}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {paged.map((s, i) => (
-                                    <tr key={s.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-4 py-3 text-sm text-gray-500">{(page - 1) * PAGES_PER_VIEW + i + 1}</td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-2.5">
-                                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarColor(s.initials)}`}>{s.initials}</div>
-                                                <div>
-                                                    <p className="text-sm font-semibold text-gray-800">{s.name}</p>
-                                                    <p className="text-xs text-gray-400">{UI_STRINGS.COMMON.ID_LABEL} {s.id}</p>
-                                                </div>
+                <div className="w-full overflow-x-auto">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                <th className="px-4 py-3 text-left w-10">{UI_STRINGS.ROSTER.HEADERS[0]}</th>
+                                <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[1]}</th>
+                                <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[2]}</th>
+                                <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[3]}</th>
+                                <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[4]}</th>
+                                <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[5]}</th>
+                                <th className="px-4 py-3 text-left">{UI_STRINGS.ROSTER.HEADERS[6]}</th>
+                                <th className="px-4 py-3 text-center">{UI_STRINGS.ROSTER.HEADERS[7]}</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {paged.map((s, i) => (
+                                <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-4 py-3 text-sm text-gray-500">{(page - 1) * PAGES_PER_VIEW + i + 1}</td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarColor(s.initials)}`}>{s.initials}</div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-800">{s.name}</p>
+                                                <p className="text-xs text-gray-400">{UI_STRINGS.COMMON.ID_LABEL} {s.id}</p>
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm font-mono text-gray-600">{s.rollNo}</td>
-                                        <td className="px-4 py-3">
-                                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${statusColor(s.status)}`}>
-                                                {statusIcon(s.status)}{s.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{s.checkIn || DASH_PLACEHOLDER}</td>
-                                        <td className="px-4 py-3">
-                                            {s.source ? (
-                                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${s.source === SOURCE_MAP.GROUP_PHOTO ? "bg-blue-50 text-blue-600 border-blue-100" : s.source === SOURCE_MAP.FACE_SCAN ? "bg-green-50 text-green-600 border-green-100" : "bg-purple-50 text-purple-600 border-purple-100"}`}>{s.source}</span>
-                                            ) : SOURCE_EMPTY_PLACEHOLDER}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {s.confidence ? (
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                                        <div className={`h-full rounded-full ${confidenceColor(s.confidence)}`} style={{ width: `${s.confidence}%` }} />
-                                                    </div>
-                                                    <span className="text-xs text-gray-600 font-mono">{s.confidence}%</span>
-                                                </div>
-                                            ) : <span className="text-xs text-gray-400">{UI_STRINGS.COMMON.N_A}</span>}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <ActionDropDownComp
-                                                onAction={(val) => val === "unmark" ? onUnmark(s) : onMark(s)}
-                                                actionOptions={
-                                                    s.status === STATUS_NOT_MARKED
-                                                        ? [{ label: actionLoadingId === s.id ? UI_STRINGS.COMMON.MARKING : UI_STRINGS.COMMON.MARK, value: "mark", icon: actionLoadingId === s.id ? Loader2 : PenLine, bg: "bg-white", text: "text-orange-600", hover: "hover:bg-orange-50", disabled: actionLoadingId === s.id }]
-                                                        : [{ label: actionLoadingId === s.id ? UI_STRINGS.COMMON.UNMARKING : UI_STRINGS.COMMON.UNMARK, value: "unmark", icon: actionLoadingId === s.id ? Loader2 : Trash2, bg: "bg-white", text: "text-red-500", hover: "hover:bg-red-50", disabled: actionLoadingId === s.id }]
-                                                }
-                                            />
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div className="md:hidden divide-y divide-gray-100">
-                        {paged.map((s) => (
-                            <div key={s.id} className="p-4 hover:bg-gray-50">
-                                <div className="flex items-start justify-between gap-2">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${avatarColor(s.initials)}`}>{s.initials}</div>
-                                        <div>
-                                            <p className="text-sm font-semibold text-gray-800">{s.name}</p>
-                                            <p className="text-xs text-gray-400">Roll: {s.rollNo} · ID: {s.id}</p>
                                         </div>
-                                    </div>
-                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${statusColor(s.status)}`}>
-                                        {statusIcon(s.status)}{s.status}
-                                    </span>
-                                </div>
-                                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-                                    {s.checkIn && <span>⏰ {s.checkIn}</span>}
-                                    {s.source && <span>📷 {s.source}</span>}
-                                    {s.confidence && <span>🎯 {s.confidence}%</span>}
-                                </div>
-                                <div className="mt-3">
-                                    <ActionDropDownComp
-                                        onAction={(val) => val === "unmark" ? onUnmark(s) : onMark(s)}
-                                        actionOptions={
-                                            s.status === STATUS_NOT_MARKED
-                                                ? [{ label: UI_STRINGS.COMMON.MARK, value: "mark", icon: PenLine, bg: "bg-white", text: "text-orange-600", hover: "hover:bg-orange-50", disabled: false }]
-                                                : [{ label: UI_STRINGS.COMMON.UNMARK, value: "unmark", icon: Trash2, bg: "bg-white", text: "text-red-500", hover: "hover:bg-red-50", disabled: false }]
-                                        }
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-gray-100 bg-gray-50">
-                        <p className="text-xs text-gray-500">
-                            {UI_STRINGS.ROSTER.SHOWING}{filtered.length === 0 ? 0 : (page - 1) * PAGES_PER_VIEW + 1}–{Math.min(page * PAGES_PER_VIEW, filtered.length)}{UI_STRINGS.ROSTER.OF}{filtered.length}{UI_STRINGS.ROSTER.STUDENTS_LOWER}
-                        </p>
-                        <div className="flex items-center gap-1">
-                            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-white disabled:opacity-40 cursor-pointer transition-colors flex items-center gap-1">
-                                <ChevronLeft className="w-3.5 h-3.5" /> {UI_STRINGS.ROSTER.PREV}
-                            </button>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                                <button key={p} onClick={() => setPage(p)}
-                                    className={`w-8 h-8 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${p === page ? "bg-blue-600 text-white" : "border border-gray-200 text-gray-600 hover:bg-white"}`}>
-                                    {p}
-                                </button>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm font-mono text-gray-600">{s.rollNo}</td>
+                                    <td className="px-4 py-3">
+                                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${statusColor(s.status)}`}>
+                                            {statusIcon(s.status)}{s.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-600">{s.checkIn || DASH_PLACEHOLDER}</td>
+                                    <td className="px-4 py-3">
+                                        {s.source ? (
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${s.source === SOURCE_MAP.GROUP_PHOTO ? "bg-blue-50 text-blue-600 border-blue-100" : s.source === SOURCE_MAP.FACE_SCAN ? "bg-green-50 text-green-600 border-green-100" : "bg-purple-50 text-purple-600 border-purple-100"}`}>{s.source}</span>
+                                        ) : SOURCE_EMPTY_PLACEHOLDER}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {s.confidence ? (
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className={`h-full rounded-full ${confidenceColor(s.confidence)}`} style={{ width: `${s.confidence}%` }} />
+                                                </div>
+                                                <span className="text-xs text-gray-600 font-mono">{s.confidence}%</span>
+                                            </div>
+                                        ) : <span className="text-xs text-gray-400">{UI_STRINGS.COMMON.N_A}</span>}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <ActionDropDownComp
+                                            onAction={(val) => val === "unmark" ? onUnmark(s) : onMark(s)}
+                                            actionOptions={
+                                                s.status === STATUS_NOT_MARKED
+                                                    ? [{ label: actionLoadingId === s.id ? UI_STRINGS.COMMON.MARKING : UI_STRINGS.COMMON.MARK, value: "mark", icon: actionLoadingId === s.id ? Loader2 : PenLine, bg: "bg-white", text: "text-orange-600", hover: "hover:bg-orange-50", disabled: actionLoadingId === s.id }]
+                                                    : [{ label: actionLoadingId === s.id ? UI_STRINGS.COMMON.UNMARKING : UI_STRINGS.COMMON.UNMARK, value: "unmark", icon: actionLoadingId === s.id ? Loader2 : Trash2, bg: "bg-white", text: "text-red-500", hover: "hover:bg-red-50", disabled: actionLoadingId === s.id }]
+                                            }
+                                        />
+                                    </td>
+                                </tr>
                             ))}
-                            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages || totalPages === 0}
-                                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-white disabled:opacity-40 cursor-pointer transition-colors flex items-center gap-1">
-                                {UI_STRINGS.ROSTER.NEXT} <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-                    </div>
-                </>
+                        </tbody>
+                    </table>
+                </div>
             )}
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-gray-100 bg-gray-50">
+                <p className="text-xs text-gray-500">
+                    {UI_STRINGS.ROSTER.SHOWING}{filtered.length === 0 ? 0 : (page - 1) * PAGES_PER_VIEW + 1}–{Math.min(page * PAGES_PER_VIEW, filtered.length)}{UI_STRINGS.ROSTER.OF}{filtered.length}{UI_STRINGS.ROSTER.STUDENTS_LOWER}
+                </p>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-white disabled:opacity-40 cursor-pointer transition-colors flex items-center gap-1"
+                    >
+                        <ChevronLeft className="w-3.5 h-3.5" /> {UI_STRINGS.ROSTER.PREV}
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                        <button
+                            key={p}
+                            onClick={() => setPage(p)}
+                            className={`w-8 h-8 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${p === page ? "bg-blue-600 text-white" : "border border-gray-200 text-gray-600 hover:bg-white"}`}
+                        >
+                            {p}
+                        </button>
+                    ))}
+                    <button
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages || totalPages === 0}
+                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-white disabled:opacity-40 cursor-pointer transition-colors flex items-center gap-1"
+                    >
+                        {UI_STRINGS.ROSTER.NEXT} <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
 
-// ─── CSV Export Utility ───────────────────────────────────────────────────────
-function exportAttendanceCSV({ students, selectedClass, selectedSection, date, rosterMeta }) {
-    const className = selectedClass?.name || "Unknown Class";
-    const sectionName = selectedSection?.name || "Unknown Section";
-    const formattedDate = new Date(date).toLocaleDateString("en-IN", {
-        weekday: "long", day: "2-digit", month: "long", year: "numeric",
-    });
-    const exportedAt = new Date().toLocaleString("en-IN", {
-        day: "2-digit", month: "short", year: "numeric",
-        hour: "2-digit", minute: "2-digit", hour12: true,
-    });
-
-    const total = rosterMeta?.totalStudents ?? students.length;
-    const present = rosterMeta?.totalPresent ?? students.filter(s => s.status.includes(STATUS_PRESENT)).length;
-    const late = rosterMeta?.totalLate ?? students.filter(s => s.status === STATUS_LATE).length;
-    const absent = rosterMeta?.totalNotMarked ?? students.filter(s => s.status === STATUS_NOT_MARKED).length;
-    const attendanceRate = total > 0 ? (((present + late) / total) * 100).toFixed(1) : "0.0";
-
-    const cell = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
-    const rows = [];
-
-    rows.push([cell(UI_STRINGS.EXPORT.REPORT_TITLE), "", "", "", "", "", "", ""]);
-    rows.push([cell(UI_STRINGS.EXPORT.CLASS), cell(className), cell(UI_STRINGS.EXPORT.SECTION), cell(sectionName), "", "", "", ""]);
-    rows.push([cell(UI_STRINGS.EXPORT.DATE), cell(formattedDate), "", "", "", "", "", ""]);
-    rows.push([cell(UI_STRINGS.EXPORT.EXPORTED_AT), cell(exportedAt), "", "", "", "", "", ""]);
-    rows.push(["", "", "", "", "", "", "", ""]);
-    rows.push([cell(UI_STRINGS.EXPORT.SUMMARY), "", "", "", "", "", "", ""]);
-    rows.push([cell(UI_STRINGS.EXPORT.TOTAL_STUDENTS), cell(total), cell(UI_STRINGS.EXPORT.ATTENDANCE_RATE), cell(`${attendanceRate}%`), "", "", "", ""]);
-    rows.push([cell(STATUS_PRESENT), cell(present), cell(STATUS_LATE), cell(late), "", "", "", ""]);
-    rows.push([cell("Absent/Unmarked"), cell(absent), "", "", "", "", "", ""]);
-    rows.push(["", "", "", "", "", "", "", ""]);
-    rows.push([cell(UI_STRINGS.EXPORT.HEADERS[0]), cell(UI_STRINGS.EXPORT.HEADERS[1]), cell(UI_STRINGS.EXPORT.HEADERS[2]), cell(UI_STRINGS.EXPORT.HEADERS[3]), cell(UI_STRINGS.EXPORT.HEADERS[4]), cell(UI_STRINGS.EXPORT.HEADERS[5]), cell(UI_STRINGS.EXPORT.HEADERS[6]), cell(UI_STRINGS.EXPORT.HEADERS[7])]);
-
-    students.forEach((s, index) => {
-        rows.push([cell(index + 1), cell(s.name), cell(s.rollNo), cell(s.id), cell(s.status), cell(s.checkIn || DASH_PLACEHOLDER), cell(s.source || SOURCE_EMPTY_PLACEHOLDER), cell(s.confidence ?? DASH_PLACEHOLDER)]);
-    });
-
-    const csvContent = rows.map(r => r.join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const safeDate = date.replace(/-/g, "");
-    const safeName = `${className}_${sectionName}_Attendance_${safeDate}`.replace(/\s+/g, "_");
-    link.href = url;
-    link.setAttribute("download", `${safeName}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function StudentAttendance() {
     const [view, setView] = useState("roster");
     const [activeTab, setActiveTab] = useState("roster");
-    const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+    const [showMonthlyModal, setShowMonthlyModal] = useState(false);
+
+    const today = new Date();
+    const [date, setDate] = useState(today.toISOString().split("T")[0]);
+    const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
+    const [selectedYear, setSelectedYear] = useState(today.getFullYear());
 
     const [classes, setClasses] = useState([]);
     const [sections, setSections] = useState([]);
@@ -464,7 +389,6 @@ export default function StudentAttendance() {
     const [loadingClasses, setLoadingClasses] = useState(true);
     const [loadingSections, setLoadingSections] = useState(false);
 
-    const [rosterMeta, setRosterMeta] = useState(null);
     const [mergedStudents, setMergedStudents] = useState([]);
     const [loadingRoster, setLoadingRoster] = useState(false);
 
@@ -472,7 +396,6 @@ export default function StudentAttendance() {
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [unmarkTarget, setUnmarkTarget] = useState(null);
     const [actionLoadingId, setActionLoadingId] = useState(null);
-    const [exportingCSV, setExportingCSV] = useState(false);
 
     const [subViewClass, setSubViewClass] = useState(null);
     const [subViewSection, setSubViewSection] = useState(null);
@@ -496,7 +419,6 @@ export default function StudentAttendance() {
             setSections([]);
             setSelectedSection(null);
             setMergedStudents([]);
-            setRosterMeta(null);
             try {
                 const data = await getSectionsByClass(selectedClass.id);
                 setSections(data);
@@ -506,30 +428,36 @@ export default function StudentAttendance() {
         })();
     }, [selectedClass]);
 
-    useEffect(() => {
+    // Single daily roster fetch (Only 1 API call per date change)
+    const fetchDailyRoster = useCallback(async () => {
         if (!selectedClass?.id || !selectedSection?.id) return;
-        (async () => {
-            setLoadingRoster(true);
-            setMergedStudents([]);
-            setRosterMeta(null);
-            try {
-                const roster = await getAttendanceRoster(selectedClass.id, selectedSection.id, date);
-                setRosterMeta(roster);
-                setMergedStudents((roster.students || []).map(shapeRosterStudent));
-            } catch (err) { console.error("getAttendanceRoster error:", err); }
-            finally { setLoadingRoster(false); }
-        })();
+        setLoadingRoster(true);
+
+        try {
+            const roster = await getAttendanceRoster(selectedClass.id, selectedSection.id, date);
+            const students = Array.isArray(roster?.students) ? roster.students : (roster?.data?.students || []);
+            setMergedStudents(students.map(shapeRosterStudent));
+        } catch (err) {
+            console.error("fetchDailyRoster error:", err);
+        } finally {
+            setLoadingRoster(false);
+        }
     }, [selectedClass, selectedSection, date]);
 
-    const stats = {
-        total: mergedStudents.length,
-        present: mergedStudents.filter((s) => s.status.includes(STATUS_PRESENT)).length,
-        late: mergedStudents.filter((s) => s.status === STATUS_LATE).length,
-        absent: mergedStudents.filter(
+    useEffect(() => {
+        fetchDailyRoster();
+    }, [fetchDailyRoster]);
+
+    const stats = useMemo(() => {
+        const total = mergedStudents.length;
+        const present = mergedStudents.filter((s) => s.status.includes(STATUS_PRESENT)).length;
+        const late = mergedStudents.filter((s) => s.status === STATUS_LATE).length;
+        const absent = mergedStudents.filter(
             (s) => s.status === STATUS_ABSENT || s.status === STATUS_NOT_MARKED
-        ).length,
-        enrolled: mergedStudents.filter((s) => s.enrolled).length,
-    };
+        ).length;
+        const enrolled = mergedStudents.filter((s) => s.enrolled).length;
+        return { total, present, late, absent, enrolled };
+    }, [mergedStudents]);
 
     const showStatSkeletons = loadingClasses;
 
@@ -537,19 +465,11 @@ export default function StudentAttendance() {
         const cls = classes.find((c) => String(c.id) === String(classId));
         if (cls) setSelectedClass(cls);
     };
+
     const handleSectionChange = (sectionId) => {
         const sec = sections.find((s) => String(s.id) === String(sectionId));
         if (sec) setSelectedSection(sec);
     };
-
-    const refreshRoster = useCallback(async () => {
-        if (!selectedClass?.id || !selectedSection?.id) return;
-        try {
-            const roster = await getAttendanceRoster(selectedClass.id, selectedSection.id, date);
-            setRosterMeta(roster);
-            setMergedStudents((roster.students || []).map(shapeRosterStudent));
-        } catch (err) { console.error("Roster refresh failed:", err); }
-    }, [selectedClass, selectedSection, date]);
 
     const handleUnmarkConfirm = async (student) => {
         if (!student.attendanceId) { alert("No attendance record found for this student"); return; }
@@ -557,30 +477,14 @@ export default function StudentAttendance() {
         try {
             await unmarkAttendance(student.attendanceId, "Wrong marking corrected by teacher");
             setUnmarkTarget(null);
-            await refreshRoster();
+            await fetchDailyRoster();
         } catch (err) { alert(err.message || "Failed to unmark attendance"); }
         finally { setActionLoadingId(null); }
     };
 
     const handleManualMark = async (payload) => {
         await bulkManualMarkAttendance(payload);
-        await refreshRoster();
-    };
-
-    const handleExportCSV = () => {
-        if (mergedStudents.length === 0) {
-            alert(UI_STRINGS.ALERTS.NO_STUDENT_DATA_EXPORT);
-            return;
-        }
-        setExportingCSV(true);
-        try {
-            exportAttendanceCSV({ students: mergedStudents, selectedClass, selectedSection, date, rosterMeta });
-        } catch (err) {
-            console.error("CSV export error:", err);
-            alert(UI_STRINGS.ALERTS.EXPORT_FAILED);
-        } finally {
-            setTimeout(() => setExportingCSV(false), 1000);
-        }
+        await fetchDailyRoster();
     };
 
     const isSubView = view === "faceScan" || view === "groupPhoto";
@@ -600,7 +504,7 @@ export default function StudentAttendance() {
         setActiveTab("roster");
         setSubViewClass(null);
         setSubViewSection(null);
-        refreshRoster();
+        fetchDailyRoster();
     };
 
     const sectionReady = !!selectedClass?.id && !!selectedSection?.id && !loadingSections;
@@ -608,7 +512,6 @@ export default function StudentAttendance() {
     return (
         <div className="min-h-screen bg-slate-100 p-3 sm:p-4 lg:p-6">
             <div className="max-w-7xl mx-auto space-y-4">
-
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                     <div>
                         <h1 className="text-xl sm:text-3xl font-bold text-gray-900">{UI_STRINGS.ROSTER.TITLE}</h1>
@@ -623,25 +526,34 @@ export default function StudentAttendance() {
                 ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 gap-3">
                         <CardComponent IconName={Users} keyName={UI_STRINGS.SUMMARY.TOTAL_STUDENTS} val={stats.total} iconBgColor="bg-blue-100" iconTxColor="text-blue-600" />
-                        <CardComponent IconName={CheckCircle2} keyName={STATUS_PRESENT}
+                        <CardComponent
+                            IconName={CheckCircle2}
+                            keyName={STATUS_PRESENT}
                             val={stats.total > 0 ? `${stats.present} · ${((stats.present / stats.total) * 100).toFixed(1)}%` : "0"}
-                            iconBgColor="bg-green-100" iconTxColor="text-green-600" />
+                            iconBgColor="bg-green-100"
+                            iconTxColor="text-green-600"
+                        />
                         <CardComponent IconName={Clock} keyName={STATUS_LATE} val={stats.late} iconBgColor="bg-orange-100" iconTxColor="text-orange-500" />
                         <CardComponent IconName={XCircle} keyName={UI_STRINGS.SUMMARY.ABSENT_UNMARKED} val={stats.absent} iconBgColor="bg-red-100" iconTxColor="text-red-500" />
-                        <CardComponent IconName={UserCheck} keyName={UI_STRINGS.SUMMARY.ENROLLED}
+                        <CardComponent
+                            IconName={UserCheck}
+                            keyName={UI_STRINGS.SUMMARY.ENROLLED}
                             val={`${stats.enrolled} · ${stats.total - stats.enrolled}${UI_STRINGS.SUMMARY.NOT_ENROLLED}`}
-                            iconBgColor="bg-sky-100" iconTxColor="text-sky-600" />
+                            iconBgColor="bg-sky-100"
+                            iconTxColor="text-sky-600"
+                        />
                     </div>
                 )}
 
-                {/* ── Action Buttons ── */}
+                {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row justify-between gap-3">
                     <div className="flex flex-wrap gap-2">
                         <button
                             onClick={() => openSubView("groupPhoto")}
                             disabled={!sectionReady}
                             title={!sectionReady ? UI_STRINGS.ALERTS.WAIT_FOR_SECTIONS : ""}
-                            className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors shadow-sm">
+                            className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors shadow-sm"
+                        >
                             <Camera className="w-4 h-4" />
                             {UI_STRINGS.ROSTER.GROUP_BTN}
                             {sectionReady && (
@@ -655,39 +567,45 @@ export default function StudentAttendance() {
                             onClick={() => openSubView("faceScan")}
                             disabled={!sectionReady}
                             title={!sectionReady ? UI_STRINGS.ALERTS.WAIT_FOR_SECTIONS : ""}
-                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors shadow-sm">
+                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors shadow-sm"
+                        >
                             <ScanFace className="w-4 h-4" /> {UI_STRINGS.ROSTER.FACE_BTN}
                         </button>
 
-                        <button onClick={() => setShowManualMark(true)}
-                            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors shadow-sm">
+                        <button
+                            onClick={() => setShowManualMark(true)}
+                            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors shadow-sm"
+                        >
                             <PenLine className="w-4 h-4" /> {UI_STRINGS.ROSTER.MANUAL_BTN}
                         </button>
                     </div>
+
                     <div className="flex flex-wrap gap-2">
-                        <button onClick={() => { setView("roster"); setActiveTab("roster"); }}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors border ${activeTab === "roster" && !isSubView ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}>
+                        <button
+                            onClick={() => setShowMonthlyModal(true)}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors border bg-[#107c41] text-white hover:bg-[#0b5c30] shadow-sm"
+                        >
+                            <FileSpreadsheet className="w-4 h-4" /> Monthly Register Sheet
+                        </button>
+
+                        <button
+                            onClick={() => { setView("roster"); setActiveTab("roster"); }}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors border ${activeTab === "roster" && !isSubView ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}
+                        >
                             <List className="w-4 h-4" /> {UI_STRINGS.ROSTER.BTN_ROSTER}
                         </button>
-                        <button onClick={() => { setView("summary"); setActiveTab("summary"); }}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors border ${activeTab === "summary" && !isSubView ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}>
-                            <BarChart2 className="w-4 h-4" /> {UI_STRINGS.ROSTER.BTN_SUMMARY}
-                        </button>
                         <button
-                            onClick={handleExportCSV}
-                            disabled={exportingCSV || mergedStudents.length === 0 || loadingRoster}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors border bg-white text-gray-700 border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                            {exportingCSV
-                                ? <><Loader2 className="w-4 h-4 animate-spin" /> {UI_STRINGS.ROSTER.EXPORTING}</>
-                                : <><Download className="w-4 h-4" /> {UI_STRINGS.ROSTER.EXPORT_CSV}</>
-                            }
+                            onClick={() => { setView("summary"); setActiveTab("summary"); }}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors border ${activeTab === "summary" && !isSubView ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}
+                        >
+                            <BarChart2 className="w-4 h-4" /> {UI_STRINGS.ROSTER.BTN_SUMMARY}
                         </button>
                     </div>
                 </div>
 
-                {/* ── Main Content ── */}
+                {/* Main View */}
                 {view === "roster" && (
-                    <RosterView
+                    <DailyRosterView
                         students={mergedStudents}
                         loadingRoster={loadingRoster}
                         onUnmark={(student) => setUnmarkTarget(student)}
@@ -703,6 +621,7 @@ export default function StudentAttendance() {
                         handleSectionChange={handleSectionChange}
                         date={date}
                         setDate={setDate}
+                        onOpenMonthlyModal={() => setShowMonthlyModal(true)}
                     />
                 )}
                 {view === "summary" && (
@@ -727,6 +646,19 @@ export default function StudentAttendance() {
                     />
                 )}
             </div>
+
+            {/* ── Monthly Excel Register Sheet Modal ── */}
+            <MonthlyAttendanceSheetModal
+                isOpen={showMonthlyModal}
+                onClose={() => setShowMonthlyModal(false)}
+                baseStudents={mergedStudents}
+                selectedClass={selectedClass}
+                selectedSection={selectedSection}
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
+                selectedYear={selectedYear}
+                setSelectedYear={setSelectedYear}
+            />
 
             {showManualMark && (
                 <ManualMarkModal
