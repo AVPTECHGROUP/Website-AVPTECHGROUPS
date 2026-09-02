@@ -96,6 +96,9 @@ export default function LeaveDashboard() {
   };
 
   /* ---------------- FETCH STATISTICS ---------------- */
+  // Note: totalDaysUsed / daysUsed / daysAvailable in the balance API response
+  // already reflect approved leaves being deducted server-side — no client-side
+  // recalculation is needed here, we just read the values as-is.
   useEffect(() => {
     const fetchStatistics = async () => {
       try {
@@ -142,6 +145,7 @@ export default function LeaveDashboard() {
           fromDate: userReq.fromDate,
           toDate: userReq.toDate,
           totalDays: userReq.totalDays,
+          isHalfDay: Boolean(userReq.isHalfDay),
           reason: userReq.reason,
           reviewRemarks: userReq.reviewRemarks,
           role: userReq.userType || MY_LEAVES_TEXT.fallbacks.role,
@@ -163,8 +167,9 @@ export default function LeaveDashboard() {
     if (leaveReq.currLeavestatus !== 'PENDING') return;
     try {
       if (!user_id) return;
+      const leaveTypeLabel = compareAndGetLabel(listOfLeaveType, leaveReq.leaveType);
       await CancelUserlLeaveReq(leaveReq.leaveId, user_id);
-      toast.success(MY_LEAVES_TOAST_MESSAGES.cancelSuccess);
+      toast.success(`${leaveTypeLabel} — ${MY_LEAVES_TOAST_MESSAGES.cancelSuccess}`);
       setFetchleaveReqfress((prev) => prev + 1);
     } catch (error) {
       console.log(error);
@@ -175,16 +180,25 @@ export default function LeaveDashboard() {
   /* ---------------- HELPERS ---------------- */
   const formatDateRange = (fromDate, toDate) => {
     const formatDate = (date) =>
-      new Date(date).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      });
+        new Date(date).toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        });
     const formattedFrom = formatDate(fromDate);
     const formattedTo = formatDate(toDate);
     return formattedFrom === formattedTo
-      ? formattedFrom
-      : `${formattedFrom} \u2013 ${formattedTo}`;
+        ? formattedFrom
+        : `${formattedFrom} \u2013 ${formattedTo}`;
+  };
+
+  const formatDuration = (totalDays, isHalfDay) => {
+    if (isHalfDay) {
+      return MY_LEAVES_TEXT?.duration?.halfDay || 'Half Day';
+    }
+    const dayLabel =
+        totalDays === 1 ? MY_LEAVES_TEXT.duration.day : MY_LEAVES_TEXT.duration.days;
+    return `${totalDays} ${dayLabel}`;
   };
 
   /* ---------------- CARDS DATA ---------------- */
@@ -231,360 +245,354 @@ export default function LeaveDashboard() {
      RENDER
   ───────────────────────────────────────────────────────────────────────── */
   return (
-    /*
-      PAGE ROOT
-      - overflow-x: hidden on the page prevents any child from ever
-        pushing the viewport wider than the screen.
-      - width: 100% + box-sizing: border-box so padding never adds width.
-    */
-    <div
-      className="min-h-screen bg-gradient-to-b from-sky-50 to-sky-100 p-3 sm:p-5 lg:p-6"
-      style={{ overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}
-    >
-      {/*
+      /*
+        PAGE ROOT
+        - overflow-x: hidden on the page prevents any child from ever
+          pushing the viewport wider than the screen.
+        - width: 100% + box-sizing: border-box so padding never adds width.
+      */
+      <div
+          className="min-h-screen bg-gradient-to-b from-sky-50 to-sky-100 p-3 sm:p-5 lg:p-6"
+          style={{ overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}
+      >
+        {/*
         INNER CONTAINER
         - minWidth: 0 is critical — without it a flex/grid child will refuse
           to shrink below its content width, blowing out the layout.
       */}
-      <div className="max-w-7xl mx-auto w-full" style={{ minWidth: 0 }}>
+        <div className="max-w-7xl mx-auto w-full" style={{ minWidth: 0 }}>
 
-        {/* ── Header ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-800">
-              {MY_LEAVES_TEXT.pageTitle}
-            </h1>
-            <p className="text-sm text-slate-500 mt-0.5">
-              {MY_LEAVES_TEXT.pageSubtitle}
-            </p>
+          {/* ── Header ── */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+            <div>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-800">
+                {MY_LEAVES_TEXT.pageTitle}
+              </h1>
+              <p className="text-sm text-slate-500 mt-0.5">
+                {MY_LEAVES_TEXT.pageSubtitle}
+              </p>
+            </div>
+
+            <button
+                onClick={() => navigate('/leaves/ApplyLeaves')}
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold shadow-sm transition-colors flex-shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              {MY_LEAVES_TEXT.buttons.requestNewLeave}
+            </button>
           </div>
 
-          <button
-            onClick={() => navigate('/leaves/ApplyLeaves')}
-            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold shadow-sm transition-colors flex-shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            {MY_LEAVES_TEXT.buttons.requestNewLeave}
-          </button>
-        </div>
+          {/* ── Stat Cards ── */}
+          <div className="grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 text-sm mt-5 mb-6">
+            {cardsArrayLeaves.map((cardData) => (
+                <CardComponent
+                    key={cardData.keyName}
+                    {...cardData}
+                    val={`${cardData.rem_val}/${cardData.total_val}`}
+                />
+            ))}
+          </div>
 
-        {/* ── Stat Cards ── */}
-        <div className="grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 text-sm mt-5 mb-6">
-          {cardsArrayLeaves.map((cardData) => (
-            <CardComponent
-              key={cardData.keyName}
-              {...cardData}
-              val={`${cardData.rem_val}/${cardData.total_val}`}
-            />
-          ))}
-        </div>
-
-        {/* ── Leave History Card ── */}
-        {/*
+          {/* ── Leave History Card ── */}
+          {/*
           The card itself must NOT have overflow-hidden at this level —
           that would clip the horizontal scrollbar of the table wrapper.
           Instead we control overflow per-section below.
         */}
-        <div
-          className="bg-white rounded-2xl border border-slate-200 shadow-sm w-full"
-          style={{ minWidth: 0, boxSizing: 'border-box' }}
-        >
+          <div
+              className="bg-white rounded-2xl border border-slate-200 shadow-sm w-full"
+              style={{ minWidth: 0, boxSizing: 'border-box' }}
+          >
 
-          {/* Card header */}
-          <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-            <h2 className="text-base sm:text-lg font-semibold text-slate-800">
-              {MY_LEAVES_TEXT.historyTitle}
-            </h2>
-            {statistics.year && (
-              <span className="text-xs sm:text-sm text-slate-500">
+            {/* Card header */}
+            <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+              <h2 className="text-base sm:text-lg font-semibold text-slate-800">
+                {MY_LEAVES_TEXT.historyTitle}
+              </h2>
+              {statistics.year && (
+                  <span className="text-xs sm:text-sm text-slate-500">
                 {MY_LEAVES_TEXT.academicYearPrefix} {statistics.year}
               </span>
-            )}
-          </div>
+              )}
+            </div>
 
-          {/* ═══════════════════════════════════════════════════════════════
+            {/* ═══════════════════════════════════════════════════════════════
               DESKTOP TABLE  (lg and above)
           ═══════════════════════════════════════════════════════════════ */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-            <div className="hidden lg:block rounded-t-xl">
-              <div
-                style={{
-                  overflowX: 'auto',
-                  overflowY: 'auto',
-                  maxHeight: 'calc(100vh - 380px)',
-                  WebkitOverflowScrolling: 'touch',
-                }}
-              >
-                <table style={{ width: '100%', minWidth: '700px', tableLayout: 'fixed' }}>
-                  <colgroup>
-                    <col style={{ width: '18%' }} />
-                    <col style={{ width: '20%' }} />
-                    <col style={{ width: '10%' }} />
-                    <col style={{ width: '30%' }} />
-                    <col style={{ width: '10%' }} />
-                    <col style={{ width: '12%' }} />
-                  </colgroup>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+              <div className="hidden lg:block rounded-t-xl">
+                <div
+                    style={{
+                      overflowX: 'auto',
+                      overflowY: 'auto',
+                      maxHeight: 'calc(100vh - 380px)',
+                      WebkitOverflowScrolling: 'touch',
+                    }}
+                >
+                  <table style={{ width: '100%', minWidth: '700px', tableLayout: 'fixed' }}>
+                    <colgroup>
+                      <col style={{ width: '18%' }} />
+                      <col style={{ width: '20%' }} />
+                      <col style={{ width: '10%' }} />
+                      <col style={{ width: '30%' }} />
+                      <col style={{ width: '10%' }} />
+                      <col style={{ width: '12%' }} />
+                    </colgroup>
 
-                  <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
+                    <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
                     <tr>
                       {MY_LEAVES_TEXT.tableHeaders.map((h) => (
-                        <th
-                          key={h}
-                          className="px-2 lg:px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider"
-                        >
-                          {h}
-                        </th>
+                          <th
+                              key={h}
+                              className="px-2 lg:px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider"
+                          >
+                            {h}
+                          </th>
                       ))}
                     </tr>
-                  </thead>
+                    </thead>
 
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                    <tbody className="divide-y divide-slate-100 bg-white">
                     {loading ? (
-                      <ListLoader avatar={false} />
+                        <ListLoader avatar={false} />
                     ) : error ? (
-                      <tr>
-                        <td colSpan={6} className="py-16 text-center">
-                          <UserRoundX className="mx-auto mb-3 text-red-400 w-12 h-12" />
-                          <p className="text-red-600 font-medium">{error}</p>
-                        </td>
-                      </tr>
+                        <tr>
+                          <td colSpan={6} className="py-16 text-center">
+                            <UserRoundX className="mx-auto mb-3 text-red-400 w-12 h-12" />
+                            <p className="text-red-600 font-medium">{error}</p>
+                          </td>
+                        </tr>
                     ) : noReqFound ? (
-                      <tr>
-                        <td colSpan={6} className="py-16 text-center">
-                          <SearchX className="mx-auto mb-3 text-blue-400 w-12 h-12" />
-                          <p className="text-slate-600 font-medium">{MY_LEAVES_TEXT.states.noRequests}</p>
-                        </td>
-                      </tr>
+                        <tr>
+                          <td colSpan={6} className="py-16 text-center">
+                            <SearchX className="mx-auto mb-3 text-blue-400 w-12 h-12" />
+                            <p className="text-slate-600 font-medium">{MY_LEAVES_TEXT.states.noRequests}</p>
+                          </td>
+                        </tr>
                     ) : (
-                      leaveData.map((leaveReq) => {
-                        const StatusIcon = statusIcons[leaveReq.currLeavestatus];
-                        return (
-                          <tr key={leaveReq.leaveId} className="hover:bg-slate-50 transition-colors">
+                        leaveData.map((leaveReq) => {
+                          const StatusIcon = statusIcons[leaveReq.currLeavestatus];
+                          return (
+                              <tr key={leaveReq.leaveId} className="hover:bg-slate-50 transition-colors">
 
-                            {/* Leave Type */}
-                            <td className="px-2 py-2">
-                              <div className="flex items-center gap-1" style={{ minWidth: 0 }}>
-                                <div className="w-6 h-6 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
-                                  <Calendar className="w-3 h-3 text-violet-600" />
-                                </div>
-                                <p
-                                  className="text-xs font-semibold text-slate-800"
-                                  style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}
-                                >
-                                  {compareAndGetLabel(listOfLeaveType, leaveReq.leaveType)}
-                                </p>
-                              </div>
-                            </td>
+                                {/* Leave Type */}
+                                <td className="px-2 py-2">
+                                  <div className="flex items-center gap-1" style={{ minWidth: 0 }}>
+                                    <div className="w-6 h-6 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
+                                      <Calendar className="w-3 h-3 text-violet-600" />
+                                    </div>
+                                    <p
+                                        className="text-xs font-semibold text-slate-800"
+                                        style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}
+                                    >
+                                      {compareAndGetLabel(listOfLeaveType, leaveReq.leaveType)}
+                                    </p>
+                                  </div>
+                                </td>
 
-                            {/* Period */}
-                            <td className="px-4 py-4">
-                              <div className="flex items-start gap-2" style={{ minWidth: 0 }}>
-                                <Clock3 className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                                <span
-                                  className="text-xs text-slate-700"
-                                  style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}
-                                >
+                                {/* Period */}
+                                <td className="px-4 py-4">
+                                  <div className="flex items-start gap-2" style={{ minWidth: 0 }}>
+                                    <Clock3 className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                                    <span
+                                        className="text-xs text-slate-700"
+                                        style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}
+                                    >
                                   {formatDateRange(leaveReq.fromDate, leaveReq.toDate)}
                                 </span>
-                              </div>
-                            </td>
+                                  </div>
+                                </td>
 
-                            {/* Duration */}
-                            <td className="px-2 py-2 whitespace-nowrap">
+                                {/* Duration */}
+                                <td className="px-2 py-2 whitespace-nowrap">
                               <span className="text-xs font-semibold text-slate-800">
-                                {leaveReq.totalDays}{' '}
-                                {leaveReq.totalDays === 1
-                                  ? MY_LEAVES_TEXT.duration.day
-                                  : MY_LEAVES_TEXT.duration.days}
+                                {formatDuration(leaveReq.totalDays, leaveReq.isHalfDay)}
                               </span>
-                            </td>
+                                </td>
 
-                            {/* Reason */}
-                            <td className="px-2 lg:px-3 py-2">
-                              <div className="flex items-start gap-2" style={{ minWidth: 0 }}>
-                                <FileText className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
-                                <p
-                                  className="text-xs text-slate-600 leading-relaxed"
-                                  title={leaveReq.reason}
-                                  style={{
-                                    flex: 1,
-                                    width: 0,
-                                    wordBreak: 'break-word',
-                                    overflowWrap: 'anywhere',
-                                    whiteSpace: 'pre-wrap',
-                                  }}
-                                >
-                                  {leaveReq.reason || MY_LEAVES_TEXT.fallbacks.noReason}
-                                </p>
-                              </div>
-                            </td>
+                                {/* Reason */}
+                                <td className="px-2 lg:px-3 py-2">
+                                  <div className="flex items-start gap-2" style={{ minWidth: 0 }}>
+                                    <FileText className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                                    <p
+                                        className="text-xs text-slate-600 leading-relaxed"
+                                        title={leaveReq.reason}
+                                        style={{
+                                          flex: 1,
+                                          width: 0,
+                                          wordBreak: 'break-word',
+                                          overflowWrap: 'anywhere',
+                                          whiteSpace: 'pre-wrap',
+                                        }}
+                                    >
+                                      {leaveReq.reason || MY_LEAVES_TEXT.fallbacks.noReason}
+                                    </p>
+                                  </div>
+                                </td>
 
-                            {/* Status */}
-                            <td className="px-1 py-1 whitespace-nowrap">
+                                {/* Status */}
+                                <td className="px-1 py-1 whitespace-nowrap">
                               <span
-                                className={`inline-flex items-center gap-1 px-1 py-0.5 rounded-full text-[10px] font-xs ${statusStyles[leaveReq.currLeavestatus]}`}
+                                  className={`inline-flex items-center gap-1 px-1 py-0.5 rounded-full text-[10px] font-xs ${statusStyles[leaveReq.currLeavestatus]}`}
                               >
                                 <StatusIcon className="w-3 h-3 shrink-0" />
                                 {leaveReq.currLeavestatus}
                               </span>
-                            </td>
+                                </td>
 
-                            {/* Action */}
-                            <td className="px-2 py-2 whitespace-nowrap items-center">
-                              {leaveReq.currLeavestatus === 'PENDING' ? (
-                                <button
-                                  onClick={() => handleCancelLeave(leaveReq)}
-                                  className="px-2 py-0.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-medium transition-colors"
-                                >
-                                  {MY_LEAVES_TEXT.buttons.cancel}
-                                </button>
-                              ) : (
-                                <span className="text-slate-400 text-xs text-center"> - </span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })
+                                {/* Action */}
+                                <td className="px-2 py-2 whitespace-nowrap items-center">
+                                  {leaveReq.currLeavestatus === 'PENDING' ? (
+                                      <button
+                                          onClick={() => handleCancelLeave(leaveReq)}
+                                          className="px-2 py-0.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-medium transition-colors"
+                                      >
+                                        {MY_LEAVES_TEXT.buttons.cancel}
+                                      </button>
+                                  ) : (
+                                      <span className="text-slate-400 text-xs text-center"> - </span>
+                                  )}
+                                </td>
+                              </tr>
+                          );
+                        })
                     )}
-                  </tbody>
-                </table>
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
 
-            {/* ═══════════════════════════════════════════════════════════════
+              {/* ═══════════════════════════════════════════════════════════════
                 MOBILE CARDS  (below lg)
             ═══════════════════════════════════════════════════════════════ */}
-            <div className="lg:hidden">
-              {loading ? (
-                <div className="py-16 flex flex-col items-center gap-3">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-                  <span className="text-slate-500 text-sm">{MY_LEAVES_TEXT.states.loading}</span>
-                </div>
-              ) : error ? (
-                <div className="py-16 text-center px-4">
-                  <UserRoundX className="mx-auto mb-3 text-red-400 w-12 h-12" />
-                  <p className="text-red-600 font-medium">{error}</p>
-                </div>
-              ) : noReqFound ? (
-                <div className="py-16 text-center px-4">
-                  <SearchX className="mx-auto mb-3 text-blue-400 w-12 h-12" />
-                  <p className="text-slate-600 font-medium">{MY_LEAVES_TEXT.states.noRequests}</p>
-                </div>
-              ) : (
-                <div className="p-3 sm:p-4 space-y-3 w-full">
-                  {leaveData.map((leaveReq) => {
-                    const StatusIcon = statusIcons[leaveReq.currLeavestatus];
-                    return (
-                      <div
-                        key={leaveReq.leaveId}
-                        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-                        style={{ maxWidth: '100%', boxSizing: 'border-box' }}
-                      >
-                        {/* Top row: icon + leave name + status badge */}
-                        <div
-                          className="flex items-start justify-between gap-2 mb-3"
-                          style={{ maxWidth: '100%' }}
-                        >
-                          {/* Left: icon + name + date */}
-                          <div
-                            className="flex items-start gap-3"
-                            style={{ flex: 1, minWidth: 0 }}
-                          >
-                            <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
-                              <Calendar className="w-5 h-5 text-violet-600" />
-                            </div>
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                              <p
-                                className="text-sm font-semibold text-slate-800 leading-snug"
-                                style={{
-                                  wordBreak: 'break-word',
-                                  overflowWrap: 'anywhere',
-                                  whiteSpace: 'normal',
-                                }}
+              <div className="lg:hidden">
+                {loading ? (
+                    <div className="py-16 flex flex-col items-center gap-3">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                      <span className="text-slate-500 text-sm">{MY_LEAVES_TEXT.states.loading}</span>
+                    </div>
+                ) : error ? (
+                    <div className="py-16 text-center px-4">
+                      <UserRoundX className="mx-auto mb-3 text-red-400 w-12 h-12" />
+                      <p className="text-red-600 font-medium">{error}</p>
+                    </div>
+                ) : noReqFound ? (
+                    <div className="py-16 text-center px-4">
+                      <SearchX className="mx-auto mb-3 text-blue-400 w-12 h-12" />
+                      <p className="text-slate-600 font-medium">{MY_LEAVES_TEXT.states.noRequests}</p>
+                    </div>
+                ) : (
+                    <div className="p-3 sm:p-4 space-y-3 w-full">
+                      {leaveData.map((leaveReq) => {
+                        const StatusIcon = statusIcons[leaveReq.currLeavestatus];
+                        return (
+                            <div
+                                key={leaveReq.leaveId}
+                                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                                style={{ maxWidth: '100%', boxSizing: 'border-box' }}
+                            >
+                              {/* Top row: icon + leave name + status badge */}
+                              <div
+                                  className="flex items-start justify-between gap-2 mb-3"
+                                  style={{ maxWidth: '100%' }}
                               >
-                                {compareAndGetLabel(listOfLeaveType, leaveReq.leaveType)}
-                              </p>
-                              <p
-                                className="text-xs text-slate-500 mt-0.5"
-                                style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
-                              >
-                                {formatDateRange(leaveReq.fromDate, leaveReq.toDate)}
-                              </p>
-                            </div>
-                          </div>
+                                {/* Left: icon + name + date */}
+                                <div
+                                    className="flex items-start gap-3"
+                                    style={{ flex: 1, minWidth: 0 }}
+                                >
+                                  <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
+                                    <Calendar className="w-5 h-5 text-violet-600" />
+                                  </div>
+                                  <div style={{ minWidth: 0, flex: 1 }}>
+                                    <p
+                                        className="text-sm font-semibold text-slate-800 leading-snug"
+                                        style={{
+                                          wordBreak: 'break-word',
+                                          overflowWrap: 'anywhere',
+                                          whiteSpace: 'normal',
+                                        }}
+                                    >
+                                      {compareAndGetLabel(listOfLeaveType, leaveReq.leaveType)}
+                                    </p>
+                                    <p
+                                        className="text-xs text-slate-500 mt-0.5"
+                                        style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                                    >
+                                      {formatDateRange(leaveReq.fromDate, leaveReq.toDate)}
+                                    </p>
+                                  </div>
+                                </div>
 
-                          {/* Status badge */}
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold flex-shrink-0 ${statusStyles[leaveReq.currLeavestatus]}`}
-                          >
+                                {/* Status badge */}
+                                <span
+                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold flex-shrink-0 ${statusStyles[leaveReq.currLeavestatus]}`}
+                                >
                             <StatusIcon className="w-3 h-3" />
-                            {leaveReq.currLeavestatus}
+                                  {leaveReq.currLeavestatus}
                           </span>
-                        </div>
+                              </div>
 
-                        {/* Detail rows */}
-                        <div
-                          className="space-y-2 border-t border-slate-100 pt-3"
-                          style={{ maxWidth: '100%' }}
-                        >
-                          <div className="flex items-center justify-between text-sm">
+                              {/* Detail rows */}
+                              <div
+                                  className="space-y-2 border-t border-slate-100 pt-3"
+                                  style={{ maxWidth: '100%' }}
+                              >
+                                <div className="flex items-center justify-between text-sm">
                             <span className="text-slate-500 text-xs">
                               {MY_LEAVES_TEXT.mobileLabels.duration}
                             </span>
-                            <span className="font-semibold text-slate-800 text-xs">
-                              {leaveReq.totalDays}{' '}
-                              {leaveReq.totalDays === 1
-                                ? MY_LEAVES_TEXT.duration.day
-                                : MY_LEAVES_TEXT.duration.days}
+                                  <span className="font-semibold text-slate-800 text-xs">
+                              {formatDuration(leaveReq.totalDays, leaveReq.isHalfDay)}
                             </span>
-                          </div>
+                                </div>
 
-                          {leaveReq.reason && (
-                            <div
-                              className="flex items-start gap-2"
-                              style={{ maxWidth: '100%' }}
-                            >
-                              <FileText className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
-                              <p
-                                className="text-xs text-slate-600 leading-relaxed"
-                                style={{
-                                  flex: 1,
-                                  width: 0,
-                                  wordBreak: 'break-word',
-                                  overflowWrap: 'anywhere',
-                                  whiteSpace: 'pre-wrap',
-                                }}
-                              >
-                                {leaveReq.reason}
-                              </p>
+                                {leaveReq.reason && (
+                                    <div
+                                        className="flex items-start gap-2"
+                                        style={{ maxWidth: '100%' }}
+                                    >
+                                      <FileText className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+                                      <p
+                                          className="text-xs text-slate-600 leading-relaxed"
+                                          style={{
+                                            flex: 1,
+                                            width: 0,
+                                            wordBreak: 'break-word',
+                                            overflowWrap: 'anywhere',
+                                            whiteSpace: 'pre-wrap',
+                                          }}
+                                      >
+                                        {leaveReq.reason}
+                                      </p>
+                                    </div>
+                                )}
+                              </div>
+
+                              {/* Cancel button */}
+                              {leaveReq.currLeavestatus === 'PENDING' && (
+                                  <button
+                                      onClick={() => handleCancelLeave(leaveReq)}
+                                      className="mt-3 w-full py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold transition-colors"
+                                  >
+                                    {MY_LEAVES_TEXT.buttons.cancelRequest}
+                                  </button>
+                              )}
                             </div>
-                          )}
-                        </div>
+                        );
+                      })}
+                    </div>
+                )}
+              </div>
+            </div>
 
-                        {/* Cancel button */}
-                        {leaveReq.currLeavestatus === 'PENDING' && (
-                          <button
-                            onClick={() => handleCancelLeave(leaveReq)}
-                            className="mt-3 w-full py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold transition-colors"
-                          >
-                            {MY_LEAVES_TEXT.buttons.cancelRequest}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+            {/* Card footer */}
+            <div className="px-4 sm:px-6 py-3 border-t border-slate-100 text-xs sm:text-sm text-slate-400 italic bg-slate-50">
+              {MY_LEAVES_TEXT.footerNote}
             </div>
           </div>
 
-          {/* Card footer */}
-          <div className="px-4 sm:px-6 py-3 border-t border-slate-100 text-xs sm:text-sm text-slate-400 italic bg-slate-50">
-            {MY_LEAVES_TEXT.footerNote}
-          </div>
         </div>
-
       </div>
-    </div>
   );
 }

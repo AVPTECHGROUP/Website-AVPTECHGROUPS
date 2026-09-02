@@ -24,7 +24,6 @@ function ApplyLeaves() {
     leaveType: '',
     fromDate: '',
     toDate: '',
-    mobile: '',
     reason: ''
   });
 
@@ -43,10 +42,6 @@ function ApplyLeaves() {
 
     setCurrentUser(currUser);
 
-    setFormData(prev => ({
-      ...prev,
-      mobile: currUser?.phone || ''
-    }));
 
     const fetchListOfValues = async () => {
       try {
@@ -169,7 +164,6 @@ function ApplyLeaves() {
         fromDate: formData.fromDate,
         toDate: formData.toDate,
         reason: formData.reason,
-        contactDuringLeave: formData.mobile,
         isHalfDay: isHalfDay
       }
       console.log(leavePayload);
@@ -181,7 +175,6 @@ function ApplyLeaves() {
         leaveType: '',
         fromDate: '',
         toDate: '',
-        mobile: currentUser.phone || '',
         reason: ''
       });
       setErrors({
@@ -319,18 +312,7 @@ function ApplyLeaves() {
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="mobile" className='block font-semibold text-gray-600 text-sm mb-2'>
-                  {APPLY_LEAVES_TEXT.labels.mobile}
-                </label>
-                <input
-                  value={formData.mobile}
-                  type="tel"
-                  name="mobile"
-                  onChange={handleInputChange}
-                  placeholder={APPLY_LEAVES_TEXT.placeholders.mobile}
-                  className='bg-gray-100 font-normal text-gray-800 border border-gray-300 p-1 px-4 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500' />
-              </div>
+              {/* Contact number removed as per requirement */}
 
               <div>
                 <label className="block font-semibold text-gray-600 text-sm mb-2">
