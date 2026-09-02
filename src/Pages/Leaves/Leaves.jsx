@@ -328,10 +328,15 @@ const Leaves = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [remarkVal, setRemarksVal] = useState(LEAVES_TEXT.defaultRemark);
+  // Which action button the user clicked to open the popup — 'approve' | 'reject' | null.
+  // null means the popup was opened via the plain "View" button (no action allowed here),
+  // or the request is already decided (status alone then drives which button shows).
+  const [actionIntent, setActionIntent] = useState(null);
 
-  const handleViewClick = (user) => {
+  const handleViewClick = (user, intent = null) => {
     setRemarksVal(user.reviewRemarks || '');
     setSelectedUser(user);
+    setActionIntent(intent);
     setIsPopupOpen(true);
   };
 
@@ -339,6 +344,7 @@ const Leaves = () => {
     setIsPopupOpen(false);
     setTimeout(() => setSelectedUser(null), 300);
     setRemarksVal('');
+    setActionIntent(null);
   };
 
   const handleLeaveApproveReq = async () => {
@@ -647,13 +653,13 @@ const Leaves = () => {
                                 {showApproveReject(emp) ? (
                                     <div className="flex gap-1.5">
                                       <button
-                                          onClick={() => handleViewClick(emp)}
+                                          onClick={() => handleViewClick(emp, 'approve')}
                                           className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
                                       >
                                         {LEAVES_TEXT.buttons.approve}
                                       </button>
                                       <button
-                                          onClick={() => handleViewClick(emp)}
+                                          onClick={() => handleViewClick(emp, 'reject')}
                                           className="px-2.5 py-1 bg-red-50 text-red-600 rounded-md text-xs font-medium hover:bg-red-100 transition-colors border border-red-200"
                                       >
                                         {LEAVES_TEXT.buttons.reject}
@@ -742,13 +748,13 @@ const Leaves = () => {
                             {showApproveReject(emp) ? (
                                 <div className="flex gap-2 w-full">
                                   <button
-                                      onClick={() => handleViewClick(emp)}
+                                      onClick={() => handleViewClick(emp, 'approve')}
                                       className="flex-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
                                   >
                                     {LEAVES_TEXT.buttons.approve}
                                   </button>
                                   <button
-                                      onClick={() => handleViewClick(emp)}
+                                      onClick={() => handleViewClick(emp, 'reject')}
                                       className="flex-1 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors border border-red-200"
                                   >
                                     {LEAVES_TEXT.buttons.reject}
@@ -832,6 +838,7 @@ const Leaves = () => {
             isOpen={isPopupOpen}
             onClose={handleClosePopup}
             userData={selectedUser}
+            actionIntent={actionIntent}
             handleLeaveApprove={handleLeaveApproveReq}
             handleLeaveReject={handleLeaveRejectReq}
             setRemarks={setRemarksVal}

@@ -80,6 +80,17 @@ export default function LeavesReqInfoComponent({
     const isApproveDisabled = isLocked || actionInProgress !== null;
     const isRejectDisabled = isLocked || actionInProgress !== null;
 
+    // Which action button(s) should be visible for the current status:
+    // - PENDING: both, actionable
+    // - APPROVED: only Approve, shown as the taken action
+    // - REJECTED: only Reject, shown as the taken action
+    // - anything else (CANCELLED/WITHDRAWN): neither, no action applies
+    const showApproveButton =
+        userData.currEmpstatus === "PENDING" || userData.currEmpstatus === "APPROVED";
+    const showRejectButton =
+        userData.currEmpstatus === "PENDING" || userData.currEmpstatus === "REJECTED";
+    const showActionsRow = showApproveButton || showRejectButton;
+
     function compareAndGetLabel(data, compareValue) {
         const found = data.find(
             item => item.value === compareValue
@@ -400,29 +411,40 @@ export default function LeavesReqInfoComponent({
                         </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="grid grid-cols-2 gap-3 pt-1">
-
-                        {/* Reject */}
-                        <button
-                            disabled={isRejectDisabled}
-                            onClick={handleRejectClick}
-                            className="flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-all enabled:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    {/* Actions — only render the button(s) relevant to the current status:
+                        PENDING shows both, APPROVED shows only Approve, REJECTED shows only Reject. */}
+                    {showActionsRow && (
+                        <div
+                            className={`grid gap-3 pt-1 ${
+                                showApproveButton && showRejectButton ? "grid-cols-2" : "grid-cols-1"
+                            }`}
                         >
-                            <X size={14} />
-                            Reject
-                        </button>
 
-                        {/* Approve */}
-                        <button
-                            disabled={isApproveDisabled}
-                            onClick={handleApproveClick}
-                            className="flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm font-semibold bg-gradient-to-r from-green-700 to-emerald-500 text-white hover:opacity-90 shadow-lg shadow-green-200 transition-all disabled:opacity-50 enabled:cursor-pointer disabled:cursor-not-allowed"
-                        >
-                            <CircleCheckBig size={14} />
-                            Approve
-                        </button>
-                    </div>
+                            {/* Reject */}
+                            {showRejectButton && (
+                                <button
+                                    disabled={isRejectDisabled}
+                                    onClick={handleRejectClick}
+                                    className="flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-all enabled:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <X size={14} />
+                                    {userData.currEmpstatus === "REJECTED" ? "Rejected" : "Reject"}
+                                </button>
+                            )}
+
+                            {/* Approve */}
+                            {showApproveButton && (
+                                <button
+                                    disabled={isApproveDisabled}
+                                    onClick={handleApproveClick}
+                                    className="flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm font-semibold bg-gradient-to-r from-green-700 to-emerald-500 text-white hover:opacity-90 shadow-lg shadow-green-200 transition-all disabled:opacity-50 enabled:cursor-pointer disabled:cursor-not-allowed"
+                                >
+                                    <CircleCheckBig size={14} />
+                                    {userData.currEmpstatus === "APPROVED" ? "Approved" : "Approve"}
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
