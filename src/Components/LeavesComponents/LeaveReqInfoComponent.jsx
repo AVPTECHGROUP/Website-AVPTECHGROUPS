@@ -1,23 +1,27 @@
+import { useState } from "react";
 import {
     CircleCheckBig,
     X,
     CalendarDays,
     Clock3,
     FileText,
-    MessageSquareText,
     Info
 } from "lucide-react";
 
 export default function LeavesReqInfoComponent({
-    isOpen,
-    onClose,
-    userData,
-    handleLeaveApprove,
-    handleLeaveReject,
-    setRemarks,
-    remarks,
-    listLeavetype
-}) {
+                                                   isOpen,
+                                                   onClose,
+                                                   userData,
+                                                   handleLeaveApprove,
+                                                   handleLeaveReject,
+                                                   setRemarks,
+                                                   remarks,
+                                                   listLeavetype
+                                               }) {
+    // Tracks which action button was clicked, so the opposite one (and itself)
+    // can be disabled until the modal closes / action resolves.
+    const [actionInProgress, setActionInProgress] = useState(null); // 'approve' | 'reject' | null
+
     if (!isOpen || !userData) return null;
 
     const getAvatarColor = (name) => {
@@ -69,8 +73,12 @@ export default function LeavesReqInfoComponent({
             "from-gray-700 via-gray-600 to-gray-500"
     };
 
-    // Disable buttons if not pending
+    // Disable buttons if not pending. Also, once any action starts (approve/reject),
+    // disable both buttons to prevent conflicting actions or double-clicks until
+    // the action resolves and the modal closes.
     const isLocked = userData.currEmpstatus !== "PENDING";
+    const isApproveDisabled = isLocked || actionInProgress !== null;
+    const isRejectDisabled = isLocked || actionInProgress !== null;
 
     function compareAndGetLabel(data, compareValue) {
         const found = data.find(
@@ -79,6 +87,25 @@ export default function LeavesReqInfoComponent({
 
         return found ? found.label : "";
     }
+
+    const handleClose = () => {
+        setActionInProgress(null);
+        onClose();
+    };
+
+    const handleApproveClick = async () => {
+        if (isApproveDisabled || actionInProgress) return;
+        setActionInProgress("approve");
+        await handleLeaveApprove();
+        handleClose();
+    };
+
+    const handleRejectClick = async () => {
+        if (isRejectDisabled || actionInProgress) return;
+        setActionInProgress("reject");
+        await handleLeaveReject();
+        handleClose();
+    };
 
     return (
         <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4">
@@ -89,8 +116,8 @@ export default function LeavesReqInfoComponent({
                 {/* Header */}
                 <div
                     className={`relative bg-gradient-to-r ${headerGradients[userData.currEmpstatus] ||
-                        headerGradients.PENDING
-                        } px-5 pt-5 pb-6 overflow-hidden`}
+                    headerGradients.PENDING
+                    } px-5 pt-5 pb-6 overflow-hidden`}
                 >
 
                     {/* Top Right */}
@@ -99,14 +126,14 @@ export default function LeavesReqInfoComponent({
                         {/* Status */}
                         <span
                             className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border shadow-sm backdrop-blur-sm whitespace-nowrap ${statusStyles[userData.currEmpstatus]
-                                }`}
+                            }`}
                         >
                             {userData.currEmpstatus}
                         </span>
 
                         {/* Close */}
                         <button
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 flex items-center justify-center text-white transition-all shrink-0"
                         >
                             <X size={14} />
@@ -378,11 +405,8 @@ export default function LeavesReqInfoComponent({
 
                         {/* Reject */}
                         <button
-                            disabled={isLocked}
-                            onClick={() => {
-                                handleLeaveReject();
-                                onClose();
-                            }}
+                            disabled={isRejectDisabled}
+                            onClick={handleRejectClick}
                             className="flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-all enabled:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <X size={14} />
@@ -391,11 +415,8 @@ export default function LeavesReqInfoComponent({
 
                         {/* Approve */}
                         <button
-                            disabled={isLocked}
-                            onClick={() => {
-                                handleLeaveApprove();
-                                onClose();
-                            }}
+                            disabled={isApproveDisabled}
+                            onClick={handleApproveClick}
                             className="flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm font-semibold bg-gradient-to-r from-green-700 to-emerald-500 text-white hover:opacity-90 shadow-lg shadow-green-200 transition-all disabled:opacity-50 enabled:cursor-pointer disabled:cursor-not-allowed"
                         >
                             <CircleCheckBig size={14} />

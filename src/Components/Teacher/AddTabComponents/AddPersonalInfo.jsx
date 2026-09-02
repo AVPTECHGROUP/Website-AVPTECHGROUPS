@@ -17,10 +17,24 @@ const ErrorText = ({ msg }) =>
 const AddPersonalInfo = ({ formData, setFormData, handleInputChange, errors, setErrors, designationList }) => {
     const today = new Date().toISOString().split('T')[0];
 
-    // Restrict mobile input to digits only, max 10
+    // Restrict mobile input to digits only, max 10, must start with 6/7/8/9
     const handleMobileChange = (e) => {
-        const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+        const raw = e.target.value.replace(/\D/g, '');
+        const match = raw.match(/^[6-9]\d{0,9}/);
+        const digits = match ? match[0] : '';
         handleInputChange({ target: { name: 'mobile', value: digits } });
+    };
+
+    // Validate mobile on blur (must be exactly 10 digits starting with 6-9)
+    const handleMobileBlur = (e) => {
+        const value = e.target.value.trim();
+        const MOBILE_REGEX = /^[6-9]\d{9}$/;
+        if (value && !MOBILE_REGEX.test(value)) {
+            setErrors?.(prev => ({
+                ...prev,
+                mobile: 'Enter a valid 10-digit mobile number starting with 6, 7, 8, or 9',
+            }));
+        }
     };
 
     // Validate email on blur
@@ -88,7 +102,8 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange, errors, set
                             name="mobile"
                             value={formData.mobile}
                             onChange={handleMobileChange}
-                            placeholder="10-digit mobile number"
+                            onBlur={handleMobileBlur}
+                            placeholder="10-digit mobile number (starts with 6-9)"
                             maxLength={10}
                             inputMode="numeric"
                             className={inputCls(errors?.mobile)}
@@ -339,12 +354,12 @@ const AddPersonalInfo = ({ formData, setFormData, handleInputChange, errors, set
                                     }
                                 }}
                                 className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${formData.accountStatus ? 'bg-blue-500' : errors?.accountStatus ? 'bg-red-300' : 'bg-gray-300'
-                                    }`}
+                                }`}
                                 aria-label="Toggle account status"
                             >
                                 <div
                                     className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${formData.accountStatus ? 'translate-x-6' : 'translate-x-0'
-                                        }`}
+                                    }`}
                                 />
                             </button>
                             <span className={`text-sm font-medium ${formData.accountStatus ? 'text-blue-600' : 'text-gray-400'}`}>
