@@ -14,23 +14,79 @@ export function formatCurrency(value) {
 }
 
 /**
- * TEMP GUARD — normalizes whatever shape a list endpoint returns into
- * { items: Array, total: number, totalPages: number }. Handles a bare array,
- * { items, total }, { data, totalElements, totalPages }, and Spring's default
- * { content, totalElements, totalPages }. Falls back to an empty list rather
- * than throwing, so a shape mismatch degrades to "no records" instead of a
- * white screen.
+ * Walks a response object looking for the first array that looks like the
+ * list payload, and the object that "contains" it (so we can also read
+ * total/totalElements/totalPages/pagination off that same level).
  *
- * This exists because Payrollservice.jsx's actual return shape hasn't been
- * confirmed yet. Once it is, every getPayroll()/getAllSalaryStructures()/etc.
- * caller should read the real field directly and this helper should go away.
+ * Handles a bare array, a single-wrapped shape ({items|data|content: [...],
+ * total|totalElements, totalPages}), and a double-wrapped envelope like:
+ *   { success, message, data: { success, message, data: [...], pagination } }
+ * — which is what authFetch responses from this backend actually look like
+ * (an outer ApiResponse wrapping an inner PagedResponse). Recurses through
+ * "data"/"result"/"payload" wrapper keys first (the common envelope names),
+ * then falls back to scanning any nested object/array so an unknown wrapper
+ * key doesn't silently produce an empty list. Depth-limited so a weird
+ * response can't cause runaway recursion.
+ */
+function findList(obj, depth = 0) {
+    if (Array.isArray(obj)) return { items: obj, container: null };
+    if (!obj || typeof obj !== "object" || depth > 3) return null;
+
+    const knownArrayKeys = ["items", "data", "content"];
+    for (const key of knownArrayKeys) {
+        if (Array.isArray(obj[key])) {
+            return { items: obj[key], container: obj };
+        }
+    }
+
+    // Recurse into common envelope wrapper keys first — these are where a
+    // double-wrapped { data: { data: [...], pagination } } shape lives.
+    const wrapperKeys = ["data", "result", "payload"];
+    for (const key of wrapperKeys) {
+        if (obj[key] && typeof obj[key] === "object" && !Array.isArray(obj[key])) {
+            const found = findList(obj[key], depth + 1);
+            if (found) return found;
+        }
+    }
+
+    // Last resort: scan every property for anything array-like or nested.
+    for (const value of Object.values(obj)) {
+        if (Array.isArray(value)) return { items: value, container: obj };
+        if (value && typeof value === "object") {
+            const found = findList(value, depth + 1);
+            if (found) return found;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Normalizes whatever shape a paginated/list endpoint returns into
+ * { items: Array, total: number, totalPages: number }.
+ *
+ * Falls back to an empty list rather than throwing if nothing at all looks
+ * like a list, so a genuine shape mismatch still degrades to "no records"
+ * instead of a white screen — but a correctly-shaped double-wrapped envelope
+ * (see findList above) is now resolved instead of hitting that fallback.
  */
 export function normalizeList(res) {
-    if (Array.isArray(res)) return { items: res, total: res.length, totalPages: 1 };
-    if (Array.isArray(res?.items)) return { items: res.items, total: res.total ?? res.items.length, totalPages: res.totalPages ?? 1 };
-    if (Array.isArray(res?.data)) return { items: res.data, total: res.totalElements ?? res.data.length, totalPages: res.totalPages ?? 1 };
-    if (Array.isArray(res?.content)) return { items: res.content, total: res.totalElements ?? res.content.length, totalPages: res.totalPages ?? 1 };
-    return { items: [], total: 0, totalPages: 1 };
+    const found = findList(res);
+    if (!found) return { items: [], total: 0, totalPages: 1 };
+
+    const { items, container } = found;
+    const pagination = (container && container.pagination) || {};
+    const total =
+        container?.total ??
+        container?.totalElements ??
+        pagination.totalElements ??
+        items.length;
+    const totalPages =
+        container?.totalPages ??
+        pagination.totalPages ??
+        1;
+
+    return { items, total, totalPages };
 }
 
 const ROLE_STYLES = {

@@ -414,7 +414,11 @@ export const API_ENDPOINTS = {
   transportBillingPay: (billingId) =>
       `${BASE_URL_V1}/fee/transport-billing/${billingId}/pay`,
 
-
+  // salary structure
+  SALARY_STRUCTURES: `${BASE_URL_V1}/payroll/salary-structures`,
+  SALARY_STRUCTURES_ALL: `${BASE_URL_V1}/payroll/salary-structures/all`,
+  SALARY_STRUCTURES_BULK: `${BASE_URL_V1}/payroll/salary-structures/bulk`,
+  salaryStructureByUser: (userId) => `${BASE_URL_V1}/payroll/salary-structures/users/${userId}`,
   // Demo leads
   LEAD_STATS: `${BASE_URL_V1}/leads/stats`,
   LEADS: `${BASE_URL_V1}/leads`,
