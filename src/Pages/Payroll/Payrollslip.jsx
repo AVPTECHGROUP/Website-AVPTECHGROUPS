@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { getPayrollSlip, getPayrollUserHistory } from "./Payrollservice.jsx";
-import { ErrorBanner, formatCurrency, MONTH_NAMES } from "./payrollUi";
+import { ErrorBanner, formatCurrency, MONTH_NAMES } from "./Payrollui.jsx";
 import { getUsersSummary } from "../../Api/StaffManagement/UserManagementAPI.js";
 import { getTeacherLookup } from "../../Api/Teachers/TeachersAPI.js";
 import { getDefaultPrintTemplate } from "../../Api/PrintTemplate/PrintTemplatesApi.js";

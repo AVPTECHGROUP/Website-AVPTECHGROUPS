@@ -15,7 +15,7 @@ import {
     formatCurrency,
     MONTH_NAMES,
     normalizeList,
-} from "./payrollUi";
+} from "./Payrollui.jsx";
 
 const today = new Date();
 const PAGE_SIZE = 10;

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import PayrollDashboard from "./PayrollDashboard";
-import PayrollRecords from "./PayrollRecords";
-import PayrollGenerate from "./PayrollGenerate";
+import PayrollDashboard from "./Payrolldashboard.jsx";
+import PayrollRecords from "./Payrollrecords.jsx";
+import PayrollGenerate from "./Payrollgenerate.jsx";
 import PayrollStructures from "./payrollstructure.jsx";
 import PayrollSlip from "./Payrollslip.jsx";
 

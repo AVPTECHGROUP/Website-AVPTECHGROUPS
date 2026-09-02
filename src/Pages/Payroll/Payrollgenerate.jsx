@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { generatePayroll, getPayroll } from "./Payrollservice.jsx";
-import { Notice, ErrorBanner, formatCurrency, MONTH_NAMES } from "./payrollUi";
+import { Notice, ErrorBanner, formatCurrency, MONTH_NAMES } from "./Payrollui.jsx";
 import { getUsersSummary } from "../../Api/StaffManagement/UserManagementAPI.js"; // TODO: point this at wherever getUsersSummary actually lives in your tree
 import { getCurrUserDetails} from "../../utils/getCurrUserDetails/index.js";
 

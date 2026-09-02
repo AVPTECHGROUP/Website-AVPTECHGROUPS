@@ -15,7 +15,7 @@ import {
     ErrorBanner,
     formatCurrency,
     normalizeList,
-} from "./payrollUi";
+} from "./Payrollui.jsx";
 
 const PAGE_SIZE_OPTIONS = [15, 30, 50];
 
