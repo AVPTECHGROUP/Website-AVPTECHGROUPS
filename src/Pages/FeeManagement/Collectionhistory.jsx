@@ -491,21 +491,16 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     const [periodSyncLoading, setPeriodSyncLoading] = useState(false);
     const lastPeriodSyncRef = useRef(''); // `${studentId}:${periodId}` already synced
 
-    // FIX (requested): before allowing a payment to be collected from the
-    // top-level "Collect Fee" button (manual mode), check whether any
-    // EARLIER fee period — ordered by that period's dueDate — still has an
-    // outstanding academic balance for this student. If it does, this
-    // blocks the collection and surfaces which period(s) need to be
-    // cleared first, both as a one-time popup (so it's impossible to miss)
-    // and as a persistent inline banner (so the restriction stays visible
-    // and the Record Receipt button stays disabled) until it's resolved.
-    //
-    // This deliberately only runs in manual mode: quick-collect (opened
-    // from a specific Outstanding row) is already pinned to one fixed
-    // period for that row, which is a narrower, already-understood flow —
-    // the ambiguity this guards against ("which period am I even paying,
-    // and did I skip an earlier one") only exists once the period can be
-    // freely chosen.
+    // FIX (requested): before allowing a payment to be collected — from
+    // EITHER the top-level "Collect Fee" button (manual mode) OR a table
+    // row's "Collect" button (quick-collect mode, period fixed to that
+    // row) — check whether any EARLIER fee period — ordered by that
+    // period's dueDate — still has an outstanding academic balance for
+    // this student. If it does, this blocks the collection and surfaces
+    // which period(s) need to be cleared first, both as a one-time popup
+    // (so it's impossible to miss) and as a persistent inline banner (so
+    // the restriction stays visible and the Record Receipt button stays
+    // disabled) until it's resolved.
     const [unpaidEarlierPeriods, setUnpaidEarlierPeriods] = useState([]);
     const [earlierPeriodsChecking, setEarlierPeriodsChecking] = useState(false);
     const [unpaidPopup, setUnpaidPopup] = useState({ open: false, periods: [] });
@@ -639,6 +634,23 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         () => periodClasses.find((c) => String(c.id) === selectedClassId)?.name || '',
         [periodClasses, selectedClassId]
     );
+
+    // FIX (requested): quick-collect (opened from a table row's "Collect"
+    // button) never sets `selectedClassId` — that's only populated via the
+    // class-picker chips shown in manual mode. The earlier-unpaid-periods
+    // check below needs a numeric classId to query getOutstandingFees, so
+    // for quick-collect this resolves one from the row's already-known
+    // class NAME (activeStudent.class) against the full active-classes
+    // list (`realClasses`, the same prop already used elsewhere in this
+    // file to resolve canonical class labels). In manual mode the
+    // chip-picked selectedClassId is used as-is.
+    const derivedClassId = useMemo(() => {
+        if (isManualMode) return selectedClassId;
+        if (!activeStudent?.class) return '';
+        const wanted = activeStudent.class.trim().toLowerCase();
+        const match = realClasses.find((c) => (c.label || '').trim().toLowerCase() === wanted);
+        return match ? match.value : '';
+    }, [isManualMode, selectedClassId, activeStudent?.class, realClasses]);
 
     const activeStructure = useMemo(() => {
         if (!periodStructures.length) return null;
@@ -823,6 +835,10 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     // (see resyncBalanceForCurrentPeriod above — the outstanding-fees
     // endpoint has no studentId filter, so each period is queried by
     // classId+periodId and the student's row is picked out client-side).
+    // Runs for BOTH manual and quick-collect mode — the caller passes in
+    // whichever classId it has (selectedClassId in manual mode,
+    // derivedClassId — resolved from the row's class name — in
+    // quick-collect mode).
     //
     // A period is only counted as "unpaid" if the outstanding-fees response
     // for that period actually contains a row for this student with
@@ -838,7 +854,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     // does nothing if the fee-periods API in a given environment doesn't
     // return dates.
     const checkEarlierPeriods = useCallback(async (studentId, classId, periodId) => {
-        if (!isManualMode || !studentId || !classId || !periodId) return;
+        if (!studentId || !classId || !periodId) return;
         const current = periodOptions.find((p) => String(p.value) === String(periodId));
         if (!current?.dueDate) { setUnpaidEarlierPeriods([]); return; }
         const currentDue = new Date(current.dueDate).getTime();
@@ -880,7 +896,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         } finally {
             setEarlierPeriodsChecking(false);
         }
-    }, [isManualMode, periodOptions]);
+    }, [periodOptions]);
 
     useEffect(() => {
         if (!open) return;
@@ -1097,18 +1113,20 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
 
     // FIX (requested): re-runs the earlier-unpaid-periods check whenever the
     // selected student + selected period combination changes and hasn't
-    // already been checked (manual mode only — see checkEarlierPeriods
-    // above for why).
+    // already been checked. Runs for both manual mode (using the
+    // chip-picked selectedClassId) and quick-collect mode (using
+    // derivedClassId, resolved above from the row's class name) — see
+    // checkEarlierPeriods above.
     useEffect(() => {
-        if (!isManualMode || !activeStudent?.studentId || !selectedClassId || !selectedPeriodId) {
+        if (!activeStudent?.studentId || !derivedClassId || !selectedPeriodId) {
             setUnpaidEarlierPeriods([]);
             return;
         }
         const key = `${activeStudent.studentId}:${selectedPeriodId}`;
         if (lastEarlierCheckRef.current === key) return;
         lastEarlierCheckRef.current = key;
-        checkEarlierPeriods(activeStudent.studentId, selectedClassId, selectedPeriodId);
-    }, [isManualMode, activeStudent?.studentId, selectedClassId, selectedPeriodId, checkEarlierPeriods]);
+        checkEarlierPeriods(activeStudent.studentId, derivedClassId, selectedPeriodId);
+    }, [activeStudent?.studentId, derivedClassId, selectedPeriodId, checkEarlierPeriods]);
 
     if (!open) return null;
 
@@ -1338,15 +1356,16 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                             {/* FIX (requested): persistent inline warning for unpaid
                   earlier fee periods — stays visible (and keeps the
                   submit button disabled, see submitDisabled above) for as
-                  long as the condition holds, independent of the one-time
-                  popup below. */}
-                            {isManualMode && activeStudent && earlierPeriodsChecking && (
+                  long as the condition holds. Now shown in BOTH manual and
+                  quick-collect mode, independent of the one-time popup
+                  below. */}
+                            {activeStudent && earlierPeriodsChecking && (
                                 <p className="text-[10.5px] text-blue-600 font-medium mt-1 flex items-center gap-1.5">
                                     <span className="w-2.5 h-2.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
                                     Checking earlier fee periods…
                                 </p>
                             )}
-                            {isManualMode && unpaidEarlierPeriods.length > 0 && (
+                            {unpaidEarlierPeriods.length > 0 && (
                                 <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2 mt-2">
                                     <AlertTriangle size={13} className="text-red-600 mt-0.5 flex-shrink-0" />
                                     <div className="text-[11.5px] text-red-700">
@@ -1841,11 +1860,12 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             </Modal>
 
             {/* FIX (requested): one-time popup that fires the moment an unpaid
-            earlier fee period is detected for the selected student + period.
-            Closing it does NOT clear unpaidEarlierPeriods — the inline
-            banner above and the disabled Record Receipt button are what
-            actually enforce the restriction; this popup exists purely to
-            make sure it's impossible to miss. */}
+            earlier fee period is detected for the selected student + period —
+            works from BOTH the header "Collect Fee" button and a table row's
+            "Collect" button. Closing it does NOT clear unpaidEarlierPeriods —
+            the inline banner above and the disabled Record Receipt button are
+            what actually enforce the restriction; this popup exists purely
+            to make sure it's impossible to miss. */}
             <Modal
                 open={unpaidPopup.open}
                 onClose={() => setUnpaidPopup({ open: false, periods: [] })}
