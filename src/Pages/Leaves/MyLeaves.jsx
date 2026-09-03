@@ -36,6 +36,17 @@ export default function LeaveDashboard() {
   const [user_id, set_user_id] = useState(null);
   const [leaveData, setLeaveData] = useState([]);
 
+  // FIX (requested): the leave-balance API computes daysUsed/daysAvailable
+  // from each request's `totalDays`, and a half-day request comes back with
+  // totalDays = 0 — so half-day leaves are invisible to the balance the
+  // server reports (confirmed against the sample /leaves/balance response:
+  // an APPROVED half-day Casual Leave contributes nothing to daysUsed).
+  // `rawBalanceData` now holds the balance API response UNADJUSTED; the
+  // half-day-aware `statistics` actually shown on the cards is derived from
+  // this plus `leaveData` in the effect below, so it can be recomputed
+  // whenever either one changes.
+  const [rawBalanceData, setRawBalanceData] = useState(null);
+
   const [statistics, setStatistics] = useState({
     totalAvailable: 0,
     totalUsed: 0,
@@ -95,10 +106,10 @@ export default function LeaveDashboard() {
     CANCELLED: Trash2,
   };
 
-  /* ---------------- FETCH STATISTICS ---------------- */
-  // Note: totalDaysUsed / daysUsed / daysAvailable in the balance API response
-  // already reflect approved leaves being deducted server-side — no client-side
-  // recalculation is needed here, we just read the values as-is.
+  /* ---------------- FETCH RAW BALANCE ---------------- */
+  // This only stores what the server actually returned. It deliberately
+  // does NOT compute the displayed `statistics` anymore — see the
+  // half-day-adjustment effect below, which combines this with `leaveData`.
   useEffect(() => {
     const fetchStatistics = async () => {
       try {
@@ -106,22 +117,7 @@ export default function LeaveDashboard() {
         const statistics_res = await getUsersLeaveBalance(user_id);
         const data = statistics_res?.data?.data ?? statistics_res?.data ?? statistics_res;
         if (!data) return;
-        const leaveBalances = data.leaveBalances || [];
-        const getLeaveData = (type) => leaveBalances.find((item) => item.leaveType === type) || {};
-        const sickLeave = getLeaveData('SICK_LEAVE');
-        const casualLeave = getLeaveData('CASUAL_LEAVE');
-        const earnedLeave = getLeaveData('EARNED_LEAVE');
-        setStatistics({
-          totalAvailable: Number(data.totalDaysAvailable) || 0,
-          totalUsed: Number(data.totalDaysUsed) || 0,
-          sickLeaveAvailable: Number(sickLeave.daysAvailable) || 0,
-          sickLeaveLimit: Number(sickLeave.annualLimit) || 0,
-          casualLeaveAvailable: Number(casualLeave.daysAvailable) || 0,
-          casualLeaveLimit: Number(casualLeave.annualLimit) || 0,
-          earnedLeaveAvailable: Number(earnedLeave.daysAvailable) || 0,
-          earnedLeaveLimit: Number(earnedLeave.annualLimit) || 0,
-          year: data.year || '',
-        });
+        setRawBalanceData(data);
       } catch (e) {
         console.error('Get statistics error:', e.message);
       }
@@ -161,6 +157,66 @@ export default function LeaveDashboard() {
     };
     fetchLeaveRequest();
   }, [fetchleaveReqRefress, user_id]);
+
+  /* ---------------- DERIVE HALF-DAY-ADJUSTED STATISTICS ---------------- */
+  // FIX (requested): combines every 2 half-day requests for a leave type
+  // into 1 full day of usage (each APPROVED half-day request contributes
+  // 0.5 days), layered on top of whatever whole-day `daysUsed` the balance
+  // API already reports for that type, then re-derives `daysAvailable`
+  // from the adjusted total. This runs entirely on the frontend — the
+  // numbers from `getUsersLeaveBalance` are never mutated, only used as the
+  // base to build the displayed statistics from.
+  //
+  // Only APPROVED requests count, matching how the backend already treats
+  // whole-day requests (a PENDING/REJECTED/CANCELLED leave — half-day or
+  // not — never reduces the balance). Recomputes whenever either the raw
+  // balance or the leave history changes, so it stays correct regardless of
+  // which one finishes loading first.
+  useEffect(() => {
+    if (!rawBalanceData) return;
+
+    const leaveBalances = rawBalanceData.leaveBalances || [];
+    const getLeaveData = (type) => leaveBalances.find((item) => item.leaveType === type) || {};
+
+    const halfDayUsageByType = {};
+    leaveData.forEach((req) => {
+      if (req.currLeavestatus !== 'APPROVED' || !req.isHalfDay) return;
+      halfDayUsageByType[req.leaveType] = (halfDayUsageByType[req.leaveType] || 0) + 0.5;
+    });
+
+    const withHalfDayAdjustment = (type) => {
+      const base = getLeaveData(type);
+      const annualLimit = Number(base.annualLimit) || 0;
+      const baseDaysUsed = Number(base.daysUsed) || 0;
+      const halfDayExtra = halfDayUsageByType[type] || 0;
+      const adjustedDaysUsed = baseDaysUsed + halfDayExtra;
+      const adjustedDaysAvailable = Math.max(0, annualLimit - adjustedDaysUsed);
+      return { annualLimit, daysAvailable: adjustedDaysAvailable };
+    };
+
+    const sickLeave = withHalfDayAdjustment('SICK_LEAVE');
+    const casualLeave = withHalfDayAdjustment('CASUAL_LEAVE');
+    const earnedLeave = withHalfDayAdjustment('EARNED_LEAVE');
+
+    // Total half-day usage across ALL leave types (including any type not
+    // broken out into its own card, e.g. Maternity/Special Leave) — needed
+    // so the combined "Available Leaves" card also reflects the adjustment.
+    const totalHalfDayExtra = Object.values(halfDayUsageByType).reduce((s, v) => s + v, 0);
+    const adjustedTotalUsed = (Number(rawBalanceData.totalDaysUsed) || 0) + totalHalfDayExtra;
+    const adjustedTotalAvailable = Math.max(0, (Number(rawBalanceData.totalDaysAvailable) || 0) - totalHalfDayExtra);
+
+    setStatistics({
+      totalAvailable: adjustedTotalAvailable,
+      totalUsed: adjustedTotalUsed,
+      sickLeaveAvailable: sickLeave.daysAvailable,
+      sickLeaveLimit: sickLeave.annualLimit,
+      casualLeaveAvailable: casualLeave.daysAvailable,
+      casualLeaveLimit: casualLeave.annualLimit,
+      earnedLeaveAvailable: earnedLeave.daysAvailable,
+      earnedLeaveLimit: earnedLeave.annualLimit,
+      year: rawBalanceData.year || '',
+    });
+  }, [rawBalanceData, leaveData]);
 
   /* ---------------- CANCEL LEAVE ---------------- */
   const handleCancelLeave = async (leaveReq) => {
