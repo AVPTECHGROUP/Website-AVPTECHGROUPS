@@ -158,56 +158,60 @@ export default function LeaveDashboard() {
     fetchLeaveRequest();
   }, [fetchleaveReqRefress, user_id]);
 
-  /* ---------------- DERIVE HALF-DAY-ADJUSTED STATISTICS ---------------- */
-  // FIX (requested): combines every 2 half-day requests for a leave type
-  // into 1 full day of usage (each APPROVED half-day request contributes
-  // 0.5 days), layered on top of whatever whole-day `daysUsed` the balance
-  // API already reports for that type, then re-derives `daysAvailable`
-  // from the adjusted total. This runs entirely on the frontend — the
-  // numbers from `getUsersLeaveBalance` are never mutated, only used as the
-  // base to build the displayed statistics from.
+  /* ---------------- DERIVE STATISTICS FROM APPROVED LEAVES ---------------- */
+  // FIX (requested): `daysUsed` / `daysAvailable` are no longer read from
+  // the balance API's per-type numbers at all — they're computed entirely
+  // on the frontend from the APPROVED requests in `leaveData`. This is what
+  // correctly counts a half-day request as 0.5 days: the balance API
+  // derives its own `daysUsed` from `totalDays`, and a half-day request's
+  // `totalDays` comes back as 0 (confirmed against the sample balance
+  // response), so relying on that field silently drops half-day usage.
+  // Only `annualLimit` is still read from the balance API, since that's
+  // configuration (not something derived from usage) and isn't affected by
+  // this at all.
   //
-  // Only APPROVED requests count, matching how the backend already treats
-  // whole-day requests (a PENDING/REJECTED/CANCELLED leave — half-day or
-  // not — never reduces the balance). Recomputes whenever either the raw
-  // balance or the leave history changes, so it stays correct regardless of
-  // which one finishes loading first.
+  // Only APPROVED requests count — PENDING, REJECTED, and CANCELLED leaves
+  // (half-day or not) never reduce the balance. Recomputes whenever either
+  // the raw balance or the leave history changes, so it's correct
+  // regardless of which one finishes loading first.
   useEffect(() => {
     if (!rawBalanceData) return;
 
     const leaveBalances = rawBalanceData.leaveBalances || [];
     const getLeaveData = (type) => leaveBalances.find((item) => item.leaveType === type) || {};
 
-    const halfDayUsageByType = {};
+    const usedByType = {};
+    let totalUsedFromApproved = 0;
     leaveData.forEach((req) => {
-      if (req.currLeavestatus !== 'APPROVED' || !req.isHalfDay) return;
-      halfDayUsageByType[req.leaveType] = (halfDayUsageByType[req.leaveType] || 0) + 0.5;
+      if (req.currLeavestatus !== 'APPROVED') return;
+      const days = req.isHalfDay ? 0.5 : (Number(req.totalDays) || 0);
+      usedByType[req.leaveType] = (usedByType[req.leaveType] || 0) + days;
+      totalUsedFromApproved += days;
     });
 
-    const withHalfDayAdjustment = (type) => {
+    const withApprovedUsage = (type) => {
       const base = getLeaveData(type);
       const annualLimit = Number(base.annualLimit) || 0;
-      const baseDaysUsed = Number(base.daysUsed) || 0;
-      const halfDayExtra = halfDayUsageByType[type] || 0;
-      const adjustedDaysUsed = baseDaysUsed + halfDayExtra;
-      const adjustedDaysAvailable = Math.max(0, annualLimit - adjustedDaysUsed);
-      return { annualLimit, daysAvailable: adjustedDaysAvailable };
+      const daysUsed = usedByType[type] || 0;
+      const daysAvailable = Math.max(0, annualLimit - daysUsed);
+      return { annualLimit, daysAvailable };
     };
 
-    const sickLeave = withHalfDayAdjustment('SICK_LEAVE');
-    const casualLeave = withHalfDayAdjustment('CASUAL_LEAVE');
-    const earnedLeave = withHalfDayAdjustment('EARNED_LEAVE');
+    const sickLeave = withApprovedUsage('SICK_LEAVE');
+    const casualLeave = withApprovedUsage('CASUAL_LEAVE');
+    const earnedLeave = withApprovedUsage('EARNED_LEAVE');
 
-    // Total half-day usage across ALL leave types (including any type not
-    // broken out into its own card, e.g. Maternity/Special Leave) — needed
-    // so the combined "Available Leaves" card also reflects the adjustment.
-    const totalHalfDayExtra = Object.values(halfDayUsageByType).reduce((s, v) => s + v, 0);
-    const adjustedTotalUsed = (Number(rawBalanceData.totalDaysUsed) || 0) + totalHalfDayExtra;
-    const adjustedTotalAvailable = Math.max(0, (Number(rawBalanceData.totalDaysAvailable) || 0) - totalHalfDayExtra);
+    // Total annual entitlement across EVERY leave type (including ones not
+    // broken out into their own card, e.g. Special/Maternity Leave) is kept
+    // as reported by the balance API — it already accounts for carry-forward
+    // days, which the frontend has no way to reconstruct. Only the USED
+    // side is recomputed from approved requests.
+    const totalLimit = (Number(rawBalanceData.totalDaysAvailable) || 0) + (Number(rawBalanceData.totalDaysUsed) || 0);
+    const totalAvailable = Math.max(0, totalLimit - totalUsedFromApproved);
 
     setStatistics({
-      totalAvailable: adjustedTotalAvailable,
-      totalUsed: adjustedTotalUsed,
+      totalAvailable,
+      totalUsed: totalUsedFromApproved,
       sickLeaveAvailable: sickLeave.daysAvailable,
       sickLeaveLimit: sickLeave.annualLimit,
       casualLeaveAvailable: casualLeave.daysAvailable,
