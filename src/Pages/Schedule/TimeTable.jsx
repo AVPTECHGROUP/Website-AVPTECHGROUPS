@@ -27,8 +27,8 @@ const StatusBadge = ({ status }) => {
     return (
         <span className={`inline-flex items-center text-nowrap gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border
       ${isDraft
-                ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                : 'bg-green-50 text-green-700 border-green-200'}`}>
+            ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+            : 'bg-green-50 text-green-700 border-green-200'}`}>
             {isDraft ? '⊘' : '✓'} {isDraft ? STATUS.DRAFT : STATUS.PUBLISHED}
         </span>
     );
@@ -225,17 +225,17 @@ export default function TimeTable() {
                     <p className="text-sm font-bold text-gray-700 mb-2.5">{DIRECTORY.QUICK_ACTIONS}</p>
                     <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2">
                         <button onClick={() => setShowAddModal(true)}
-                            className="flex items-center justify-center sm:justify-start gap-1.5 px-4 py-2.5 sm:py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer w-full sm:w-auto">
+                                className="flex items-center justify-center sm:justify-start gap-1.5 px-4 py-2.5 sm:py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer w-full sm:w-auto">
                             <Plus size={15} />
                             {DIRECTORY.BTN_ADD_TT}
                         </button>
                         <button onClick={() => setShowTeacherSchedule(true)}
-                            className="flex items-center justify-center sm:justify-start gap-1.5 px-4 py-2.5 sm:py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer w-full sm:w-auto">
+                                className="flex items-center justify-center sm:justify-start gap-1.5 px-4 py-2.5 sm:py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer w-full sm:w-auto">
                             <UserSearch size={15} />
                             <span className="truncate">{DIRECTORY.BTN_TEACHER_SCH}</span>
                         </button>
                         <button onClick={() => setShowConfig(true)}
-                            className="flex items-center justify-center sm:justify-start gap-1.5 px-4 py-2.5 sm:py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer w-full sm:w-auto">
+                                className="flex items-center justify-center sm:justify-start gap-1.5 px-4 py-2.5 sm:py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition cursor-pointer w-full sm:w-auto">
                             <Settings2 size={15} />
                             <span className="truncate">{DIRECTORY.BTN_CONFIG}</span>
                         </button>
@@ -308,53 +308,65 @@ export default function TimeTable() {
                 <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="bg-gray-50 border-b border-gray-100">
-                                {DIRECTORY.TABLE_HEADERS.map(h => (
-                                    <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 tracking-wider">{h}</th>
-                                ))}
-                            </tr>
+                        <tr className="bg-gray-50 border-b border-gray-100">
+                            {DIRECTORY.TABLE_HEADERS.map(h => (
+                                <th key={h} className="text-center px-5 py-3 text-xs font-semibold text-gray-500 tracking-wider">{h}</th>
+                            ))}
+                        </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {loading ? (
-                                <tr><td colSpan={6} className="text-center py-12 text-gray-400 text-sm">{DIRECTORY.LOADING}</td></tr>
-                            ) : filtered.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="text-center py-12 text-gray-400">
-                                        <Calendar size={40} className="mx-auto mb-2 opacity-30" />
-                                        {DIRECTORY.NO_TT}
-                                    </td>
-                                </tr>
-                            ) : filtered.map(tt => (
-                                <tr key={tt.id} className="hover:bg-gray-50/60 transition">
-                                    <td className="px-5 text-center py-4 font-medium text-gray-900">{tt.class}</td>
-                                    <td className="px-5 text-center py-4 text-gray-600">{tt.section}</td>
+                        {loading ? (
+                            <tr><td colSpan={6} className="text-center py-12 text-gray-400 text-sm">{DIRECTORY.LOADING}</td></tr>
+                        ) : filtered.length === 0 ? (
+                            <tr>
+                                <td colSpan={6} className="text-center py-12 text-gray-400">
+                                    <Calendar size={40} className="mx-auto mb-2 opacity-30" />
+                                    {DIRECTORY.NO_TT}
+                                </td>
+                            </tr>
+                        ) : filtered.map(tt => (
+                            <tr key={tt.id} className="hover:bg-gray-50/60 transition">
+                                <td className="px-5 text-center py-4 font-medium text-gray-900">{tt.class}</td>
+                                <td className="px-5 text-center py-4 text-gray-600">{tt.section}</td>
 
-                                    <td className="px-5 text-center py-4"><StatusBadge status={tt.status} /></td>
-                                    <td className="px-5 text-center py-4 text-gray-500">{tt.lastUpdated}</td>
-                                    <td className="px-5 text-center py-4">
-                                        <div className="flex items-center justify-center gap-2 flex-wrap">
-                                            <button onClick={() => setOpenWorkspace({ timetable: tt, mode: 'view' })}
-                                                className="flex items-center gap-1 px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition">
-                                                <Eye size={13} /> {DIRECTORY.BTN_VIEW}
+                                <td className="px-5 text-center py-4"><StatusBadge status={tt.status} /></td>
+                                <td className="px-5 text-center py-4 text-gray-500">{tt.lastUpdated}</td>
+                                <td className="px-5 py-4">
+                                    {/* FIX: justify-center, but every row reserves the same slot for
+                                        Publish (an invisible placeholder when the row is already
+                                        Published). That keeps the group's total width identical on
+                                        every row, so centering no longer shifts View/Edit/Delete
+                                        left or right depending on whether Publish is shown — they
+                                        stay in a straight column while the whole group sits centered
+                                        under "Actions". */}
+                                    <div className="flex items-center justify-center gap-2 flex-nowrap overflow-x-auto">
+                                        <button onClick={() => setOpenWorkspace({ timetable: tt, mode: 'view' })}
+                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition whitespace-nowrap flex-shrink-0">
+                                            <Eye size={14} /> {DIRECTORY.BTN_VIEW}
+                                        </button>
+                                        <button onClick={() => setOpenWorkspace({ timetable: tt, mode: 'edit' })}
+                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition whitespace-nowrap flex-shrink-0">
+                                            <Pencil size={14} /> {DIRECTORY.BTN_EDIT}
+                                        </button>
+                                        <button onClick={() => setDeleteConfirm(tt.id)}
+                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-red-200 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 transition whitespace-nowrap cursor-pointer flex-shrink-0">
+                                            <Trash2 size={14} /> {DIRECTORY.BTN_DELETE}
+                                        </button>
+                                        {tt.status === STATUS.DRAFT ? (
+                                            <button onClick={() => handlePublish(tt.id)} disabled={publishingId === tt.id}
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg text-xs font-semibold hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0">
+                                                <Send size={14} /> {publishingId === tt.id ? DIRECTORY.BTN_PUBLISHING : DIRECTORY.BTN_PUBLISH}
                                             </button>
-                                            <button onClick={() => setOpenWorkspace({ timetable: tt, mode: 'edit' })}
-                                                className="flex items-center gap-1 px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition">
-                                                <Pencil size={13} /> {DIRECTORY.BTN_EDIT}
-                                            </button>
-                                            {tt.status === STATUS.DRAFT && (
-                                                <button onClick={() => handlePublish(tt.id)} disabled={publishingId === tt.id}
-                                                    className="flex items-center gap-1 px-3 cursor-pointer py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition disabled:opacity-50">
-                                                    <Send size={13} /> {publishingId === tt.id ? DIRECTORY.BTN_PUBLISHING : DIRECTORY.BTN_PUBLISH}
-                                                </button>
-                                            )}
-                                            <button onClick={() => setDeleteConfirm(tt.id)}
-                                                className="flex items-center gap-1 px-3 py-1.5 border cursor-pointer border-red-100 rounded-lg text-xs font-medium text-red-500 hover:bg-red-50 transition">
-                                                <Trash2 size={13} /> {DIRECTORY.BTN_DELETE}
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+                                        ) : (
+                                            <span aria-hidden="true"
+                                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 invisible pointer-events-none">
+                                                <Send size={14} /> {DIRECTORY.BTN_PUBLISH}
+                                            </span>
+                                        )}
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
                         </tbody>
                     </table>
                 </div>
@@ -377,25 +389,33 @@ export default function TimeTable() {
                                 </div>
                                 <StatusBadge status={tt.status} />
                             </div>
-                            <div className="flex gap-2 flex-wrap mt-3">
+                            {/* FIX: same reserved-slot approach as desktop — centered, but
+                                Publish's space is always reserved (invisible placeholder when
+                                already Published) so View/Edit/Delete don't shift row to row. */}
+                            <div className="flex justify-center gap-2 flex-nowrap overflow-x-auto mt-4">
                                 <button onClick={() => setOpenWorkspace({ timetable: tt, mode: 'view' })}
-                                    className="flex items-center gap-1 px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600">
-                                    <Eye size={13} /> {DIRECTORY.BTN_VIEW}
+                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:border-gray-400 cursor-pointer whitespace-nowrap transition flex-shrink-0">
+                                    <Eye size={14} /> {DIRECTORY.BTN_VIEW}
                                 </button>
                                 <button onClick={() => setOpenWorkspace({ timetable: tt, mode: 'edit' })}
-                                    className="flex items-center gap-1 px-3 cursor-pointer py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600">
-                                    <Pencil size={13} /> {DIRECTORY.BTN_EDIT}
+                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:border-gray-400 cursor-pointer whitespace-nowrap transition flex-shrink-0">
+                                    <Pencil size={14} /> {DIRECTORY.BTN_EDIT}
                                 </button>
-                                {tt.status === STATUS.DRAFT && (
-                                    <button onClick={() => handlePublish(tt.id)} disabled={publishingId === tt.id}
-                                        className="flex items-center gap-1 px-3 cursor-pointer py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium disabled:opacity-50">
-                                        <Send size={13} /> {publishingId === tt.id ? DIRECTORY.BTN_PUBLISHING : DIRECTORY.BTN_PUBLISH}
-                                    </button>
-                                )}
                                 <button onClick={() => setDeleteConfirm(tt.id)}
-                                    className="flex items-center gap-1 px-3 py-1.5 border border-red-100 rounded-lg text-xs font-medium text-red-500">
-                                    <Trash2 size={13} /> {DIRECTORY.BTN_DELETE}
+                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-red-200 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 cursor-pointer whitespace-nowrap transition flex-shrink-0">
+                                    <Trash2 size={14} /> {DIRECTORY.BTN_DELETE}
                                 </button>
+                                {tt.status === STATUS.DRAFT ? (
+                                    <button onClick={() => handlePublish(tt.id)} disabled={publishingId === tt.id}
+                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg text-xs font-semibold hover:from-blue-700 hover:to-blue-800 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap transition flex-shrink-0">
+                                        <Send size={14} /> {publishingId === tt.id ? DIRECTORY.BTN_PUBLISHING : DIRECTORY.BTN_PUBLISH}
+                                    </button>
+                                ) : (
+                                    <span aria-hidden="true"
+                                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 invisible pointer-events-none">
+                                        <Send size={14} /> {DIRECTORY.BTN_PUBLISH}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -425,11 +445,11 @@ export default function TimeTable() {
                         <p className="text-sm text-gray-500 mb-5">{DIRECTORY.CONFIRM_DEL_MSG}</p>
                         <div className="flex gap-3 justify-end">
                             <button onClick={() => setDeleteConfirm(null)}
-                                className="px-4 py-2 border cursor-pointer border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
+                                    className="px-4 py-2 border cursor-pointer border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
                                 {DIRECTORY.BTN_CANCEL}
                             </button>
                             <button onClick={() => handleDelete(deleteConfirm)} disabled={deletingId === deleteConfirm}
-                                className="px-4 py-2 bg-red-500 text-white rounded-lg cursor-pointer text-sm font-medium hover:bg-red-600 disabled:opacity-50">
+                                    className="px-4 py-2 bg-red-500 text-white rounded-lg cursor-pointer text-sm font-medium hover:bg-red-600 disabled:opacity-50">
                                 {deletingId === deleteConfirm ? DIRECTORY.BTN_DELETING : DIRECTORY.BTN_DELETE}
                             </button>
                         </div>
