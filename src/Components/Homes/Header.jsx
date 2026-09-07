@@ -6,7 +6,7 @@ import Mockups from '../../Components/Homes/Mockups/Mockups'
 import { useNavigate } from 'react-router-dom'
 
 // Carousel image assets
-import crousel2 from '../../assets/Images/crousel/2nd_Cr.png'
+import crousel2 from '../../assets/Images/crousel/2nd_cr.png'
 import crousel3 from '../../assets/Images/crousel/3rd_crousel.png'
 import crousel4 from '../../assets/Images/crousel/4th_crousel.png'
 import crousel5 from '../../assets/Images/crousel/5th_cr.png'
