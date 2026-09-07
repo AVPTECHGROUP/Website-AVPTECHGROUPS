@@ -1,17 +1,33 @@
 // Login_2.jsx
 import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
-import React, { useContext, useState } from 'react'
-import Worker_3 from '../assets/Images/Worker_3.jpeg'
+import React, { useContext, useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { loginAPI } from '../Api/Authentication/AuthApi'
 import { UserContext } from '../ContextAPI/UserContext'
 import SS_logo from "../assets/Images/loginimageschool3.png"
 import cstech from "../assets/Images/cstech.png"
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import SS_logo_3 from "../assets/Images/loginimageschool3.png"
 import { getSchoolById } from '../Api/SchoolConfiguration/schoolconfig'
 import { getCurrentAcademicYear } from '../Api/AcademicYears/AcademicYear'
 import LOGIN_CONSTANTS from '../Constants/StringConstants/LoginConstants'
+
+// ─── Login Carousel Image Imports ───────────────────────────────────────────
+import academicsImg from '../assets/Images/login/academics.png'
+import attendanceImg from '../assets/Images/login/attendance.png'
+import feeManagementImg from '../assets/Images/login/fee_management.png'
+import loginImg from '../assets/Images/login/login.png'
+import peopleImg from '../assets/Images/login/people.png'
+import stockTransImg from '../assets/Images/login/stocl_trans.png'
+
+const loginImages = [
+    academicsImg,
+    attendanceImg,
+    feeManagementImg,
+    loginImg,
+    peopleImg,
+    stockTransImg
+]
 
 // ─── School Floating SVGs ─────────────────────────────────────────────────────
 const SchoolSVGs = {
@@ -89,7 +105,6 @@ const floatingItems = [
 function FloatingSchoolBg() {
     return (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {/* Top Left School Logo - Hidden on mobile, sized compact for tablet & laptop */}
             <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -174,12 +189,12 @@ function ShinyButton({ children, disabled, isLoading }) {
           font-bold text-white text-sm tracking-widest uppercase
           transition-all duration-300 ease-out
           ${disabled
-                    ? 'opacity-60 cursor-not-allowed'
-                    : `bg-gradient-to-r from-[#00C9B1] via-[#00DEC5] to-[#F5A623]
+                        ? 'opacity-60 cursor-not-allowed'
+                        : `bg-gradient-to-r from-[#00C9B1] via-[#00DEC5] to-[#F5A623]
                hover:from-[#00B89F] hover:via-[#00C9B1] hover:to-[#E8961A]
                hover:shadow-[0_8px_28px_rgba(0,201,177,0.5),0_4px_12px_rgba(245,166,35,0.3)]
                hover:scale-[1.015] active:scale-[0.975] cursor-pointer`
-                }
+                    }
         `}
                 style={disabled ? {} : {
                     background: 'linear-gradient(135deg, #00C9B1 0%, #00DEC5 40%, #F5A623 100%)',
@@ -209,9 +224,18 @@ const Login_2 = ({ onLoginSuccess }) => {
     const [errors, seterrors] = useState({})
     const [isLoading, setIsLoading] = useState(false)
     const [loginError, setLoginError] = useState('')
+    const [activeSlide, setActiveSlide] = useState(0)
     const navigate = useNavigate()
 
     const { setUser, saveProfile, saveSchool, saveToken, saveCurrentAcademicYear } = useContext(UserContext)
+
+    // Auto-advance Carousel smoothly every 3 seconds
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setActiveSlide((prev) => (prev + 1) % loginImages.length)
+        }, 3000)
+        return () => clearInterval(timer)
+    }, [])
 
     const stripEdgeSpaces = (value) => value.replace(/^\s+/, '').replace(/\s+$/, '')
 
@@ -285,13 +309,6 @@ const Login_2 = ({ onLoginSuccess }) => {
 
             if (onLoginSuccess) onLoginSuccess(token)
 
-            // requiresSchoolSelection (from the backend) is the single source
-            // of truth for whether this login lands on the Select School
-            // console. GLOBAL_ADMIN, SUPER_ADMIN, and GLOBAL_READ_ONLY all go
-            // through this same path — GLOBAL_READ_ONLY has no special-cased
-            // "no dashboard" behavior; once it selects a school it reaches a
-            // full dashboard, same navigation as GLOBAL_ADMIN, just with
-            // every mutating action disabled via its VIEW-only permission set.
             if (requiresSchoolSelection) {
                 navigate('/superAdmin')
             } else {
@@ -334,9 +351,9 @@ const Login_2 = ({ onLoginSuccess }) => {
         }
     }
 
-    const inputBase   = 'w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl text-sm text-slate-850 placeholder-slate-400 outline-none transition-all duration-300 focus:ring-4'
+    const inputBase = 'w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl text-sm text-slate-850 placeholder-slate-400 outline-none transition-all duration-300 focus:ring-4'
     const inputNormal = 'bg-slate-50/60 border border-slate-200/80 focus:bg-white focus:border-indigo-500 focus:ring-indigo-500/10'
-    const inputError  = 'bg-red-500/5 border border-red-300 focus:bg-white focus:border-red-500 focus:ring-red-500/15'
+    const inputError = 'bg-red-500/5 border border-red-300 focus:bg-white focus:border-red-500 focus:ring-red-500/15'
 
     return (
         <div className="relative min-h-screen flex flex-col items-center justify-center p-3 sm:p-5 md:p-6 overflow-hidden bg-gradient-to-tr from-[#f3f4f6] via-[#eff6ff] to-[#f5f3ff]">
@@ -401,25 +418,55 @@ const Login_2 = ({ onLoginSuccess }) => {
                 transition={{ duration: 0.65, delay: 0.1 }}
                 className="relative z-10 flex flex-col sm:flex-row w-full max-w-xs sm:max-w-md md:max-w-xl lg:max-w-2xl xl:max-w-3xl overflow-hidden rounded-3xl"
                 style={{
-                    background: 'rgba(255, 255, 255, 0.45)',
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(255, 255, 255, 0.6)',
+                    background: 'rgba(255, 255, 255, 0.65)',
+                    backdropFilter: 'blur(24px)',
+                    WebkitBackdropFilter: 'blur(24px)',
+                    border: '1px solid rgba(255, 255, 255, 0.8)',
                     boxShadow: '0 25px 50px -12px rgba(59, 130, 246, 0.12), 0 0 40px rgba(255, 255, 255, 0.2) inset, 0 4px 30px rgba(0, 0, 0, 0.05)',
                 }}
             >
-                <div className="hidden sm:block sm:w-5/12 relative overflow-hidden">
-                    <img
-                        src={Worker_3}
-                        alt="Portal Visual"
-                        className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-105"
-                        style={{ minHeight: '100%' }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/20 via-indigo-600/10 to-transparent mix-blend-multiply pointer-events-none" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent pointer-events-none" />
-                    <div className="absolute top-0 left-0 w-24 h-1 bg-gradient-to-r from-blue-500 to-indigo-500" />
+                {/* ── RESPONSIVE ANIMATED LOGIN CAROUSEL (Subtle Depth Shadow & Bottom Dots Only) ── */}
+                <div className="relative w-full sm:w-5/12 self-stretch min-h-[230px] sm:min-h-[480px] overflow-hidden select-none bg-slate-900">
+
+                    {/* Animated Cross-fade Image Display with Soft Ken-Burns Zoom */}
+                    <AnimatePresence initial={false}>
+                        <motion.img
+                            key={activeSlide}
+                            src={loginImages[activeSlide]}
+                            alt={`Portal Feature ${activeSlide + 1}`}
+                            initial={{ opacity: 0, scale: 1.05 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+                            className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
+                        />
+                    </AnimatePresence>
+
+                    {/* Very Subtle Dark Shadow Overlay for Depth */}
+                    <div className="absolute inset-0 bg-gradient-to-t pointer-events-none z-10" />
+                    <div className="absolute inset-0 shadow-[inset_0_0_40px_rgba(0,0,0,0.14)] pointer-events-none z-10" />
+
+                    {/* Top Accent Strip */}
+                    <div className="absolute top-0 left-0 w-24 h-1 bg-gradient-to-r from-[#00C9B1] to-[#F5A623] z-20" />
+
+                    {/* Carousel Bottom Dots Dock */}
+                    <div className="absolute bottom-3.5 sm:bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-md border border-white/60 shadow-sm">
+                        {loginImages.map((_, idx) => (
+                            <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setActiveSlide(idx)}
+                                aria-label={`Go to slide ${idx + 1}`}
+                                className={`transition-all duration-300 rounded-full cursor-pointer ${activeSlide === idx
+                                        ? 'w-5 h-1.5 bg-gradient-to-r from-[#00C9B1] to-[#F5A623] shadow-xs'
+                                        : 'w-1.5 h-1.5 bg-slate-400/50 hover:bg-slate-600'
+                                    }`}
+                            />
+                        ))}
+                    </div>
                 </div>
 
+                {/* ── Right Column: Login Form ── */}
                 <div className="flex-1 flex flex-col justify-center px-5 sm:px-7 md:px-8 py-7 sm:py-8 md:py-10 bg-white/85 backdrop-blur-md">
 
                     <div className="flex sm:hidden items-center gap-2.5 mb-5 pb-4 border-b border-slate-100">
@@ -436,7 +483,7 @@ const Login_2 = ({ onLoginSuccess }) => {
                             {LOGIN_CONSTANTS.LOGIN_TITLE}
                         </h2>
                         <p className="text-xs sm:text-sm text-slate-500"
-                           style={{ fontFamily: '"DM Sans", sans-serif' }}>
+                            style={{ fontFamily: '"DM Sans", sans-serif' }}>
                             {LOGIN_CONSTANTS.LOGIN_SUBTITLE}
                         </p>
                         <div className="mt-2 h-[3px] w-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600" />
@@ -535,11 +582,11 @@ const Login_2 = ({ onLoginSuccess }) => {
 
                         <div className="text-center space-y-1">
                             <p className="text-[11px] sm:text-xs font-medium text-slate-500"
-                               style={{ fontFamily: '"DM Sans", sans-serif' }}>
+                                style={{ fontFamily: '"DM Sans", sans-serif' }}>
                                 {LOGIN_CONSTANTS.AUTHORIZED_ACCESS}
                             </p>
                             <p className="text-[10px] sm:text-[11px] text-slate-400"
-                               style={{ fontFamily: '"DM Sans", sans-serif' }}>
+                                style={{ fontFamily: '"DM Sans", sans-serif' }}>
                                 {LOGIN_CONSTANTS.CONTACT_ADMIN}
                             </p>
                         </div>

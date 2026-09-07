@@ -20,184 +20,411 @@ export const TEMPLATE_TYPES = {
     label: 'Report Card Templates',
     shortLabel: 'Report Card',
     icon: FileText,
-    stub: `<div class="rc-premium">
+    stub: `<div class="rc-green-wrap">
 <style>
-  .rc-premium { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; max-width: 700px; margin: 0 auto; border: 1px solid #e0e7ff; border-radius: 20px; overflow: hidden; box-shadow: 0 12px 32px rgba(79,70,229,0.14); background: #ffffff; color: #1f2937; }
-  .rc-premium .rc-accent-top { height: 6px; width: 100%; background: linear-gradient(90deg,#6366f1,#3b82f6,#06b6d4); }
-  .rc-premium .rc-header { position: relative; overflow: hidden; text-align: center; padding: 26px 24px 22px; background: linear-gradient(135deg,#eef2ff 0%,#f0f9ff 55%,#faf5ff 100%); }
-  .rc-premium .rc-blob-a { position: absolute; top: -30px; right: -30px; width: 160px; height: 160px; border-radius: 50%; background: radial-gradient(circle,#818cf8,transparent 70%); opacity: .35; filter: blur(2px); }
-  .rc-premium .rc-blob-b { position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle,#38bdf8,transparent 70%); opacity: .3; filter: blur(2px); }
-  .rc-premium .rc-logo { position: relative; width: 62px; height: 62px; margin: 0 auto 12px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg,#6366f1,#3b82f6); color: #fff; font-weight: 800; font-size: 19px; letter-spacing: .5px; box-shadow: 0 10px 22px rgba(99,102,241,.35); border: 2px solid #ffffff; }
-  .rc-premium .rc-school-name { position: relative; margin: 0; font-size: 23px; font-weight: 800; color: #111827; letter-spacing: -.2px; }
-  .rc-premium .rc-school-meta { position: relative; margin: 4px 0 0; font-size: 11.5px; color: #6b7280; }
-  .rc-premium .rc-exam-badge { position: relative; display: inline-flex; align-items: center; gap: 7px; margin-top: 14px; padding: 7px 18px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: #fff; background: linear-gradient(90deg,#6366f1,#3b82f6); box-shadow: 0 6px 16px rgba(59,130,246,.35); }
+  /* ══ Screen Preview ══ */
+  .rc-green-wrap {
+    font-family: 'Times New Roman', Times, Georgia, serif;
+    width: 100%;
+    max-width: 840px;
+    margin: 0 auto;
+    background: #ffffff;
+    border: 4px double #166534;
+    padding: 24px;
+    position: relative;
+    box-sizing: border-box;
+    color: #111827;
+    display: flex;
+    flex-direction: column;
+    min-height: 980px;
+    justify-content: space-between;
+  }
 
-  .rc-premium .rc-section { padding: 18px 22px; }
-  .rc-premium .rc-section-title { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #4f46e5; margin: 0 0 12px; }
-  .rc-premium .rc-section-title .rc-bar { width: 5px; height: 15px; border-radius: 3px; background: #6366f1; display: inline-block; }
+  /* ══ Full A4 Page Print Fit ══ */
+  @media print {
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      height: 100% !important;
+    }
+    .rc-green-wrap {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: 278mm !important; /* Exact A4 height without creating 2nd blank page */
+      min-height: 278mm !important;
+      border: 4px double #166534 !important;
+      padding: 16mm 14mm !important;
+      box-sizing: border-box !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      page-break-inside: avoid !important;
+      page-break-after: avoid !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  }
 
-  .rc-premium .rc-info-box { border: 1px solid #eef0f4; border-radius: 14px; overflow: hidden; }
-  .rc-premium .rc-info-row td { padding: 10px 14px; font-size: 12.5px; border-bottom: 1px solid #f1f2f6; }
-  .rc-premium .rc-info-row:last-child td { border-bottom: none; }
-  .rc-premium .rc-info-label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #818cf8; margin-bottom: 2px; }
-  .rc-premium .rc-info-value { font-weight: 700; color: #111827; }
+  /* ══ Watermark Centering ══ */
+  .rc-watermark {
+    position: absolute;
+    top: 52%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 440px;
+    height: 440px;
+    opacity: 0.16;
+    pointer-events: none;
+    z-index: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .rc-watermark img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 
-  .rc-premium table.rc-subjects { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .rc-premium table.rc-subjects thead th { background: linear-gradient(90deg,#4f46e5,#3b82f6); color: #fff; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: 10px 8px; text-align: center; }
-  .rc-premium table.rc-subjects thead th:first-child { text-align: left; padding-left: 14px; }
-  .rc-premium table.rc-subjects tbody td { padding: 10px 8px; text-align: center; border-bottom: 1px solid #f1f2f6; color: #374151; }
-  .rc-premium table.rc-subjects tbody td:first-child { text-align: left; padding-left: 14px; font-weight: 700; color: #111827; }
-  .rc-premium table.rc-subjects tbody tr:nth-child(even) { background: #f8f9ff; }
-  .rc-premium .rc-max-cell { color: #9ca3af; }
-  .rc-premium .rc-remarks-cell { color: #9ca3af; font-style: italic; max-width: 110px; white-space: normal; word-break: break-word; }
+  /* ══ Header ══ */
+  .rc-head-container {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2.5px solid #166534;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+  }
+  .rc-logo-box {
+    width: 88px;
+    height: 88px;
+    border: 1.5px solid #166534;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    flex-shrink: 0;
+  }
+  .rc-logo-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 
-  .rc-premium .rc-bar-track { display: inline-block; width: 48px; height: 6px; border-radius: 999px; background: #e5e7eb; overflow: hidden; vertical-align: middle; margin-right: 6px; }
-  .rc-premium .rc-bar-fill { display: block; height: 100%; border-radius: 999px; background: #a1a1aa; }
-  .rc-premium .rc-bar-fill[data-grade="A+"], .rc-premium .rc-bar-fill[data-grade="A"] { background: #22c55e; }
-  .rc-premium .rc-bar-fill[data-grade="B+"], .rc-premium .rc-bar-fill[data-grade="B"] { background: #3b82f6; }
-  .rc-premium .rc-bar-fill[data-grade="C"] { background: #8b5cf6; }
-  .rc-premium .rc-bar-fill[data-grade="D"] { background: #f97316; }
-  .rc-premium .rc-bar-fill[data-grade="F"] { background: #ef4444; }
-  .rc-premium .rc-bar-fill[data-grade="AB"] { background: #9ca3af; }
+  .rc-title-center {
+    text-align: center;
+    flex: 1;
+    padding: 0 16px;
+  }
+  .rc-school-name {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 900;
+    color: #14532d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1.15;
+  }
+  .rc-school-sub {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #374151;
+    margin: 3px 0;
+  }
+  .rc-school-address {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #166534;
+  }
+  .rc-session-badge {
+    display: inline-block;
+    background: #166534 !important;
+    color: #ffffff !important;
+    padding: 4px 24px;
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 800;
+    margin-top: 8px;
+    text-transform: uppercase;
+    -webkit-print-color-adjust: exact;
+  }
 
-  .rc-premium .rc-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; border: 1px solid transparent; }
-  .rc-premium .rc-grade-pill[data-grade="A+"], .rc-premium .rc-grade-pill[data-grade="A"] { background: #ecfdf5; color: #15803d; border-color: #86efac; }
-  .rc-premium .rc-grade-pill[data-grade="B+"], .rc-premium .rc-grade-pill[data-grade="B"] { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
-  .rc-premium .rc-grade-pill[data-grade="C"] { background: #f5f3ff; color: #6d28d9; border-color: #c4b5fd; }
-  .rc-premium .rc-grade-pill[data-grade="D"] { background: #fff7ed; color: #c2410c; border-color: #fdba74; }
-  .rc-premium .rc-grade-pill[data-grade="F"] { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
-  .rc-premium .rc-grade-pill[data-grade="AB"] { background: #f3f4f6; color: #6b7280; border-color: #d1d5db; }
+  /* ══ Student Info Grid ══ */
+  .rc-student-info {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 1.5px solid #166534;
+    margin-bottom: 14px;
+    background: #fdfdfd;
+  }
+  .rc-info-cell {
+    padding: 7px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 13px;
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+  .rc-info-cell:nth-child(odd) {
+    border-right: 1.5px solid #166534;
+  }
+  .rc-info-cell.full-width {
+    grid-column: span 2;
+    border-right: none;
+  }
+  .rc-lbl {
+    font-weight: 800;
+    color: #166534;
+    min-width: 140px;
+    text-transform: uppercase;
+    font-size: 11.5px;
+  }
+  .rc-val {
+    font-weight: 700;
+    color: #000000;
+  }
 
-  .rc-premium .rc-status-pill[data-status="Pass"] { background: #ecfdf5; color: #15803d; border-color: #86efac; }
-  .rc-premium .rc-status-pill[data-status="Fail"] { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
-  .rc-premium .rc-status-pill[data-status="Absent"] { background: #f3f4f6; color: #6b7280; border-color: #d1d5db; }
+  /* ══ Marks Table ══ */
+  .rc-table-container {
+    position: relative;
+    z-index: 1;
+    flex-grow: 1; /* Automatically expands space */
+  }
+  table.rc-marks-tbl {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1.5px solid #166534;
+    font-size: 13px;
+    counter-reset: serial-number;
+  }
+  table.rc-marks-tbl th {
+    background: #166534 !important;
+    color: #ffffff !important;
+    padding: 10px 6px;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 11.5px;
+    border: 1px solid #14532d;
+    text-align: center;
+    -webkit-print-color-adjust: exact;
+  }
+  table.rc-marks-tbl td {
+    padding: 9px 6px;
+    border: 1px solid #cbd5e1;
+    text-align: center;
+    font-weight: 600;
+  }
+  table.rc-marks-tbl tbody td.sno-cell::before {
+    counter-increment: serial-number;
+    content: counter(serial-number);
+  }
+  table.rc-marks-tbl tbody tr:nth-child(even) {
+    background: #f0fdf4 !important;
+    -webkit-print-color-adjust: exact;
+  }
+  table.rc-marks-tbl td.subject-name {
+    text-align: left;
+    padding-left: 14px;
+    font-weight: 800;
+  }
 
-  .rc-premium .rc-summary { display: flex; gap: 10px; padding: 4px 22px 18px; flex-wrap: wrap; }
-  .rc-premium .rc-summary-card { flex: 1 1 130px; text-align: center; border-radius: 14px; padding: 12px 10px; border: 2px solid #e0e7ff; background: linear-gradient(135deg,#eef2ff,#eff6ff); }
-  .rc-premium .rc-summary-label { font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #6366f1; margin-bottom: 4px; }
-  .rc-premium .rc-summary-value { font-size: 19px; font-weight: 800; color: #111827; }
-  .rc-premium .rc-summary-value .rc-sub { font-size: 11px; font-weight: 600; color: #9ca3af; }
-  .rc-premium .rc-summary-card.rc-blue { border-color: #bfdbfe; background: linear-gradient(135deg,#eff6ff,#f0f9ff); }
-  .rc-premium .rc-summary-card.rc-amber { border-color: #fde68a; background: linear-gradient(135deg,#fffbeb,#fef9c3); }
-  .rc-premium .rc-summary-card.rc-grade-card[data-grade="A+"], .rc-premium .rc-summary-card.rc-grade-card[data-grade="A"] { border-color: #86efac; background: linear-gradient(135deg,#ecfdf5,#f0fdf4); }
-  .rc-premium .rc-summary-card.rc-grade-card[data-grade="B+"], .rc-premium .rc-summary-card.rc-grade-card[data-grade="B"] { border-color: #93c5fd; background: linear-gradient(135deg,#eff6ff,#f0f9ff); }
-  .rc-premium .rc-summary-card.rc-grade-card[data-grade="C"] { border-color: #c4b5fd; background: linear-gradient(135deg,#f5f3ff,#faf5ff); }
-  .rc-premium .rc-summary-card.rc-grade-card[data-grade="D"], .rc-premium .rc-summary-card.rc-grade-card[data-grade="F"] { border-color: #fca5a5; background: linear-gradient(135deg,#fef2f2,#fff1f2); }
+  /* ══ Totals Bar ══ */
+  .rc-totals-bar {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border: 1.5px solid #166534;
+    border-top: none;
+    background: #ffffff;
+  }
+  .rc-total-item {
+    padding: 10px 8px;
+    text-align: center;
+    border-right: 1px solid #166534;
+  }
+  .rc-total-item:last-child {
+    border-right: none;
+  }
+  .rc-total-lbl {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #166534;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .rc-total-val {
+    font-size: 16px;
+    font-weight: 900;
+    color: #000000;
+  }
 
-  .rc-premium .rc-result-banner { margin: 0 22px 20px; padding: 12px; text-align: center; font-weight: 800; font-size: 13px; border-radius: 12px; border: 2px solid #d1d5db; color: #4b5563; background: #f9fafb; }
-  .rc-premium .rc-result-banner[data-result="PASSED"] { border-color: #86efac; color: #15803d; background: linear-gradient(90deg,#ecfdf5,#f0fdf4,#ecfdf5); }
-  .rc-premium .rc-result-banner[data-result="FAILED"] { border-color: #fca5a5; color: #b91c1c; background: linear-gradient(90deg,#fef2f2,#fff1f2,#fef2f2); }
+  /* ══ Remarks Strip ══ */
+  .rc-remarks-strip {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    border: 1.5px solid #166534;
+    border-top: none;
+    padding: 9px 14px;
+    background: #fafdfb;
+    font-size: 12.5px;
+  }
+  .rc-remarks-tag {
+    font-weight: 800;
+    color: #166534;
+    text-transform: uppercase;
+    font-size: 11.5px;
+    flex-shrink: 0;
+  }
+  .rc-remarks-text {
+    font-style: italic;
+    color: #1f2937;
+    font-weight: 600;
+  }
 
-  .rc-premium .rc-footer { text-align: center; font-size: 10px; color: #b0b4bd; padding: 0 22px 18px; }
+  /* ══ Signatures (Sticks to Page Bottom) ══ */
+  .rc-footer-sigs {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    margin-top: auto; /* Pushes signatures directly to bottom */
+    padding-top: 28px;
+    padding-left: 14px;
+    padding-right: 14px;
+    align-items: flex-end;
+  }
+  .rc-sig-box {
+    text-align: center;
+  }
+  .rc-seal-circle {
+    width: 80px;
+    height: 80px;
+    border: 2px dashed #166534;
+    border-radius: 50%;
+    margin: 0 auto 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 800;
+    color: #166534;
+    transform: rotate(-12deg);
+    opacity: 0.75;
+  }
+  .rc-sig-line {
+    width: 85%;
+    border-top: 1.5px solid #166534;
+    margin: 0 auto 6px;
+  }
+  .rc-sig-lbl {
+    font-size: 12px;
+    font-weight: 800;
+    color: #166534;
+    text-transform: uppercase;
+  }
 </style>
 
-  <div class="rc-accent-top"></div>
-
-  <!-- ══ School Header ══ -->
-  <div class="rc-header">
-    <div class="rc-blob-a"></div>
-    <div class="rc-blob-b"></div>
-    <div class="rc-logo">{{schoolInitials}}</div>
-    <h1 class="rc-school-name">{{schoolName}}</h1>
-    <p class="rc-school-meta">{{schoolAddress}}</p>
-    <div class="rc-exam-badge">★&nbsp; {{examTypeName}} — {{examName}} — {{className}} Report Card &nbsp;★</div>
+  <!-- Center Watermark -->
+  <div class="rc-watermark">
+    <img src="{{schoolLogo}}" alt="Watermark" onerror="this.style.display='none'">
   </div>
 
-  <!-- ══ Student Information ══ -->
-  <div class="rc-section">
-    <div class="rc-section-title"><span class="rc-bar"></span> Student Information</div>
-    <div class="rc-info-box">
-      <table style="width:100%;border-collapse:collapse;">
-        <tr class="rc-info-row">
-          <td style="width:50%;"><span class="rc-info-label">Student Name</span><span class="rc-info-value">{{studentName}}</span></td>
-          <td><span class="rc-info-label">Section</span><span class="rc-info-value">{{sectionName}}</span></td>
+  <!-- Header -->
+  <div class="rc-head-container">
+    <div class="rc-logo-box">
+      <img src="{{schoolLogo}}" alt="Logo" onerror="this.onerror=null;this.src='{{schoolLogoFallback}}'">
+    </div>
+    <div class="rc-title-center">
+      <h1 class="rc-school-name">{{schoolName}}</h1>
+      <div class="rc-school-sub">{{schoolBoard}}</div>
+      <div class="rc-school-address">📍 {{schoolAddress}}</div>
+      <div class="rc-session-badge">Annual Report Card : {{academicYear}}</div>
+    </div>
+    <div class="rc-logo-box">
+      <img src="{{studentPhoto}}" alt="Student" onerror="this.style.display='none'">
+    </div>
+  </div>
+
+  <!-- Student Info -->
+  <div class="rc-student-info">
+    <div class="rc-info-cell"><span class="rc-lbl">Student's Name:</span><span class="rc-val">{{studentName}}</span></div>
+    <div class="rc-info-cell"><span class="rc-lbl">Admission No:</span><span class="rc-val">{{admissionNumber}}</span></div>
+    <div class="rc-info-cell"><span class="rc-lbl">Father's Name:</span><span class="rc-val">{{parentName}}</span></div>
+    <div class="rc-info-cell"><span class="rc-lbl">Class & Section:</span><span class="rc-val">{{className}} - {{sectionName}}</span></div>
+    <div class="rc-info-cell"><span class="rc-lbl">Mother's Name:</span><span class="rc-val">{{motherName}}</span></div>
+    <div class="rc-info-cell"><span class="rc-lbl">Roll Number:</span><span class="rc-val">{{rollNo}}</span></div>
+    <div class="rc-info-cell full-width"><span class="rc-lbl">Residential Address:</span><span class="rc-val">{{studentAddress}}</span></div>
+  </div>
+
+  <!-- Marks Table -->
+  <div class="rc-table-container">
+    <table class="rc-marks-tbl">
+      <thead>
+        <tr>
+          <th style="width: 48px;">S.No.</th>
+          <th>Subject</th>
+          <th>Max</th>
+          <th>Theory</th>
+          <th>Practical</th>
+          <th>Total</th>
+          <th>Grade</th>
+          <th>Result</th>
         </tr>
-        <tr class="rc-info-row">
-          <td><span class="rc-info-label">Admission No.</span><span class="rc-info-value">{{admissionNumber}}</span></td>
-          <td><span class="rc-info-label">Roll No.</span><span class="rc-info-value">{{rollNo}}</span></td>
+      </thead>
+      <tbody>
+        {{#subjectMarks}}
+        <tr>
+          <td class="sno-cell"></td>
+          <td class="subject-name">{{subjectName}}</td>
+          <td>{{maxMarks}}</td>
+          <td>{{theoryMarks}}</td>
+          <td>{{practicalMarks}}</td>
+          <td style="color:#166534; font-weight: 900;">{{totalMarks}}</td>
+          <td>{{grade}}</td>
+          <td style="font-size: 11.5px;">{{status}}</td>
         </tr>
-        <tr class="rc-info-row">
-          <td><span class="rc-info-label">Class</span><span class="rc-info-value">{{className}}</span></td>
-          <td><span class="rc-info-label">Exam</span><span class="rc-info-value">{{examTypeName}}</span></td>
-        </tr>
-      </table>
+        {{/subjectMarks}}
+      </tbody>
+    </table>
+
+    <div class="rc-totals-bar">
+      <div class="rc-total-item"><div class="rc-total-lbl">Grand Total</div><div class="rc-total-val">{{totalMarksObtained}} / {{totalMaxMarks}}</div></div>
+      <div class="rc-total-item"><div class="rc-total-lbl">Percentage</div><div class="rc-total-val">{{percentage}}%</div></div>
+      <div class="rc-total-item"><div class="rc-total-lbl">Final Grade</div><div class="rc-total-val">{{overallGrade}}</div></div>
+      <div class="rc-total-item"><div class="rc-total-lbl">Rank</div><div class="rc-total-val">{{sectionRank}}</div></div>
+    </div>
+
+    <div class="rc-remarks-strip">
+      <span class="rc-remarks-tag">Teacher's Remarks:</span>
+      <span class="rc-remarks-text">{{remarks}}</span>
     </div>
   </div>
 
-  <!-- ══ Subject-wise Marks ══ -->
-  <!-- {{#subjectMarks}}...{{/subjectMarks}} repeats this row once per
-       subject returned by the report card API — add/remove subjects on
-       the backend and this table updates automatically, no template
-       edit needed. -->
-  <div class="rc-section" style="padding-top:0;">
-    <div class="rc-section-title"><span class="rc-bar"></span> Subject-wise Marks</div>
-    <div style="overflow-x:auto;border-radius:12px;border:1px solid #f1f2f6;">
-      <table class="rc-subjects">
-        <thead>
-          <tr>
-            <th>Subject</th>
-            <th>Max</th>
-            <th>Theory</th>
-            <th>Practical</th>
-            <th>Total</th>
-            <th>%</th>
-            <th>Grade</th>
-            <th>Remarks</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#subjectMarks}}
-          <tr>
-            <td>{{subjectName}}</td>
-            <td class="rc-max-cell">{{maxMarks}}</td>
-            <td>{{theoryMarks}}</td>
-            <td>{{practicalMarks}}</td>
-            <td style="font-weight:800;color:#111827;">{{totalMarks}}</td>
-            <td>
-              <span class="rc-bar-track"><span class="rc-bar-fill" data-grade="{{grade}}" style="width:{{percentage}}%;"></span></span>{{percentage}}%
-            </td>
-            <td><span class="rc-pill rc-grade-pill" data-grade="{{grade}}">{{grade}}</span></td>
-            <td class="rc-remarks-cell">{{remarks}}</td>
-            <td><span class="rc-pill rc-status-pill" data-status="{{status}}">{{status}}</span></td>
-          </tr>
-          {{/subjectMarks}}
-        </tbody>
-      </table>
+  <!-- Signatures Section -->
+  <div class="rc-footer-sigs">
+    <div class="rc-sig-box">
+      <div class="rc-seal-circle">SCHOOL SEAL</div>
+      <div class="rc-sig-lbl">School Seal</div>
+    </div>
+    <div class="rc-sig-box" style="display: flex; flex-direction: column; justify-content: flex-end;">
+      <div class="rc-sig-line"></div>
+      <div class="rc-sig-lbl">Class Teacher</div>
+    </div>
+    <div class="rc-sig-box" style="display: flex; flex-direction: column; justify-content: flex-end;">
+      <div class="rc-sig-line"></div>
+      <div class="rc-sig-lbl">Principal</div>
     </div>
   </div>
-
-  <!-- ══ Summary Cards ══ -->
-  <div class="rc-summary">
-    <div class="rc-summary-card">
-      <div class="rc-summary-label">Total Marks</div>
-      <div class="rc-summary-value">{{totalMarksObtained}} <span class="rc-sub">/ {{totalMaxMarks}}</span></div>
-    </div>
-    <div class="rc-summary-card rc-blue">
-      <div class="rc-summary-label">Percentage</div>
-      <div class="rc-summary-value">{{percentage}}%</div>
-    </div>
-    <div class="rc-summary-card rc-grade-card" data-grade="{{overallGrade}}">
-      <div class="rc-summary-label">Grade</div>
-      <div class="rc-summary-value">{{overallGrade}}</div>
-    </div>
-    <div class="rc-summary-card rc-amber">
-      <div class="rc-summary-label">Class Rank</div>
-      <div class="rc-summary-value">🏅 {{classRank}}</div>
-    </div>
-  </div>
-
-  <!-- ══ Result Banner ══ -->
-  <div class="rc-result-banner" data-result="{{resultStatus}}">
-    {{resultStatus}} — Section Rank {{sectionRank}}
-  </div>
-
-  <!-- Do NOT add a remarks or signature section here — the report card
-       screen already renders Teacher/Principal remarks (editable) and
-       signature lines below whatever template is used. Adding them
-       here would duplicate that section. -->
-
-  <div class="rc-footer">{{schoolName}} &middot; {{schoolBoard}} &middot; Generated on {{generatedAt}}</div>
 
 </div>`,
   },
@@ -348,20 +575,16 @@ export const TEMPLATE_TYPES = {
     label: 'Gate Pass Templates',
     shortLabel: 'Gate Pass',
     icon: DoorOpen,
-    // Student/receipt-style fields are merge-driven; the Reason checklist,
-    // leaving date/time, and all 4 signature boxes stay blank on purpose —
-    // this is a print-and-fill form, staff tick/sign it by hand at the gate.
     stub: `<div class="gp-premium"> 
 <style> 
   .gp-premium { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; max-width: 700px; margin: 0 auto; border: 2px solid #0f1e3d; border-radius: 14px; overflow: hidden; background: #ffffff; color: #1f2937; box-shadow: 0 12px 32px rgba(15,30,61,0.14); } 
  
-  .gp-header { display: flex; align-items: center; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid #e5e7eb; } 
+  .gp-header { display: flex; align-items: center; gap: 14px; padding: 18px 22px 14px; border-bottom: 1px solid #e5e7eb; } 
   .gp-logo { width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg,#0f1e3d,#1e3a8a); color: #fbbf24; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; border: 2px solid #fbbf24; overflow: hidden; } 
   .gp-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; } 
   .gp-school-block { flex: 1; min-width: 0; } 
-  .gp-school-name { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.2px; color: #0f1e3d; text-transform: uppercase; } 
-  .gp-school-tagline { margin: 1px 0 6px; font-size: 10.5px; font-style: italic; color: #6b7280; } 
-  .gp-school-meta { font-size: 10px; color: #4b5563; display: flex; flex-wrap: wrap; gap: 4px 14px; } 
+  .gp-school-name { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.2px; color: #0f1e3d; text-transform: uppercase; line-height: 1.2; } 
+  .gp-school-meta { font-size: 10.5px; color: #4b5563; display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; line-height: 1.4; } 
  
   .gp-pass-box { flex-shrink: 0; border: 1.5px solid #0f1e3d; border-radius: 10px; padding: 8px 14px; text-align: center; min-width: 118px; } 
   .gp-pass-box .gp-pb-label { font-size: 8px; font-weight: 800; letter-spacing: .06em; color: #6b7280; } 
@@ -395,64 +618,11 @@ export const TEMPLATE_TYPES = {
   .gp-instructions ul { margin: 0; padding-left: 16px; font-size: 11px; color: #374151; line-height: 1.9; } 
   .gp-instructions .gp-badge-icon { font-size: 38px; opacity: .12; flex-shrink: 0; } 
  
-  /* ══ Signatures ══ */
-  .gp-signatures { 
-    display: grid; 
-    grid-template-columns: repeat(4, minmax(0, 1fr)); 
-    gap: 10px; 
-    padding: 16px 22px 6px; 
-  } 
-  
-  .gp-sign-box { 
-    border: 1px solid #d1d5db; 
-    border-radius: 8px; 
-    padding: 20px 8px 8px; 
-    text-align: center; 
-    position: relative; 
-    min-height: 66px;
-    min-width: 0;
-  } 
-  
-  .gp-sign-box .gp-sign-title { 
-    position: absolute; 
-    top: 7px; 
-    left: 5px; 
-    right: 5px; 
-    font-size: 7.5px; 
-    font-weight: 800; 
-    text-transform: uppercase; 
-    letter-spacing: 0;
-    color: #6b7280; 
-    text-align: center;
-    white-space: nowrap;
-    overflow: visible;
-  } 
-  
-  .gp-sign-line { 
-    border-top: 1px solid #9ca3af; 
-    font-size: 9px; 
-    color: #6b7280; 
-    padding-top: 3px; 
-  } 
-  
-  .gp-stamp { 
-    position: absolute; 
-    bottom: 8px; 
-    right: 8px; 
-    width: 34px; 
-    height: 34px; 
-    border: 1.5px dashed #1e3a8a; 
-    border-radius: 50%; 
-    color: #1e3a8a; 
-    font-size: 6px; 
-    font-weight: 800; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    text-align: center; 
-    transform: rotate(-12deg); 
-    opacity: .55; 
-  } 
+  .gp-signatures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 16px 22px 6px; } 
+  .gp-sign-box { border: 1px solid #d1d5db; border-radius: 8px; padding: 20px 8px 8px; text-align: center; position: relative; min-height: 66px; min-width: 0; } 
+  .gp-sign-box .gp-sign-title { position: absolute; top: 7px; left: 5px; right: 5px; font-size: 7.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0; color: #6b7280; text-align: center; white-space: nowrap; } 
+  .gp-sign-line { border-top: 1px solid #9ca3af; font-size: 9px; color: #6b7280; padding-top: 3px; } 
+  .gp-stamp { position: absolute; bottom: 8px; right: 8px; width: 34px; height: 34px; border: 1.5px dashed #1e3a8a; border-radius: 50%; color: #1e3a8a; font-size: 6px; font-weight: 800; display: flex; align-items: center; justify-content: center; text-align: center; transform: rotate(-12deg); opacity: .55; } 
  
   .gp-footer { padding: 4px 22px 18px; font-size: 10px; color: #6b7280; display: flex; justify-content: space-between; align-items: center; gap: 10px; } 
   .gp-thankyou { font-family: Georgia, serif; font-style: italic; font-size: 15px; color: #0f1e3d; } 
@@ -465,6 +635,8 @@ export const TEMPLATE_TYPES = {
       <h1 class="gp-school-name">{{schoolName}}</h1> 
       <div class="gp-school-meta"> 
         <span>📍 {{schoolAddress}}</span> 
+        <span>📞 {{schoolPhone}}</span> 
+        <span>✉️ {{schoolEmail}}</span> 
       </div> 
     </div> 
     <div class="gp-pass-box"> 
@@ -749,19 +921,16 @@ export const TEMPLATE_TYPES = {
     label: "Visitor's Pass Templates",
     shortLabel: "Visitor's Pass",
     icon: UserCheck,
-    // Blue-themed print-and-fill pass. Vehicle Details and Remarks are
-    // optional-on-paper sections (staff fill only if applicable), so no
-    // {{#xxxRows}} conditionals needed — always rendered like GATE_PASS.
     stub: `<div class="vp-premium">
 <style>
   .vp-premium { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; max-width: 700px; margin: 0 auto; border: 2px solid #1e3a8a; border-radius: 14px; overflow: hidden; background: #ffffff; color: #1f2937; box-shadow: 0 12px 32px rgba(30,58,138,0.14); }
 
-  .vp-header { display: flex; align-items: center; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid #e5e7eb; }
+  .vp-header { display: flex; align-items: center; gap: 14px; padding: 18px 22px 14px; border-bottom: 1px solid #e5e7eb; }
   .vp-logo { width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg,#1e3a8a,#2563eb); color: #fbbf24; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; border: 2px solid #fbbf24; overflow: hidden; }
   .vp-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
   .vp-school-block { flex: 1; min-width: 0; }
-  .vp-school-name { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.2px; color: #1e3a8a; text-transform: uppercase; }
-  .vp-school-meta { font-size: 10px; color: #4b5563; display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; }
+  .vp-school-name { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.2px; color: #1e3a8a; text-transform: uppercase; line-height: 1.2; }
+  .vp-school-meta { font-size: 10.5px; color: #4b5563; display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; line-height: 1.4; }
 
   .vp-pass-box { flex-shrink: 0; border: 1.5px solid #1e3a8a; border-radius: 10px; padding: 8px 14px; text-align: center; min-width: 118px; }
   .vp-pass-box .vp-pb-label { font-size: 8px; font-weight: 800; letter-spacing: .06em; color: #6b7280; }
@@ -796,6 +965,11 @@ export const TEMPLATE_TYPES = {
     <div class="vp-logo"><img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.parentElement.textContent='{{schoolInitials}}'"></div>
     <div class="vp-school-block">
       <h1 class="vp-school-name">{{schoolName}}</h1>
+      <div class="vp-school-meta">
+        <span>📍 {{schoolAddress}}</span>
+        <span>📞 {{schoolPhone}}</span>
+        <span>✉️ {{schoolEmail}}</span>
+      </div>
     </div>
     <div class="vp-pass-box">
       <div class="vp-pb-label">PASS NO.</div>

@@ -278,30 +278,47 @@ export function renderTemplate(html, data = {}) {
     return out
 }
 
+// utils/TemplateStorage/Templateengine.js
+
 export function buildReportCardMergeData(student, school, remarksOverride = {}) {
-    const subjects = student?.subjectMarks ?? []
-    const pct = student?.percentage
-    const teacherRemarks = remarksOverride.teacherRemarks ?? student?.teacherRemarks ?? ''
-    const principalRemarks = remarksOverride.principalRemarks ?? student?.principalRemarks ?? ''
-    const schoolName = school?.name || 'School Name'
+    const subjects = student?.subjectMarks ?? [];
+    const pct = student?.percentage;
+    const resolvedAddress = student?.address || student?.studentAddress || '—';
+    const teacherRemarks = remarksOverride.teacherRemarks ?? student?.teacherRemarks ?? '';
+    const principalRemarks = remarksOverride.principalRemarks ?? student?.principalRemarks ?? '';
+    const schoolName = school?.schoolName || school?.name || 'School Name';
 
     return {
+        // School Details
         schoolName,
-        schoolAddress: school?.address || '',
-        schoolBoard: school?.board || '',
+        schoolAddress: school?.address || school?.schoolAddress || 'School Address Not Set',
+        schoolEmail: school?.email || school?.schoolEmail || '',
+        schoolPhone: school?.phone || school?.phoneNumber || school?.mobile || '',
+        schoolWebsite: school?.website || school?.schoolWebsite || '',
+        schoolBoard: school?.board || school?.schoolBoard || '',
+        schoolLogo: school?.logoUrl || school?.logo || school?.schoolLogo || '',
+        schoolLogoFallback: school?.logoFallback || school?.schoolLogo || '',
         schoolInitials: schoolName.split(' ').map((w) => w[0]).join('').slice(0, 3).toUpperCase(),
-
-        studentName: student?.studentName ?? '—',
+        
+        // Student Details & Photos
+        studentPhoto: student?.profileImageUrl || student?.photo || student?.studentPhoto || '',
+        studentName: student?.studentName || student?.name || '—',
+        parentName: student?.fatherName || student?.father || student?.parentName || '—',
+        fatherName: student?.fatherName || student?.father || student?.parentName || '—',
+        motherName: student?.motherName || student?.mother || '—',
+        address: resolvedAddress,
+        studentAddress: student?.address || student?.studentAddress || '—',
         className: student?.className ?? '—',
         sectionName: student?.sectionName ?? '—',
-        rollNo: student?.rollNumber ?? '—',
-        rollNumber: student?.rollNumber ?? '—',
-        admissionNumber: student?.admissionNumber ?? '—',
+        rollNo: student?.rollNumber ?? student?.rollNo ?? '—',
+        rollNumber: student?.rollNumber ?? student?.rollNo ?? '—',
+        admissionNumber: student?.admissionNumber ?? student?.admissionNo ?? '—',
         examName: student?.examName ?? '—',
         examTypeName: student?.examTypeName ?? '—',
-        academicYear: student?.academicYear ?? '',
-        dob: student?.dob ?? '',
+        academicYear: student?.academicYear || '2025-26',
+        dob: student?.dob || student?.dateOfBirth || '',
 
+        // Performance Totals
         totalMarksObtained: student?.totalMarksObtained ?? '—',
         totalMaxMarks: student?.totalMaxMarks ?? '—',
         percentage: pct != null ? Number(pct).toFixed(1) : '—',
@@ -312,17 +329,17 @@ export function buildReportCardMergeData(student, school, remarksOverride = {}) 
 
         teacherRemarks,
         principalRemarks,
-        remarks: teacherRemarks || principalRemarks || '',
+        remarks: teacherRemarks || principalRemarks || student?.remarks || 'Good Performance',
 
         generatedAt: student?.generatedAt
             ? new Date(student.generatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-            : '',
+            : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
 
         subjectMarks: subjects.map((s) => {
-            const max = s.maxMarks || 0
-            const scored = Number(s.totalMarks) || 0
-            const pctOfMax = !s.isAbsent && max > 0 ? Math.round((scored / max) * 100) : 0
-            const isPass = !s.isAbsent && max > 0 ? (scored / max) * 100 >= 33 : false
+            const max = s.maxMarks || 0;
+            const scored = Number(s.totalMarks) || 0;
+            const pctOfMax = !s.isAbsent && max > 0 ? Math.round((scored / max) * 100) : 0;
+            const isPass = !s.isAbsent && max > 0 ? (scored / max) * 100 >= 33 : false;
             return {
                 subjectName: s.subjectName ?? '',
                 theoryMarks: s.theoryMarks ?? '—',
@@ -333,7 +350,7 @@ export function buildReportCardMergeData(student, school, remarksOverride = {}) 
                 grade: s.isAbsent ? 'AB' : (s.grade ?? ''),
                 remarks: s.remarks || '—',
                 status: s.isAbsent ? 'Absent' : (isPass ? 'Pass' : 'Fail'),
-            }
+            };
         }),
-    }
+    };
 }

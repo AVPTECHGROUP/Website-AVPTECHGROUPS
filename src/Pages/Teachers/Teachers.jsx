@@ -29,6 +29,7 @@ const Teachers = () => {
   // Data State
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState(null);
 
   // Classes State
@@ -68,10 +69,10 @@ const Teachers = () => {
   // CHECK IF FILTERS ARE ACTIVE
   const hasActiveFilters = useMemo(() => {
     return (
-        debouncedSearch.trim() !== '' ||
-        statusFilter !== 'All Status' ||
-        classFilter !== 'All Classes' ||
-        salaryFilter !== 'All Salary Types'
+      debouncedSearch.trim() !== '' ||
+      statusFilter !== 'All Status' ||
+      classFilter !== 'All Classes' ||
+      salaryFilter !== 'All Salary Types'
     );
   }, [debouncedSearch, statusFilter, classFilter, salaryFilter]);
 
@@ -122,24 +123,21 @@ const Teachers = () => {
         name: teacher.fullName || 'Unknown',
         avatar: (teacher.fullName || 'U')[0].toUpperCase(),
         image:
-            teacher.profileImageUrl ||
-            teacher.imageUrl ||
-            teacher.profileImage ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                teacher.fullName || 'User'
-            )}&background=random`,
+          teacher.profileImageUrl ||
+          teacher.imageUrl ||
+          teacher.profileImage ||
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(
+            teacher.fullName || 'User'
+          )}&background=random`,
         role: teacher.designation || 'Teacher',
         mobile: teacher.mobile || 'N/A',
         classes: teacher.assignedClasses
-            ? teacher.assignedClasses.split(',').map((c) => c.trim())
-            : [],
+          ? teacher.assignedClasses.split(',').map((c) => c.trim())
+          : [],
         subjects: teacher.assignedSubjects
-            ? teacher.assignedSubjects.split(',').map((s) => s.trim())
-            : [],
+          ? teacher.assignedSubjects.split(',').map((s) => s.trim())
+          : [],
         designation: teacher.designation || 'Teacher',
-        // NOTE: assumed API field is `teacher.salaryType`. If your backend
-        // returns this under a different key (e.g. teacher.salary?.type or
-        // teacher.payType), update the line below to match.
         salaryType: teacher.salaryType || 'N/A',
         status: teacher.status || 'ACTIVE',
         attendance: teacher.attendanceAccessStatus || 'ALLOWED',
@@ -212,51 +210,99 @@ const Teachers = () => {
     return str;
   };
 
-  // ── EXPORT CSV LOGIC FOR TEACHERS ────────────────────────────────────────
-  const handleExportTeachersCSV = () => {
-    if (teachers.length === 0) {
-      toast.info(strings.TEACHERS_LIST.EXPORT_INFO);
+  // ── EXPORT CSV LOGIC FOR ALL FILTERED TEACHERS ───────────────────────────
+  const handleExportTeachersCSV = async () => {
+    if (totalElements === 0) {
+      toast.info(strings.TEACHERS_LIST.EXPORT_INFO || "No teachers available to export");
       return;
     }
 
-    // Header structure according to the table fields
-    const HEADERS = strings.TEACHERS_LIST.TABLE_HEADERS;
+    setIsExporting(true);
+    const exportToast = toast.loading("Fetching all filtered teacher records for export...");
 
-    // Mapping over current paginated mapped teachers array
-    // Column order matches TEACHERS_LIST.TABLE_HEADERS exactly:
-    // Full Name, Employee Code, Designation/Role, Mobile Number,
-    // Assigned Classes, Salary Type, Status, Attendance Access,
-    // Payroll Status, Joining Date
-    const dataRows = teachers.map((t) =>
-        [
-          csvCell(t.name),
-          csvCell(t.employeeCode),
-          csvCell(t.designation),
-          csvCell(t.mobile),
-          csvCell(t.classes.join(' | ')), // Multiple classes separated by pipe operator
-          csvCell(t.salaryType),
-          csvCell(t.status),
-          csvCell(t.attendance),
-          csvCell(t.payroll),
-          csvCell(t.joiningDate),
-        ].join(',')
-    );
+    try {
+      const fetchLimit = Math.max(totalElements, 5000);
+      let res;
 
-    const csvString = [HEADERS.join(','), ...dataRows].join('\n');
-    const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
+      if (hasActiveFilters) {
+        const filters = {};
+        if (debouncedSearch.trim()) filters.searchTerm = debouncedSearch.trim();
+        if (statusFilter !== 'All Status') filters.status = statusFilter.toUpperCase();
+        if (classFilter !== 'All Classes') {
+          filters.classId = Number(classFilter);
+        }
+        if (salaryFilter !== 'All Salary Types') {
+          const salaryMap = {
+            'Monthly': 'MONTHLY',
+            'Per Day': 'PER_DAY',
+          };
+          filters.salaryType = salaryMap[salaryFilter];
+        }
 
-    const date = new Date().toISOString().slice(0, 10);
-    anchor.href = url;
-    anchor.download = `teachers_page${page}of${totalPages}_${rowsPerPage}rows_${date}.csv`;
+        res = await searchTeachers(filters, 0, fetchLimit);
+      } else {
+        res = await getTeachers(0, fetchLimit);
+      }
 
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
+      const allTeachers = res?.data || [];
 
-    toast.success(strings.TEACHERS_LIST.EXPORT_SUCCESS.replace('{count}', teachers.length).replace('{plural}', teachers.length !== 1 ? 's' : '').replace('{page}', page).replace('{totalPages}', totalPages));
+      if (allTeachers.length === 0) {
+        toast.dismiss(exportToast);
+        toast.warning("No teacher records found to export.");
+        return;
+      }
+
+      const HEADERS = strings.TEACHERS_LIST.TABLE_HEADERS;
+
+      const dataRows = allTeachers.map((t) => {
+        const assignedClasses = t.assignedClasses
+          ? (Array.isArray(t.assignedClasses) ? t.assignedClasses.join(' | ') : String(t.assignedClasses).split(',').map((c) => c.trim()).join(' | '))
+          : '';
+
+        return [
+          csvCell(t.fullName || t.name || 'Unknown'),
+          csvCell(t.employeeCode || 'N/A'),
+          csvCell(t.designation || 'Teacher'),
+          csvCell(t.mobile || 'N/A'),
+          csvCell(assignedClasses),
+          csvCell(t.salaryType || 'N/A'),
+          csvCell(t.status || 'ACTIVE'),
+          csvCell(t.attendanceAccessStatus || t.attendance || 'ALLOWED'),
+          csvCell(t.payrollStatus || t.payroll || 'INCLUDED'),
+          csvCell(t.joiningDate || 'N/A'),
+        ].join(',');
+      });
+
+      const csvString = [HEADERS.join(','), ...dataRows].join('\n');
+      const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+
+      const date = new Date().toISOString().slice(0, 10);
+      let fileName = `Teachers_Export_${allTeachers.length}_Records_${date}.csv`;
+
+      if (classFilter !== 'All Classes') {
+        const selectedCls = classes.find((c) => String(c.id) === String(classFilter));
+        const clsLabel = (selectedCls?.name || `Class_${classFilter}`).replace(/[^a-zA-Z0-9_-]/g, '_');
+        fileName = `Teachers_${clsLabel}_${allTeachers.length}_Records_${date}.csv`;
+      }
+
+      anchor.href = url;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+
+      toast.dismiss(exportToast);
+      toast.success(`Successfully exported ${allTeachers.length} teacher record${allTeachers.length !== 1 ? 's' : ''}!`);
+    } catch (err) {
+      console.error("Export Teachers Error:", err);
+      toast.dismiss(exportToast);
+      toast.error(err.message || "Failed to export teacher records.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   useEffect(() => {
@@ -285,63 +331,63 @@ const Teachers = () => {
   };
 
   return (
-      <div className="flex h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
-        <div ref={scrollContainerRef} className="flex-1 overflow-auto w-0">
+    <div className="flex h-screen overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
+      <div ref={scrollContainerRef} className="flex-1 overflow-auto w-0">
 
-          <TeachersHeader stats={stats} loading={statsLoading} />
+        <TeachersHeader stats={stats} loading={statsLoading} />
 
-          <div className="flex-1 overflow-auto p-4 pt-0 sm:p-5 sm:pt-0 lg:p-4 lg:pt-0">
-            <div className="flex items-center gap-2">
-              {/* Passed handleExportTeachersCSV handler into QuickActions component */}
-              <QuickActions
-                  teacherId={selectedTeacher?.id ?? null}
-                  onResetPassword={() => setIsResetOpen(true)}
-                  onExportCSV={handleExportTeachersCSV}
-              />
-            </div>
-
-            <TeachersFilters
-                search={search}
-                setSearch={setSearch}
-                statusFilter={statusFilter}
-                setStatusFilter={setStatusFilter}
-                classFilter={classFilter}
-                setClassFilter={setClassFilter}
-                salaryFilter={salaryFilter}
-                setSalaryFilter={setSalaryFilter}
-                setPage={setPage}
-                classes={classes}
-            />
-
-            <TeachersTable
-                selectedTeacherId={selectedTeacher?.id ?? null}
-                onRowSelect={handleRowSelect}
-                assignTeacherId={() => { }}
-                teachers={teachers}
-                setTeachers={setTeachers}
-                loading={loading}
-                error={error}
-                page={page}
-                setPage={setPage}
-                rowsPerPage={rowsPerPage}
-                setRowsPerPage={setRowsPerPage}
-                totalElements={totalElements}
-                totalPages={totalPages}
-                fetchTeachers={fetchTeachers}
-                onStatusToggle={updateStatisticsOptimistically}
+        <div className="flex-1 overflow-auto p-4 pt-0 sm:p-5 sm:pt-0 lg:p-4 lg:pt-0">
+          <div className="flex items-center gap-2">
+            <QuickActions
+              teacherId={selectedTeacher?.id ?? null}
+              onResetPassword={() => setIsResetOpen(true)}
+              onExportCSV={handleExportTeachersCSV}
+              isExporting={isExporting}
             />
           </div>
 
-          <PasswordResetModal
-              isOpen={isResetOpen}
-              onClose={() => setIsResetOpen(false)}
-              userName={selectedTeacher?.name}
-              onReset={() => resetPassword(selectedTeacher?.userId)}
-              currUserId={selectedTeacher?.userId}
+          <TeachersFilters
+            search={search}
+            setSearch={setSearch}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            classFilter={classFilter}
+            setClassFilter={setClassFilter}
+            salaryFilter={salaryFilter}
+            setSalaryFilter={setSalaryFilter}
+            setPage={setPage}
+            classes={classes}
           />
 
+          <TeachersTable
+            selectedTeacherId={selectedTeacher?.id ?? null}
+            onRowSelect={handleRowSelect}
+            assignTeacherId={() => { }}
+            teachers={teachers}
+            setTeachers={setTeachers}
+            loading={loading}
+            error={error}
+            page={page}
+            setPage={setPage}
+            rowsPerPage={rowsPerPage}
+            setRowsPerPage={setRowsPerPage}
+            totalElements={totalElements}
+            totalPages={totalPages}
+            fetchTeachers={fetchTeachers}
+            onStatusToggle={updateStatisticsOptimistically}
+          />
         </div>
+
+        <PasswordResetModal
+          isOpen={isResetOpen}
+          onClose={() => setIsResetOpen(false)}
+          userName={selectedTeacher?.name}
+          onReset={() => resetPassword(selectedTeacher?.userId)}
+          currUserId={selectedTeacher?.userId}
+        />
+
       </div>
+    </div>
   );
 };
 
