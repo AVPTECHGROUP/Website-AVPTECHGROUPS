@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { X, Printer, Medal, CheckCircle, XCircle, Award, BookOpen, Star, Loader2 } from "lucide-react";
+import { X, Printer, CheckCircle, BookOpen, Loader2 } from "lucide-react";
 import { updateReportCardRemarks } from "../../Api/Academics/Exams";
 import { getDefaultPrintTemplate } from "../../Api/PrintTemplate/PrintTemplatesApi";
 import { EXAM_CONSTS } from "../../Constants/StringConstants/AcademicsConstants";
 import { getCachedDefaultTemplate, cacheDefaultTemplate, clearCachedDefaultTemplate } from "../../utils/TemplateStorage/templateCache";
 import { renderTemplate, buildReportCardMergeData } from "../../utils/TemplateStorage/Templateengine";
 
-// ─── Grade helper ─────────────────────────────────────────────────────────────
+import { useDecodedUser } from "../../ContextAPI/UserContext";
+import { getSchoolById } from "../../Api/SchoolConfiguration/Schools";
+import { getStudentById } from "../../Api/Students/StudentsApi";
+
 function getGrade(pct) {
     if (pct >= 91) return { label: "A+", color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-300", bar: "bg-emerald-500" };
     if (pct >= 81) return { label: "A", color: "text-green-700", bg: "bg-green-50", border: "border-green-300", bar: "bg-green-500" };
@@ -17,33 +20,24 @@ function getGrade(pct) {
     return { label: "F", color: "text-red-700", bg: "bg-red-50", border: "border-red-300", bar: "bg-red-500" };
 }
 
-function getSchoolInfo() {
-    try {
-        const school = JSON.parse(localStorage.getItem("school"));
-        return {
-            name: school?.schoolName || EXAM_CONSTS.STUDENT_REPORT.FALLBACK_SCHOOL,
-            address: school?.address || "",
-            board: school?.board || EXAM_CONSTS.STUDENT_REPORT.FALLBACK_BOARD,
-            logoUrl: school?.logoUrl || null,
-        };
-    } catch {
-        return { name: EXAM_CONSTS.STUDENT_REPORT.FALLBACK_SCHOOL, address: "", board: EXAM_CONSTS.STUDENT_REPORT.FALLBACK_BOARD, logoUrl: null };
-    }
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
 export default function StudentReportCard({ student, examId, onClose, onUpdateRemarks }) {
-    const school = getSchoolInfo();
+    // Context se academic year aur schoolId le rahe hain
+    const { schoolId, schoolInfo: cachedSchool, currentAcademicYear } = useDecodedUser();
 
-    const subjects = student?.subjectMarks ?? [];
-    const pct = student?.percentage ?? 0;
-    const overallGrade = getGrade(Number(pct));
-    const isPassed = student?.isPassed ?? false;
-    const isAbsent = subjects.length > 0 && subjects.every((s) => s.isAbsent);
+    // School State (Default local storage fallback)
+    const [schoolDetails, setSchoolDetails] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem("school")) || null;
+        } catch {
+            return null;
+        }
+    });
 
-    const initials = school.name.split(" ").map((w) => w[0]).join("").slice(0, 3).toUpperCase();
+    // Student Full Profile State (Photo, Father, Mother etc.)
+    const [studentProfile, setStudentProfile] = useState(null);
+    const [profileLoading, setProfileLoading] = useState(false);
 
-    // ── Remarks edit state ────────────────────────────────────────────────────
+    // Remarks edit state
     const [editingRemarks, setEditingRemarks] = useState(false);
     const [teacherRemarks, setTeacherRemarks] = useState(student?.teacherRemarks ?? "");
     const [principalRemarks, setPrincipalRemarks] = useState(student?.principalRemarks ?? "");
@@ -51,14 +45,60 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
     const [remarksError, setRemarksError] = useState(null);
     const [remarksSaved, setRemarksSaved] = useState(false);
 
-    // ── Default print template ──────────────────────────────────────────────
-    // Source of truth is always the API (so every user/browser sees whatever
-    // is currently set as default on the backend). The localStorage cache is
-    // only used for an instant first paint and as an offline fallback if the
-    // API call fails — it is refreshed every time this screen opens.
+    // Template state
     const [defaultTemplate, setDefaultTemplate] = useState(() => getCachedDefaultTemplate("REPORT_CARD"));
     const [templateLoading, setTemplateLoading] = useState(() => !getCachedDefaultTemplate("REPORT_CARD"));
 
+    // --- 1. CALL getSchoolById ---
+    useEffect(() => {
+        const targetId = schoolId || cachedSchool?.id || schoolDetails?.id;
+        if (!targetId) return;
+
+        let isMounted = true;
+        getSchoolById(targetId)
+            .then((res) => {
+                const data = res?.data || res;
+                if (isMounted && data) {
+                    setSchoolDetails(data);
+                }
+            })
+            .catch((err) => {
+                console.error("Failed to load school details via getSchoolById:", err);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [schoolId, cachedSchool?.id]);
+
+    // --- 2. CALL getStudentById (Tap/Modal open hote hi) ---
+    useEffect(() => {
+        const studentIdentifier = student?.studentId || student?.id;
+        if (!studentIdentifier) return;
+
+        let isMounted = true;
+        setProfileLoading(true);
+
+        getStudentById(studentIdentifier)
+            .then((res) => {
+                const data = res?.data || res;
+                if (isMounted && data) {
+                    setStudentProfile(data);
+                }
+            })
+            .catch((err) => {
+                console.error("Failed to fetch student details via getStudentById:", err);
+            })
+            .finally(() => {
+                if (isMounted) setProfileLoading(false);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [student?.studentId, student?.id]);
+
+    // --- 3. FETCH PRINT TEMPLATE ---
     useEffect(() => {
         let cancelled = false;
         getDefaultPrintTemplate("REPORT_CARD")
@@ -72,22 +112,98 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                     clearCachedDefaultTemplate("REPORT_CARD");
                 }
             })
-            .catch(() => {
-                // Offline / request failed — keep whatever we already have
-                // (cached copy, or nothing, in which case the built-in
-                // design below is used instead).
-            })
+            .catch(() => { })
             .finally(() => {
                 if (!cancelled) setTemplateLoading(false);
             });
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
+    // School object format normalize
+    const normalizedSchool = useMemo(() => {
+        const effective = schoolDetails || cachedSchool || {};
+        return {
+            name: effective?.schoolName || effective?.name || EXAM_CONSTS?.STUDENT_REPORT?.FALLBACK_SCHOOL || "School Name",
+            address: effective?.address || effective?.schoolAddress || "",
+            website: effective?.website || effective?.schoolWebsite || "",
+            email: effective?.email || effective?.schoolEmail || "",
+            phone: effective?.phone || effective?.phoneNumber || effective?.mobile || "",
+            board: effective?.board || effective?.schoolBoard || EXAM_CONSTS?.STUDENT_REPORT?.FALLBACK_BOARD || "",
+            logoUrl: effective?.logoUrl || effective?.logo || effective?.schoolLogo || null,
+        };
+    }, [schoolDetails, cachedSchool]);
+
+    // Academic Year String resolution from UserContext
+    const academicYearStr = useMemo(() => {
+        if (typeof currentAcademicYear === "string") return currentAcademicYear;
+        return (
+            currentAcademicYear?.name ||
+            currentAcademicYear?.year ||
+            currentAcademicYear?.academicYear ||
+            student?.academicYear ||
+            "2025-26"
+        );
+    }, [currentAcademicYear, student?.academicYear]);
+
+    // Enriched student details (Student exam data + API profile data + Academic Year)
+    const enrichedStudent = useMemo(() => {
+        // API ke personalDetails ke andar se address nikalna
+        const resolvedAddress =
+            studentProfile?.personalDetails?.address ||
+            studentProfile?.address ||
+            studentProfile?.currentAddress ||
+            studentProfile?.permanentAddress ||
+            student?.address ||
+            "—";
+
+        return {
+            ...student,
+            profileImageUrl:
+                studentProfile?.profileImageUrl ||
+                studentProfile?.photo ||
+                studentProfile?.avatar ||
+                student?.profileImageUrl ||
+                "",
+            fatherName:
+                studentProfile?.fatherName ||
+                studentProfile?.father ||
+                studentProfile?.parentName ||
+                student?.fatherName ||
+                student?.parentName ||
+                "—",
+            motherName:
+                studentProfile?.motherName ||
+                studentProfile?.mother ||
+                student?.motherName ||
+                "—",
+            address: resolvedAddress,
+            studentAddress: resolvedAddress, // Dono keys provide kar di
+            admissionNumber:
+                studentProfile?.admissionNumber ||
+                studentProfile?.admissionNo ||
+                student?.admissionNumber ||
+                "—",
+            dob:
+                studentProfile?.personalDetails?.dateOfBirth ||
+                studentProfile?.dob ||
+                studentProfile?.dateOfBirth ||
+                student?.dob ||
+                "",
+            academicYear: academicYearStr,
+        };
+    }, [student, studentProfile, academicYearStr]);
+
+    // Template compile with all merge data
     const mergedTemplateHtml = useMemo(() => {
         if (!defaultTemplate?.templateHtml) return null;
-        const data = buildReportCardMergeData(student, school, { teacherRemarks, principalRemarks });
+        const data = buildReportCardMergeData(enrichedStudent, normalizedSchool, {
+            teacherRemarks,
+            principalRemarks,
+        });
         return renderTemplate(defaultTemplate.templateHtml, data);
-    }, [defaultTemplate, student, school, teacherRemarks, principalRemarks]);
+    }, [defaultTemplate, enrichedStudent, normalizedSchool, teacherRemarks, principalRemarks]);
 
     const handleSaveRemarks = async () => {
         setSavingRemarks(true);
@@ -96,12 +212,12 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
         try {
             await updateReportCardRemarks(
                 examId ?? student?.examId,
-                student.studentId,
+                student.studentId || student.id,
                 { teacherRemarks, principalRemarks }
             );
             setRemarksSaved(true);
             setEditingRemarks(false);
-            onUpdateRemarks?.(student.studentId, { teacherRemarks, principalRemarks });
+            onUpdateRemarks?.(student.studentId || student.id, { teacherRemarks, principalRemarks });
         } catch (err) {
             setRemarksError(err.message ?? "Failed to save remarks.");
         } finally {
@@ -109,48 +225,51 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
         }
     };
 
-    // ─────────────────────────────────────────────────────────────────────────
+    const isInitialLoading = (templateLoading && !defaultTemplate) || profileLoading;
+
     return (
         <>
             <style>{`
-                @media print {
-                    /* Hide everything first */
-                    body * { visibility: hidden !important; }
+                @page {
+                    size: A4 portrait;
+                    margin: 0mm !important;
+                }
 
-                    /* Make only the report content visible */
+                @media print {
+                    body * { visibility: hidden !important; }
                     .rc-print-content,
                     .rc-print-content * { visibility: visible !important; }
 
-                    /* Stretch the content to fill the printed page */
                     .rc-print-content {
-                        position: fixed !important;
-                        inset: 0 !important;
-                        z-index: 99999 !important;
-                        background: white !important;
+                        position: absolute !important;
+                        left: 0 !important;
+                        top: 0 !important;
+                        width: 100% !important;
+                        margin: 0 !important;
+                        padding: 10mm !important;
+                        background: #fff !important;
                         overflow: visible !important;
                         height: auto !important;
                         max-height: none !important;
-                        padding: 16px !important;
+                        box-sizing: border-box !important;
                     }
 
-                    /* Remove scroll clipping so nothing gets cut off */
+                    .rc-no-print,
+                    .rc-no-print * {
+                        display: none !important;
+                        visibility: hidden !important;
+                    }
+
                     .rc-scroll {
                         overflow: visible !important;
                         height: auto !important;
                         max-height: none !important;
                     }
 
-                    /* Hide the sticky header and footer (buttons etc.) */
-                    .rc-no-print {
-                        display: none !important;
-                        visibility: hidden !important;
-                    }
-
-                    /* Prevent subject rows splitting across pages */
                     tr { page-break-inside: avoid; }
                 }
 
-                .rc-custom-template { padding: 4px; }
+                .rc-custom-template { padding: 0; }
                 @media print {
                     .rc-custom-template { border: none !important; padding: 0 !important; }
                 }
@@ -164,19 +283,21 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
 
             <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm sm:p-4 overflow-y-auto">
                 <div
-                    className="rc-root bg-white w-full sm:rounded-2xl sm:shadow-2xl sm:max-w-2xl flex flex-col rounded-t-2xl"
+                    className="rc-root bg-white w-full sm:rounded-2xl sm:shadow-2xl sm:max-w-3xl flex flex-col rounded-t-2xl"
                     style={{ maxHeight: "96vh", height: "100vh" }}
                 >
-                    {/* ── Sticky Header ── */}
-                    <div className="rc-no-print flex items-center justify-between px-4 sm:px-6 py-3 sm:py-3.5 border-b border-gray-100 shrink-0 rounded-t-2xl bg-white z-10">
+                    {/* Sticky Header */}
+                    <div className="rc-no-print flex items-center justify-between px-4 sm:px-6 py-3 border-b border-gray-100 shrink-0 rounded-t-2xl bg-white z-10">
                         <div className="flex items-center gap-2">
-                            <BookOpen className="w-4 h-4 text-indigo-500" />
-                            <span className="text-sm font-semibold text-gray-800">{EXAM_CONSTS.STUDENT_REPORT.TITLE}</span>
+                            <BookOpen className="w-4 h-4 text-emerald-600" />
+                            <span className="text-sm font-semibold text-gray-800">
+                                {EXAM_CONSTS?.STUDENT_REPORT?.TITLE || "Student Report Card"}
+                            </span>
                             <span className="hidden sm:inline text-xs text-gray-400 truncate max-w-[180px]">
-                                — {student?.studentName}
+                                — {enrichedStudent?.studentName}
                             </span>
                             {defaultTemplate && (
-                                <span className="rc-no-print hidden md:inline-flex items-center gap-1 text-[10px] font-bold text-purple-600 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full">
+                                <span className="hidden md:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
                                     {defaultTemplate.templateName}
                                 </span>
                             )}
@@ -184,10 +305,12 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => window.print()}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg shadow-sm transition-all"
                             >
                                 <Printer className="w-3.5 h-3.5" />
-                                <span className="hidden sm:inline">{EXAM_CONSTS.STUDENT_REPORT.BTN_PRINT}</span>
+                                <span className="hidden sm:inline">
+                                    {EXAM_CONSTS?.STUDENT_REPORT?.BTN_PRINT || "Print"}
+                                </span>
                             </button>
                             <button
                                 onClick={onClose}
@@ -198,266 +321,83 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                         </div>
                     </div>
 
-                    {/* ── Scrollable Content (this is what gets printed) ── */}
+                    {/* Scrollable Printable Area */}
                     <div className="rc-scroll rc-print-content overflow-y-auto flex-1">
                         <div className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
-
-                            {templateLoading && !defaultTemplate ? (
-                                /* ══ First load in this browser — waiting on the live default-template check ══ */
+                            {isInitialLoading ? (
                                 <div className="rc-no-print flex flex-col items-center justify-center gap-2 text-sm text-gray-400 py-16">
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    Loading report card template…
+                                    <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+                                    Loading student profile & template details…
                                 </div>
                             ) : mergedTemplateHtml ? (
-                                /* ══ Custom default template — themed HTML, filled with live API data ══ */
                                 <div
-                                    className="rc-custom-template rounded-2xl border border-gray-100 overflow-hidden bg-white"
+                                    className="rc-custom-template rounded-xl overflow-hidden bg-white"
                                     dangerouslySetInnerHTML={{ __html: mergedTemplateHtml }}
                                 />
                             ) : (
+                                /* Direct fallback if no template is saved */
                                 <>
-                                    {/* ══ School Header ══ */}
-                                    <div
-                                        className="relative rounded-2xl border-2 border-indigo-200 overflow-hidden"
-                                        style={{ background: "linear-gradient(135deg,#eef2ff 0%,#f0f9ff 60%,#faf5ff 100%)" }}
-                                    >
-                                        <div className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-30 blur-3xl"
-                                            style={{ background: "radial-gradient(circle,#818cf8,transparent)" }} />
-                                        <div className="absolute bottom-0 left-0 w-28 h-28 rounded-full opacity-20 blur-2xl"
-                                            style={{ background: "radial-gradient(circle,#38bdf8,transparent)" }} />
-                                        <div className="h-2 w-full" style={{ background: "linear-gradient(90deg,#6366f1,#3b82f6,#06b6d4)" }} />
-                                        <div className="relative px-4 sm:px-5 py-4 sm:py-5 text-center">
-                                            <div className="flex justify-center mb-3">
-                                                {school.logoUrl ? (
-                                                    <img src={school.logoUrl} alt="Logo"
-                                                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-contain bg-white border-2 border-indigo-200 shadow-lg p-1"
-                                                        onError={(e) => { e.currentTarget.style.display = "none"; }}
-                                                    />
-                                                ) : (
-                                                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shadow-lg border-2 border-indigo-300"
-                                                        style={{ background: "linear-gradient(135deg,#6366f1,#3b82f6)" }}>
-                                                        <span className="text-white text-base sm:text-lg font-black tracking-tight">{initials}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <h1 className="text-base sm:text-lg lg:text-2xl font-black text-gray-900 tracking-tight leading-tight">{school.name}</h1>
-                                            {school.address && <p className="text-xs text-gray-400 mt-0.5">{school.address} &middot; {school.board}</p>}
-                                            <div className="mt-3 inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-1.5 rounded-full text-xs sm:text-sm font-bold text-white shadow-md"
-                                                style={{ background: "linear-gradient(90deg,#6366f1,#3b82f6)" }}>
-                                                <Star className="w-3 h-3" />
-                                                <span className="hidden sm:inline">{student?.examTypeName} — {student?.examName} {EXAM_CONSTS.STUDENT_REPORT.TITLE}</span>
-                                                <span className="sm:hidden">{student?.examTypeName}</span>
-                                                <Star className="w-3 h-3" />
-                                            </div>
-                                        </div>
-                                        <div className="h-1 w-full opacity-40" style={{ background: "linear-gradient(90deg,#6366f1,#3b82f6,#06b6d4)" }} />
+                                    <div className="relative rounded-2xl border-2 border-emerald-200 p-5 text-center bg-emerald-50/50">
+                                        <h1 className="text-xl font-black text-gray-900">{normalizedSchool.name}</h1>
+                                        <p className="text-xs text-gray-500">{normalizedSchool.address}</p>
+                                        <p className="text-xs text-gray-400">
+                                            {normalizedSchool.phone && `Tel: ${normalizedSchool.phone} `}
+                                            {normalizedSchool.email && `| Email: ${normalizedSchool.email} `}
+                                            {normalizedSchool.website && `| Web: ${normalizedSchool.website}`}
+                                        </p>
                                     </div>
-
-                                    {/* ══ Student Info ══ */}
-                                    <div className="rounded-xl border-2 border-gray-100 overflow-hidden">
-                                        <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-100">
-                                            <div className="w-1.5 h-4 rounded-full bg-indigo-500" />
-                                            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">{EXAM_CONSTS.STUDENT_REPORT.INFO_TITLE}</p>
-                                        </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
-                                            <div className="p-3 sm:p-4 space-y-2 sm:space-y-2.5">
-                                                {[
-                                                    [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[0], student?.studentName ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
-                                                    [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[1], student?.admissionNumber ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
-                                                    [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[2], student?.className ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
-                                                ].map(([label, val]) => (
-                                                    <div key={label} className="flex items-start sm:items-center gap-2">
-                                                        <span className="text-[11px] font-semibold text-indigo-400 w-24 sm:w-28 shrink-0 pt-0.5 sm:pt-0">{label}</span>
-                                                        <span className="text-sm font-bold text-gray-800">{val}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <div className="p-3 sm:p-4 space-y-2 sm:space-y-2.5">
-                                                {[
-                                                    [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[3], student?.sectionName ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
-                                                    [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[4], student?.rollNumber ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
-                                                    [EXAM_CONSTS.STUDENT_REPORT.INFO_LABELS[5], student?.examTypeName ?? student?.examName ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH],
-                                                ].map(([label, val]) => (
-                                                    <div key={label} className="flex items-start sm:items-center gap-2">
-                                                        <span className="text-[11px] font-semibold text-indigo-400 w-24 sm:w-28 shrink-0 pt-0.5 sm:pt-0">{label}</span>
-                                                        <span className="text-sm font-bold text-gray-800">{val}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* ══ Marks Table ══ */}
-                                    <div className="rounded-xl border-2 border-indigo-100 overflow-hidden">
-                                        <div className="flex items-center gap-2 px-4 py-2 border-b border-indigo-100"
-                                            style={{ background: "linear-gradient(90deg,#eef2ff,#eff6ff)" }}>
-                                            <div className="w-1.5 h-4 rounded-full bg-indigo-500" />
-                                            <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest">{EXAM_CONSTS.STUDENT_REPORT.MARKS_TITLE}</p>
-                                        </div>
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full text-sm min-w-[460px]">
-                                                <thead>
-                                                    <tr style={{ background: "linear-gradient(90deg,#6366f1,#3b82f6)" }}>
-                                                        {EXAM_CONSTS.STUDENT_REPORT.HEADERS.map((h) => (
-                                                            <th key={h} className="text-left px-2.5 sm:px-3 py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold text-white uppercase tracking-wider whitespace-nowrap">
-                                                                {h}
-                                                            </th>
-                                                        ))}
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {subjects.length === 0 ? (
-                                                        <tr>
-                                                            <td colSpan={8} className="text-center text-xs text-gray-400 py-6">
-                                                                {EXAM_CONSTS.STUDENT_REPORT.NO_MARKS}
-                                                            </td>
-                                                        </tr>
-                                                    ) : subjects.map((sub, i) => {
-                                                        const subPct = sub.maxMarks
-                                                            ? Math.round((sub.totalMarks / sub.maxMarks) * 100)
-                                                            : 0;
-                                                        const g = getGrade(subPct);
-                                                        const pass = !sub.isAbsent && sub.totalMarks >= (sub.passingMarks ?? 0);
-
-                                                        return (
-                                                            <tr key={`${sub.subjectId}-${i}`}
-                                                                className={`border-t border-gray-100 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/60"} hover:bg-indigo-50/30 transition-colors`}>
-                                                                <td className="px-2.5 sm:px-3 py-2 sm:py-2.5 font-semibold text-gray-800 whitespace-nowrap">
-                                                                    {sub.subjectName}
-                                                                </td>
-                                                                <td className="px-2.5 sm:px-3 py-2 text-gray-400 text-xs">{sub.maxMarks}</td>
-                                                                <td className="px-2.5 sm:px-3 py-2 text-gray-500 text-xs">
-                                                                    {sub.isAbsent ? <span className="text-blue-400 font-semibold">{EXAM_CONSTS.STUDENT_REPORT.ABSENT_MARK}</span>
-                                                                        : sub.theoryMarks != null ? sub.theoryMarks
-                                                                            : <span className="text-gray-200">{EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}</span>}
-                                                                </td>
-                                                                <td className="px-2.5 sm:px-3 py-2 text-gray-500 text-xs">
-                                                                    {sub.isAbsent ? <span className="text-blue-400 font-semibold">{EXAM_CONSTS.STUDENT_REPORT.ABSENT_MARK}</span>
-                                                                        : sub.practicalMarks != null ? sub.practicalMarks
-                                                                            : <span className="text-gray-200">{EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}</span>}
-                                                                </td>
-                                                                <td className="px-2.5 sm:px-3 py-2">
-                                                                    <span className="font-extrabold text-gray-900">
-                                                                        {sub.isAbsent ? <span className="text-blue-400 font-semibold">{EXAM_CONSTS.STUDENT_REPORT.ABSENT_MARK}</span> : sub.totalMarks}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="px-2.5 sm:px-3 py-2">
-                                                                    <div className="flex items-center gap-1 sm:gap-1.5">
-                                                                        <div className="w-6 sm:w-8 h-1.5 rounded-full bg-gray-100 overflow-hidden hidden sm:block shrink-0">
-                                                                            <div className={`h-full rounded-full ${g.bar}`} style={{ width: `${subPct}%` }} />
-                                                                        </div>
-                                                                        <span className="text-xs font-semibold text-gray-600">
-                                                                            {sub.isAbsent ? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH : `${subPct}%`}
-                                                                        </span>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-2.5 sm:px-3 py-2">
-                                                                    <span className={`inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full text-[10px] font-extrabold border-2 ${g.bg} ${g.color} ${g.border}`}>
-                                                                        {sub.isAbsent ? EXAM_CONSTS.STUDENT_REPORT.ABSENT_MARK : (sub.grade || g.label)}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="px-2.5 sm:px-3 py-2">
-                                                                    {sub.isAbsent ? (
-                                                                        <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-bold border bg-gray-50 text-gray-500 border-gray-200">
-                                                                            {EXAM_CONSTS.STUDENT_REPORT.ABSENT_LBL}
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-bold border ${pass ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-600 border-red-200"}`}>
-                                                                            {pass ? EXAM_CONSTS.STUDENT_REPORT.PASS_LBL : EXAM_CONSTS.STUDENT_REPORT.FAIL_LBL}
-                                                                        </span>
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-
-                                    {/* ══ Summary Cards ══ */}
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                                        <div className="col-span-2 sm:col-span-1 rounded-xl border-2 border-indigo-100 p-3 text-center"
-                                            style={{ background: "linear-gradient(135deg,#eef2ff,#eff6ff)" }}>
-                                            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">{EXAM_CONSTS.STUDENT_REPORT.TOTAL_MARKS}</p>
-                                            <p className="text-lg sm:text-xl font-extrabold text-gray-900">
-                                                {student?.totalMarksObtained ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}
-                                                <span className="text-xs font-semibold text-gray-400"> / {student?.totalMaxMarks ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}</span>
-                                            </p>
-                                        </div>
-                                        <div className="rounded-xl border-2 border-blue-100 p-3 text-center"
-                                            style={{ background: "linear-gradient(135deg,#eff6ff,#f0f9ff)" }}>
-                                            <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">{EXAM_CONSTS.STUDENT_REPORT.PERCENTAGE}</p>
-                                            <p className="text-lg sm:text-xl font-extrabold text-gray-900">
-                                                {pct != null ? `${Number(pct).toFixed(1)}%` : EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}
-                                            </p>
-                                        </div>
-                                        <div className={`rounded-xl border-2 p-3 text-center ${overallGrade.bg} ${overallGrade.border}`}>
-                                            <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-gray-400">{EXAM_CONSTS.STUDENT_REPORT.LBL_GRADE}</p>
-                                            <span className={`text-2xl font-extrabold ${overallGrade.color}`}>
-                                                {student?.overallGrade || overallGrade.label}
-                                            </span>
-                                        </div>
-                                        <div className="rounded-xl border-2 border-amber-200 p-3 text-center"
-                                            style={{ background: "linear-gradient(135deg,#fffbeb,#fef9c3)" }}>
-                                            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">{EXAM_CONSTS.STUDENT_REPORT.CLASS_RANK}</p>
-                                            <div className="flex items-center justify-center gap-1">
-                                                <Medal className="w-4 h-4 text-amber-500" />
-                                                <span className="text-lg sm:text-xl font-extrabold text-gray-900">
-                                                    {student?.classRank ?? EXAM_CONSTS.STUDENT_REPORT.FALLBACK_DASH}
-                                                </span>
-                                            </div>
-                                            {student?.sectionRank && (
-                                                <p className="text-[10px] text-amber-400 font-medium mt-0.5">
-                                                    {EXAM_CONSTS.STUDENT_REPORT.SEC_RANK}{student.sectionRank}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* ══ Result Banner ══ */}
-                                    <div className={`relative flex items-center justify-center gap-2 sm:gap-2.5 rounded-xl py-3 sm:py-3.5 font-bold text-xs sm:text-sm border-2 overflow-hidden ${isAbsent
-                                        ? "bg-gray-50 border-gray-200 text-gray-500"
-                                        : isPassed
-                                            ? "border-emerald-300 text-emerald-700"
-                                            : "border-red-300 text-red-600"
-                                        }`}
-                                        style={!isAbsent ? {
-                                            background: isPassed
-                                                ? "linear-gradient(90deg,#ecfdf5,#f0fdf4,#ecfdf5)"
-                                                : "linear-gradient(90deg,#fef2f2,#fff1f2,#fef2f2)"
-                                        } : {}}>
-                                        {isAbsent ? (
-                                            <><Award className="w-4 h-4 sm:w-5 sm:h-5" /> {EXAM_CONSTS.STUDENT_REPORT.RES_ABSENT}</>
-                                        ) : isPassed ? (
-                                            <><CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" /> {EXAM_CONSTS.STUDENT_REPORT.RES_PASSED}</>
+                                    <div className="p-4 border rounded-xl flex items-center gap-4">
+                                        {enrichedStudent.profileImageUrl ? (
+                                            <img
+                                                src={enrichedStudent.profileImageUrl}
+                                                alt="Student"
+                                                className="w-16 h-16 rounded-full object-cover border"
+                                            />
                                         ) : (
-                                            <><XCircle className="w-4 h-4 sm:w-5 sm:h-5" /> {EXAM_CONSTS.STUDENT_REPORT.RES_FAILED}</>
+                                            <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-lg">
+                                                {enrichedStudent?.studentName?.charAt(0) || "S"}
+                                            </div>
                                         )}
+                                        <div>
+                                            <p className="text-sm font-bold">
+                                                {enrichedStudent?.studentName} — Class: {enrichedStudent?.className} ({enrichedStudent?.sectionName})
+                                            </p>
+                                            <p className="text-xs text-gray-600">Father's Name: {enrichedStudent?.fatherName}</p>
+                                            <p className="text-xs text-gray-600">Mother's Name: {enrichedStudent?.motherName}</p>
+                                            <p className="text-xs text-gray-500">Session: {enrichedStudent?.academicYear}</p>
+                                        </div>
                                     </div>
                                 </>
                             )}
 
-                            {/* ══ Remarks ══ */}
-                            <div className="rounded-xl border-2 border-indigo-100 overflow-hidden">
-                                <div className="flex items-center justify-between px-4 py-2.5 bg-indigo-50/40 border-b border-indigo-100">
+                            {/* Remarks Editor UI (Hidden in Print) */}
+                            <div className="rc-no-print rounded-xl border border-emerald-200 overflow-hidden mt-4 bg-emerald-50/20">
+                                <div className="flex items-center justify-between px-4 py-2 bg-emerald-100/50 border-b border-emerald-200">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-4 rounded-full bg-indigo-500" />
-                                        <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest">{EXAM_CONSTS.STUDENT_REPORT.REMARKS_TITLE}</p>
+                                        <div className="w-1.5 h-4 rounded-full bg-emerald-600" />
+                                        <p className="text-xs font-bold text-emerald-800 uppercase tracking-widest">
+                                            {EXAM_CONSTS?.STUDENT_REPORT?.REMARKS_TITLE || "Remarks"}
+                                        </p>
                                     </div>
                                     {!editingRemarks && (
                                         <button
-                                            onClick={() => { setEditingRemarks(true); setRemarksSaved(false); setRemarksError(null); }}
-                                            className="rc-no-print text-xs font-semibold text-indigo-600 hover:text-indigo-800 px-2 py-1 rounded-lg hover:bg-indigo-100 transition-all"
+                                            onClick={() => {
+                                                setEditingRemarks(true);
+                                                setRemarksSaved(false);
+                                                setRemarksError(null);
+                                            }}
+                                            className="text-xs font-semibold text-emerald-700 hover:text-emerald-900 px-2.5 py-1 rounded-lg bg-white border border-emerald-200 hover:bg-emerald-50 transition-all"
                                         >
-                                            {(student?.teacherRemarks || student?.principalRemarks) ? EXAM_CONSTS.STUDENT_REPORT.BTN_EDIT : EXAM_CONSTS.STUDENT_REPORT.BTN_ADD_REMARKS}
+                                            {student?.teacherRemarks || student?.principalRemarks
+                                                ? EXAM_CONSTS?.STUDENT_REPORT?.BTN_EDIT || "Edit Remarks"
+                                                : EXAM_CONSTS?.STUDENT_REPORT?.BTN_ADD_REMARKS || "Add Remarks"}
                                         </button>
                                     )}
                                 </div>
 
                                 {remarksSaved && (
                                     <div className="px-4 py-2 bg-green-50 text-xs text-green-700 border-b border-green-100 flex items-center gap-1.5">
-                                        <CheckCircle className="w-3.5 h-3.5" /> {EXAM_CONSTS.STUDENT_REPORT.SUCC_REMARKS}
+                                        <CheckCircle className="w-3.5 h-3.5" /> Remarks successfully updated in template!
                                     </div>
                                 )}
                                 {remarksError && (
@@ -466,113 +406,78 @@ export default function StudentReportCard({ student, examId, onClose, onUpdateRe
                                     </div>
                                 )}
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 sm:p-4">
-                                    {/* Teacher Remarks */}
-                                    <div className="rounded-xl border border-indigo-100 p-3 bg-indigo-50/40">
-                                        <p className="text-[11px] font-bold text-indigo-500 uppercase tracking-wider mb-1.5">{EXAM_CONSTS.STUDENT_REPORT.TEACHER_REMARKS}</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3">
+                                    <div className="rounded-lg border border-emerald-100 p-2.5 bg-white">
+                                        <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Teacher's Remarks</p>
                                         {editingRemarks ? (
                                             <textarea
                                                 value={teacherRemarks}
                                                 onChange={(e) => setTeacherRemarks(e.target.value)}
-                                                rows={3}
-                                                placeholder={EXAM_CONSTS.STUDENT_REPORT.PH_TEACHER}
-                                                className="w-full text-xs text-gray-700 border border-indigo-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none bg-white"
+                                                rows={2}
+                                                placeholder="Enter teacher remarks..."
+                                                className="w-full text-xs text-gray-700 border border-emerald-200 rounded p-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
                                             />
                                         ) : (
-                                            <p className="text-xs sm:text-sm text-gray-600 italic leading-relaxed">
-                                                {teacherRemarks
-                                                    ? `"${teacherRemarks}"`
-                                                    : <span className="text-gray-300 not-italic">{EXAM_CONSTS.STUDENT_REPORT.NO_REMARKS}</span>}
-                                            </p>
+                                            <p className="text-xs text-gray-600 italic">{teacherRemarks || "No remarks added."}</p>
                                         )}
                                     </div>
-
-                                    {/* Principal Remarks */}
-                                    <div className="rounded-xl border border-blue-100 p-3 bg-blue-50/40">
-                                        <p className="text-[11px] font-bold text-blue-500 uppercase tracking-wider mb-1.5">{EXAM_CONSTS.STUDENT_REPORT.PRINCIPAL_REMARKS}</p>
+                                    <div className="rounded-lg border border-emerald-100 p-2.5 bg-white">
+                                        <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Principal's Remarks</p>
                                         {editingRemarks ? (
                                             <textarea
                                                 value={principalRemarks}
                                                 onChange={(e) => setPrincipalRemarks(e.target.value)}
-                                                rows={3}
-                                                placeholder={EXAM_CONSTS.STUDENT_REPORT.PH_PRINCIPAL}
-                                                className="w-full text-xs text-gray-700 border border-blue-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none bg-white"
+                                                rows={2}
+                                                placeholder="Enter principal remarks..."
+                                                className="w-full text-xs text-gray-700 border border-emerald-200 rounded p-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
                                             />
                                         ) : (
-                                            <p className="text-xs sm:text-sm text-gray-600 italic leading-relaxed">
-                                                {principalRemarks
-                                                    ? `"${principalRemarks}"`
-                                                    : <span className="text-gray-300 not-italic">{EXAM_CONSTS.STUDENT_REPORT.NO_REMARKS}</span>}
-                                            </p>
+                                            <p className="text-xs text-gray-600 italic">{principalRemarks || "No remarks added."}</p>
                                         )}
                                     </div>
                                 </div>
 
-                                {/* Edit mode action buttons */}
                                 {editingRemarks && (
-                                    <div className="rc-no-print flex items-center justify-end gap-2 px-4 pb-4">
+                                    <div className="flex items-center justify-end gap-2 px-3 pb-3">
                                         <button
                                             onClick={() => {
                                                 setTeacherRemarks(student?.teacherRemarks ?? "");
                                                 setPrincipalRemarks(student?.principalRemarks ?? "");
                                                 setEditingRemarks(false);
-                                                setRemarksError(null);
                                             }}
                                             disabled={savingRemarks}
-                                            className="px-4 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50"
+                                            className="px-3 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
                                         >
-                                            {EXAM_CONSTS.STUDENT_REPORT.BTN_CANCEL}
+                                            Cancel
                                         </button>
                                         <button
                                             onClick={handleSaveRemarks}
                                             disabled={savingRemarks}
-                                            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-all disabled:opacity-60"
+                                            className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-white bg-emerald-700 rounded-lg hover:bg-emerald-800"
                                         >
-                                            {savingRemarks && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                                            {savingRemarks ? EXAM_CONSTS.STUDENT_REPORT.BTN_SAVING : EXAM_CONSTS.STUDENT_REPORT.BTN_SAVE_REMARKS}
+                                            {savingRemarks && <Loader2 className="w-3 h-3 animate-spin" />}
+                                            Save Remarks
                                         </button>
                                     </div>
                                 )}
                             </div>
-
-                            {/* ══ Signatures ══ */}
-                            <div className="rounded-xl border-2 border-dashed border-gray-200 px-4 sm:px-5 py-4 flex flex-col sm:flex-row justify-between gap-6">
-                                <div className="flex flex-col gap-3 items-start">
-                                    <span className="text-xs font-semibold text-gray-500">{EXAM_CONSTS.STUDENT_REPORT.TEACHER_SIG}</span>
-                                    <div className="w-36 border-b-2 border-gray-300" />
-                                </div>
-                                <div className="flex flex-col gap-3 items-start sm:items-end">
-                                    <span className="text-xs font-semibold text-gray-500">{EXAM_CONSTS.STUDENT_REPORT.PRINCIPAL_SIG}</span>
-                                    <div className="w-36 border-b-2 border-gray-300" />
-                                </div>
-                            </div>
-
-                            {/* Footer */}
-                            <p className="text-center text-[10px] text-gray-300 pb-1">
-                                {school.name} · {school.board} · {EXAM_CONSTS.STUDENT_REPORT.GENERATED_BY}
-                                {student?.generatedAt && (
-                                    <> · {new Date(student.generatedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</>
-                                )}
-                            </p>
                         </div>
                     </div>
 
-                    {/* ── Sticky Footer ── */}
-                    <div className="rc-no-print flex items-center justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-3.5 border-t border-gray-100 shrink-0 bg-gray-50/80 rounded-b-2xl">
+                    {/* Sticky Footer */}
+                    <div className="rc-no-print flex items-center justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-3 border-t border-gray-100 shrink-0 bg-gray-50 rounded-b-2xl">
                         <button
                             onClick={onClose}
-                            className="flex-1 sm:flex-none px-4 sm:px-5 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all"
+                            className="px-4 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
                         >
-                            {EXAM_CONSTS.STUDENT_REPORT.BTN_CLOSE}
+                            Close
                         </button>
                         <button
                             onClick={() => window.print()}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-5 py-2 text-sm font-semibold text-white rounded-xl shadow-sm active:scale-95 transition-all"
-                            style={{ background: "linear-gradient(90deg,#6366f1,#3b82f6)" }}
+                            className="flex items-center gap-2 px-5 py-2 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg shadow-sm transition-all"
                         >
-                            <Printer className="w-4 h-4" />
-                            <span className="hidden sm:inline">{EXAM_CONSTS.STUDENT_REPORT.PRINT_BTN_FULL}</span>
-                            <span className="sm:hidden">{EXAM_CONSTS.STUDENT_REPORT.BTN_PRINT}</span>
+                            <Printer className="w-3.5 h-3.5" />
+                            Print Report Card
                         </button>
                     </div>
                 </div>

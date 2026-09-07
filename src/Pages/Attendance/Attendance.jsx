@@ -1,6 +1,7 @@
 import {
   FilterIcon, Calendar, CalendarCheck2Icon,
   Users, Clock, LogOut, ClipboardCheck, Download, Search, ScanFace, ClipboardEdit, UserX, UserCheck2,
+  FileSpreadsheet,
 } from 'lucide-react';
 import CardLoader from '../../Components/CommonComp/CardLoader';
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -8,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import ListLoader from '../../Components/CommonComp/ListLoader';
 import { toast } from 'react-toastify';
 import ManualStaffAttendance from './ManualStaffAttendance';
+import MonthlyStaffAttendanceSheetModal from './MonthlyStaffAttendanceSheetModal';
 
 import {
   allAttendanceDetails,
@@ -83,6 +85,7 @@ const Attendance = () => {
   const [listLoading, setListLoading] = useState(false);
   const [roles, setRoles] = useState([]);
   const [manualMarkOpen, setManualMarkOpen] = useState(false);
+  const [showMonthlyModal, setShowMonthlyModal] = useState(false);
   const debounceRef = useRef(null);
 
   const formatDate = (dateString) => {
@@ -206,6 +209,14 @@ const Attendance = () => {
           onSuccess={handleManualSuccess}
         />
       )}
+
+      {/* ── Monthly Staff Attendance Sheet Modal ── */}
+      <MonthlyStaffAttendanceSheetModal
+        isOpen={showMonthlyModal}
+        onClose={() => setShowMonthlyModal(false)}
+        roles={roles}
+      />
+
       <div className="flex-1 flex flex-col overflow-hidden w-0">
         <div className="flex-1 bg-linear-to-b from-sky-50 to-sky-100 overflow-auto p-3 sm:p-4 md:p-6 lg:p-8">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
@@ -279,22 +290,34 @@ const Attendance = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div className="flex flex-wrap gap-2">
               <button onClick={() => navigate('/attendance/markUserAttendance')}
-                className="flex items-center gap-2 px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold rounded-xl shadow-sm transition-all">
+                className="flex items-center gap-2 px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold rounded-xl shadow-sm transition-all cursor-pointer">
                 <ScanFace className="w-4 h-4" />
                 <span className="hidden sm:inline">{UI_STRINGS.ATTENDANCE_OVERVIEW.BTN_INDIVIDUAL_SCAN}</span>
                 <span className="sm:hidden">{UI_STRINGS.ATTENDANCE_OVERVIEW.BTN_FACE_SCAN}</span>
               </button>
               <button onClick={() => setManualMarkOpen(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl shadow-sm transition-all">
+                className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl shadow-sm transition-all cursor-pointer">
                 <ClipboardEdit className="w-4 h-4" />
                 {UI_STRINGS.ATTENDANCE_OVERVIEW.BTN_MANUAL}
               </button>
             </div>
-            <button onClick={handleExportCSV}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-xl shadow-sm transition-all">
-              <Download className="w-4 h-4" />
-              {UI_STRINGS.ATTENDANCE_OVERVIEW.BTN_EXPORT}
-            </button>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Monthly Register Sheet Action Button */}
+              <button
+                onClick={() => setShowMonthlyModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#107c41] hover:bg-[#0b5c30] text-white text-sm font-semibold rounded-xl shadow-sm transition-all cursor-pointer"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                Monthly Register Sheet
+              </button>
+
+              <button onClick={handleExportCSV}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-xl shadow-sm transition-all cursor-pointer">
+                <Download className="w-4 h-4" />
+                {UI_STRINGS.ATTENDANCE_OVERVIEW.BTN_EXPORT}
+              </button>
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 mb-4">
@@ -305,7 +328,7 @@ const Attendance = () => {
                   <span className="text-gray-600 text-sm font-semibold">{UI_STRINGS.ATTENDANCE_OVERVIEW.FILTERS}</span>
                 </div>
                 <button onClick={handleReset}
-                  className="text-xs text-gray-500 hover:text-red-500 font-semibold transition-colors">
+                  className="text-xs text-gray-500 hover:text-red-500 font-semibold transition-colors cursor-pointer">
                   {UI_STRINGS.ATTENDANCE_OVERVIEW.RESET}
                 </button>
               </div>
@@ -453,14 +476,14 @@ const Attendance = () => {
                 <button
                   disabled={!pagination?.hasPrevious}
                   onClick={() => setPage(p => p - 1)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${pagination?.hasPrevious ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${pagination?.hasPrevious ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
                   Prev
                 </button>
                 <span className="px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 rounded-lg border border-blue-100">{page + 1}</span>
                 <button
                   disabled={!pagination?.hasNext}
                   onClick={() => setPage(p => p + 1)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${pagination?.hasNext ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${pagination?.hasNext ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
                   Next
                 </button>
               </div>

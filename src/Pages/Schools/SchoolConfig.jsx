@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import {
   School, Phone, Globe, MapPin, Award,
   ChevronDown, CheckCircle, RotateCcw, Save,
@@ -9,6 +9,7 @@ import {
 import { getSchoolById, updateSchool } from "../../Api/SchoolConfiguration/schoolconfig";
 import { getListOfValues } from "../../Api/Lov/ListOfValues";
 import SCHOOL_CONFIG_CONST from "../../Constants/StringConstants/SchoolConfigConstants";
+import { UserContext } from "../../ContextAPI/UserContext";
 
 import AttendanceTab from "./AttendanceTab";
 import FeaturesTab from "./FeaturesTab";
@@ -195,6 +196,33 @@ export default function SchoolConfig() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [schoolId, setSchoolId] = useState(null);
+
+  // ── Role extraction (matching Sidebar logic) ──
+  const { user: ctxUser } = useContext(UserContext) || {};
+  const storedUser = (() => {
+    try { return JSON.parse(localStorage.getItem("user")) || null; }
+    catch { return null; }
+  })();
+
+  const userRole =
+    ctxUser?.userType ||
+    (Array.isArray(ctxUser?.roles) ? ctxUser.roles[0] : null) ||
+    (Array.isArray(storedUser?.roles) ? storedUser.roles[0] : null) ||
+    null;
+
+  const isGlobalAdmin = userRole === "GLOBAL_ADMIN";
+
+  // Filter tabs so "Features" only shows for GLOBAL_ADMIN
+  const visibleTabs = useMemo(() => {
+    return TABS.filter(tab => tab.id !== "features" || isGlobalAdmin);
+  }, [isGlobalAdmin]);
+
+  // Fallback to "school" if a non-global admin somehow lands on the features tab
+  useEffect(() => {
+    if (activeTab === "features" && !isGlobalAdmin) {
+      setActiveTab("school");
+    }
+  }, [activeTab, isGlobalAdmin]);
 
   useEffect(() => {
     const loadSchool = async () => {
@@ -447,8 +475,8 @@ export default function SchoolConfig() {
 
       {/* ══ NAVIGATION TABS ══ */}
       <div className="px-4 sm:px-6 lg:px-8 mt-5">
-        <div className="grid grid-cols-4 gap-2 sm:hidden">
-          {TABS.map(tab => {
+        <div className={`grid ${isGlobalAdmin ? "grid-cols-4" : "grid-cols-3"} gap-2 sm:hidden`}>
+          {visibleTabs.map(tab => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
             return (
@@ -470,7 +498,7 @@ export default function SchoolConfig() {
 
         <div className="hidden sm:block overflow-x-auto">
           <div className="flex gap-1 min-w-max border-b border-gray-200">
-            {TABS.map(tab => {
+            {visibleTabs.map(tab => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
               return (
@@ -651,8 +679,8 @@ export default function SchoolConfig() {
           <AttendanceTab schoolId={schoolId} schoolName={schoolData.name} />
         )}
 
-        {/* TAB 3: Features Config */}
-        {activeTab === "features" && (
+        {/* TAB 3: Features Config (Global Admin Only) */}
+        {activeTab === "features" && isGlobalAdmin && (
           <FeaturesTab
             schoolId={schoolId}
             schoolData={schoolData}

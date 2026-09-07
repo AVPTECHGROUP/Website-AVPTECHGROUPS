@@ -677,7 +677,7 @@ export default function ReportCards() {
                                             key={student.studentId}
                                             className={`border-b border-gray-50 transition-colors hover:bg-blue-50/40 ${rowBg}`}
                                         >
-                                            <td className="px-2 xl:px-4 py-3">{getRankDisplay(student.classRank)}</td>
+                                            <td className="px-2 xl:px-4 py-3">{getRankDisplay(student.sectionRank)}</td>
                                             <td className="px-2 xl:px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">{student.studentName}</td>
                                             <td className="px-2 xl:px-4 py-3 text-gray-500">{student.rollNumber || "—"}</td>
                                             <td className="px-2 xl:px-4 py-3 text-gray-500 whitespace-nowrap">{student.admissionNumber || "—"}</td>
