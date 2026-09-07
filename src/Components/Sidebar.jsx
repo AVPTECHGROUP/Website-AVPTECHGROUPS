@@ -13,8 +13,8 @@ import {
 import { useState, useEffect, useContext, useRef, useMemo } from 'react'
 import { UserContext } from '../ContextAPI/UserContext'
 import { PERMISSIONS as P, SYSTEM_ROLES } from '../Constants/Permission'
-import OverdueFeeNotifications from "../Pages/FeeManagement/Overduefeenotification.jsx";
-import SalarySlip from "../Pages/Payroll/Salaryslipgenerator.jsx";
+// import OverdueFeeNotifications from "../Pages/FeeManagement/Overduefeenotification.jsx";
+// import SalarySlip from "../Pages/Payroll/Salaryslipgenerator.jsx";
 
 const SCHOOL_SWITCHER_ROLES = SYSTEM_ROLES.SCHOOL_SWITCHER;
 
@@ -108,16 +108,12 @@ const menuSections = [
           { label: 'Leave Config', route: '/leaves/leaveConfig', permission: P.LEAVE_DELETE },
         ]
       },
-      // {
-      //   id: 'payroll', icon: Wallet, label: 'Payroll', route: '/payroll/myPayroll',
-      //   permission: P.PAYROLL_VIEW,
-      //   featureFlag: 'payrollEnabled',
-      //   subItems: [
-      //     { label: 'Manage Payroll', route: '/payroll', permission: P.PAYROLL_MANAGE },
-      //     { label: 'My Payroll', route: '/payroll/myPayroll', permission: P.PAYROLL_VIEW },
-      //     { label: 'Payroll Config', route: '/payroll/payrollConfig', permission: P.PAYROLL_CONFIG },
-      //   ]
-      // }
+      {
+        id: 'payroll', icon: Wallet, label: 'Payroll', route: '/payroll',
+        permission: P.PAYROLL_VIEW,
+        featureFlag: 'payrollEnabled',
+
+      }
     ]
   },
   {
@@ -218,6 +214,7 @@ const menuSections = [
           { label: 'Visitor Pass Templates', route: '/templates/visitorPass', icon: UserCheck },
           { label: 'Cycle Stand Templates', route: '/templates/cycleStandPass', icon: Bike },
           { label: 'Salary Slip Templates', route: '/templates/salarySlip', icon: Wallet },
+          {label:'No Dues Templates' , route:'/templates/noDues' , icon:Mail}
         ]
       }
     ]

@@ -27,13 +27,13 @@ export const API_ENDPOINTS = {
   PRINT_TEMPLATES: `${BASE_URL_V1}/print-templates`,
 
   printTemplateById: (id) =>
-    `${BASE_URL_V1}/print-templates/${id}`,
+      `${BASE_URL_V1}/print-templates/${id}`,
 
   printTemplateSetDefault: (id) =>
-    `${BASE_URL_V1}/print-templates/${id}/set-default`,
+      `${BASE_URL_V1}/print-templates/${id}/set-default`,
 
   printTemplateDefault: (type) =>
-    `${BASE_URL_V1}/print-templates/default?type=${encodeURIComponent(type)}`,
+      `${BASE_URL_V1}/print-templates/default?type=${encodeURIComponent(type)}`,
 
   // ─── School Events 
   SCHOOL_EVENTS: `${BASE_URL_V1}/school-events`,
@@ -299,11 +299,11 @@ export const API_ENDPOINTS = {
   // ─── Student Documents ───
   STUDENT_DOCUMENTS: (id) => `${BASE_URL_DOUBLE_V1}/students/${id}/documents`,
   UPLOAD_STUDENT_DOCUMENT: (id, docType) =>
-    `${BASE_URL_DOUBLE_V1}/students/${id}/documents/${docType}`,
+      `${BASE_URL_DOUBLE_V1}/students/${id}/documents/${docType}`,
 
   // ─── Parent / Guardian Photos ───
   UPLOAD_PARENT_PHOTO: (id, photoType) =>
-    `${BASE_URL_DOUBLE_V1}/students/${id}/photos/${photoType}`,
+      `${BASE_URL_DOUBLE_V1}/students/${id}/photos/${photoType}`,
 
   // ─── Student Store (Class Item Configs) ───
   CLASS_ITEM_CONFIGS: `${BASE_URL_DOUBLE_V1}/stock/class-item-configs`,
@@ -326,12 +326,39 @@ export const API_ENDPOINTS = {
   teacherActivate: (id) => `${BASE_URL_V1}/teachers/${id}/activate`,
   teacherDeactivate: (id) => `${BASE_URL_V1}/teachers/${id}/deactivate`,
 
-  // ─── Payroll (frontend wrappers expect these; backend may implement) ───
+  // ─── Payroll ─────────────────────────────────────────────────────────────────
+  // Corrected against the API Integration Reference embedded in
+  // payroll-module-mockup.html. Fixed vs. the previous version:
+  //   - payrollUserSlip / payrollUserHistory now use /payroll/users/{id}/...
+  //     (plural "users" — was singular "user" before, which was wrong)
+  //   - Added the salary-structures endpoints (all / non-teacher / by-user / bulk),
+  //     which the Structures page's service calls need and weren't defined at all.
+  PAYROLL: `${BASE_URL_V1}/payroll`,
+  PAYROLL_TOTAL: `${BASE_URL_V1}/payroll/total`,
+  PAYROLL_APPROVE: `${BASE_URL_V1}/payroll/approve`,
+  PAYROLL_APPROVE_BULK: `${BASE_URL_V1}/payroll/approve/bulk`,
+  PAYROLL_MARK_PAID: `${BASE_URL_V1}/payroll/mark-paid`,
+  PAYROLL_GENERATE: `${BASE_URL_V1}/payroll/generate`,
+
+  payrollById: (id) => `${BASE_URL_V1}/payroll/${id}`,
+  payrollUserSlip: (userId) => `${BASE_URL_V1}/payroll/users/${userId}/slip`,
+  payrollUserHistory: (userId) => `${BASE_URL_V1}/payroll/users/${userId}/history`,
+
+  // ─── Payroll Salary Structures ───
+  PAYROLL_SALARY_STRUCTURES_ALL: `${BASE_URL_V1}/payroll/salary-structures/all`,
+  PAYROLL_SALARY_STRUCTURES: `${BASE_URL_V1}/payroll/salary-structures`,
+  PAYROLL_SALARY_STRUCTURES_BULK: `${BASE_URL_V1}/payroll/salary-structures/bulk`,
+  payrollSalaryStructureByUser: (userId) => `${BASE_URL_V1}/payroll/salary-structures/users/${userId}`,
+
+  // ─── Payroll Advances / Dashboard (existing, unchanged) ───
   PAYROLL_ADVANCES: `${BASE_URL_V1}/payroll/advances`,
   payrollAdvanceByUser: (userId) => `${BASE_URL_V1}/payroll/advances/user/${userId}`,
   payrollAdvanceById: (id) => `${BASE_URL_V1}/payroll/advances/${id}`,
   payrollTeacherSalarySlip: (teacherId, month, year) => `${BASE_URL_V1}/payroll/teachers/${teacherId}/salary-slip?month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}`,
   PAYROLL_DASHBOARD: `${BASE_URL_V1}/payroll/dashboard/summary`,
+
+  // Note: teacher-managed salary structures reuse teacherSalary(id) above
+  // (GET/PUT `${BASE_URL_V1}/teachers/${id}/salary-structure`) — no new entry needed.
 
   teacherAssignments: (id) => `${BASE_URL_V1}/teachers/${id}/assignments`,
   teacherActiveAssignments: (id) => `${BASE_URL_V1}/teachers/${id}/assignments/active`,
@@ -373,21 +400,25 @@ export const API_ENDPOINTS = {
   transportRouteStudentsReportByRoute: (routeId) => `${BASE_URL_V1}/transport/reports/routes/${routeId}/students`,
 
   transportBillingByStudent: (studentId) =>
-    `${BASE_URL_V1}/fee/transport-billing/student/${studentId}`,
+      `${BASE_URL_V1}/fee/transport-billing/student/${studentId}`,
 
   transportBillingFlatOverride: (billingId) =>
-    `${BASE_URL_V1}/fee/transport-billing/${billingId}/flat-override`,
+      `${BASE_URL_V1}/fee/transport-billing/${billingId}/flat-override`,
 
   transportBillingMonthOverride: (billingId) =>
-    `${BASE_URL_V1}/fee/transport-billing/${billingId}/month-override`,
+      `${BASE_URL_V1}/fee/transport-billing/${billingId}/month-override`,
 
   transportBillingBulkMonthOverride:
-    `${BASE_URL_V1}/fee/transport-billing/bulk-month-override`,
+      `${BASE_URL_V1}/fee/transport-billing/bulk-month-override`,
 
   transportBillingPay: (billingId) =>
-    `${BASE_URL_V1}/fee/transport-billing/${billingId}/pay`,
+      `${BASE_URL_V1}/fee/transport-billing/${billingId}/pay`,
 
-
+  // salary structure
+  SALARY_STRUCTURES: `${BASE_URL_V1}/payroll/salary-structures`,
+  SALARY_STRUCTURES_ALL: `${BASE_URL_V1}/payroll/salary-structures/all`,
+  SALARY_STRUCTURES_BULK: `${BASE_URL_V1}/payroll/salary-structures/bulk`,
+  salaryStructureByUser: (userId) => `${BASE_URL_V1}/payroll/salary-structures/users/${userId}`,
   // Demo leads
   LEAD_STATS: `${BASE_URL_V1}/leads/stats`,
   LEADS: `${BASE_URL_V1}/leads`,

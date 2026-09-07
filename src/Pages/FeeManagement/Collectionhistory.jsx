@@ -491,6 +491,21 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     const [periodSyncLoading, setPeriodSyncLoading] = useState(false);
     const lastPeriodSyncRef = useRef(''); // `${studentId}:${periodId}` already synced
 
+    // FIX (requested): before allowing a payment to be collected — from
+    // EITHER the top-level "Collect Fee" button (manual mode) OR a table
+    // row's "Collect" button (quick-collect mode, period fixed to that
+    // row) — check whether any EARLIER fee period — ordered by that
+    // period's dueDate — still has an outstanding academic balance for
+    // this student. If it does, this blocks the collection and surfaces
+    // which period(s) need to be cleared first, both as a one-time popup
+    // (so it's impossible to miss) and as a persistent inline banner (so
+    // the restriction stays visible and the Record Receipt button stays
+    // disabled) until it's resolved.
+    const [unpaidEarlierPeriods, setUnpaidEarlierPeriods] = useState([]);
+    const [earlierPeriodsChecking, setEarlierPeriodsChecking] = useState(false);
+    const [unpaidPopup, setUnpaidPopup] = useState({ open: false, periods: [] });
+    const lastEarlierCheckRef = useRef(''); // `${studentId}:${periodId}` already checked
+
     const academicTouchedRef = useRef(false);
     const transportTouchedRef = useRef(false);
 
@@ -619,6 +634,23 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         () => periodClasses.find((c) => String(c.id) === selectedClassId)?.name || '',
         [periodClasses, selectedClassId]
     );
+
+    // FIX (requested): quick-collect (opened from a table row's "Collect"
+    // button) never sets `selectedClassId` — that's only populated via the
+    // class-picker chips shown in manual mode. The earlier-unpaid-periods
+    // check below needs a numeric classId to query getOutstandingFees, so
+    // for quick-collect this resolves one from the row's already-known
+    // class NAME (activeStudent.class) against the full active-classes
+    // list (`realClasses`, the same prop already used elsewhere in this
+    // file to resolve canonical class labels). In manual mode the
+    // chip-picked selectedClassId is used as-is.
+    const derivedClassId = useMemo(() => {
+        if (isManualMode) return selectedClassId;
+        if (!activeStudent?.class) return '';
+        const wanted = activeStudent.class.trim().toLowerCase();
+        const match = realClasses.find((c) => (c.label || '').trim().toLowerCase() === wanted);
+        return match ? match.value : '';
+    }, [isManualMode, selectedClassId, activeStudent?.class, realClasses]);
 
     const activeStructure = useMemo(() => {
         if (!periodStructures.length) return null;
@@ -796,12 +828,83 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         }
     }, [periodStructures, selectedClassId]);
 
+    // FIX (requested): checks every EARLIER fee period (by dueDate, strictly
+    // before the currently selected period's dueDate) for an outstanding
+    // academic balance belonging to this student, using the same
+    // classId+periodId query already proven reliable elsewhere in this file
+    // (see resyncBalanceForCurrentPeriod above — the outstanding-fees
+    // endpoint has no studentId filter, so each period is queried by
+    // classId+periodId and the student's row is picked out client-side).
+    // Runs for BOTH manual and quick-collect mode — the caller passes in
+    // whichever classId it has (selectedClassId in manual mode,
+    // derivedClassId — resolved from the row's class name — in
+    // quick-collect mode).
+    //
+    // A period is only counted as "unpaid" if the outstanding-fees response
+    // for that period actually contains a row for this student with
+    // balanceDue > 0. If no row comes back at all, that period is treated
+    // as settled/not-applicable for this student rather than assumed
+    // unpaid — mirroring how the rest of this file already treats a missing
+    // outstanding-fees row (see resyncBalanceForCurrentPeriod's fallback
+    // branch), since the endpoint is the authoritative source for what's
+    // still outstanding.
+    //
+    // Periods without a resolvable dueDate are skipped entirely (there's no
+    // reliable way to say they're "before" anything), so this check quietly
+    // does nothing if the fee-periods API in a given environment doesn't
+    // return dates.
+    const checkEarlierPeriods = useCallback(async (studentId, classId, periodId) => {
+        if (!studentId || !classId || !periodId) return;
+        const current = periodOptions.find((p) => String(p.value) === String(periodId));
+        if (!current?.dueDate) { setUnpaidEarlierPeriods([]); return; }
+        const currentDue = new Date(current.dueDate).getTime();
+        if (Number.isNaN(currentDue)) { setUnpaidEarlierPeriods([]); return; }
+
+        const earlier = periodOptions.filter((p) => {
+            if (String(p.value) === String(periodId) || !p.dueDate) return false;
+            const t = new Date(p.dueDate).getTime();
+            return !Number.isNaN(t) && t < currentDue;
+        });
+        if (earlier.length === 0) { setUnpaidEarlierPeriods([]); return; }
+
+        setEarlierPeriodsChecking(true);
+        try {
+            const results = await Promise.all(
+                earlier.map((p) =>
+                    getOutstandingFees({ periodId: p.value, classId, page: 0, size: 500 })
+                        .then((res) => ({ period: p, records: res?.records || [] }))
+                        .catch(() => ({ period: p, records: [] }))
+                )
+            );
+            const unpaid = results
+                .map(({ period, records }) => {
+                    const rec = records.find((r) => String(r.studentId) === String(studentId));
+                    const balanceDue = Number(rec?.balanceDue) || 0;
+                    return balanceDue > 0
+                        ? { periodId: period.value, label: period.label, balanceDue, dueDate: period.dueDate }
+                        : null;
+                })
+                .filter(Boolean)
+                .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+            setUnpaidEarlierPeriods(unpaid);
+            if (unpaid.length > 0) setUnpaidPopup({ open: true, periods: unpaid });
+        } catch {
+            // A failed check shouldn't be silently treated as "all clear" —
+            // leave whatever was already known; reselecting the period will
+            // retry via the effect below.
+        } finally {
+            setEarlierPeriodsChecking(false);
+        }
+    }, [periodOptions]);
+
     useEffect(() => {
         if (!open) return;
         setPeriodStructures([]); setPeriodClasses([]); setSelectedClassId('');
         setStudents([]); setStudentSearch(''); setTransportInfo(null);
         academicTouchedRef.current = false; transportTouchedRef.current = false;
         lastPeriodSyncRef.current = ''; setPeriodSyncLoading(false);
+        lastEarlierCheckRef.current = ''; setUnpaidEarlierPeriods([]); setUnpaidPopup({ open: false, periods: [] });
         if (initialStudent) {
             const totalFee = Number(initialStudent.totalFee) || 0;
             const balance = Number(initialStudent.balance) || 0;
@@ -1008,6 +1111,23 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         return () => { cancelled = true; };
     }, [selectedPeriodId, activeStudent?.studentId, resyncBalanceForCurrentPeriod]);
 
+    // FIX (requested): re-runs the earlier-unpaid-periods check whenever the
+    // selected student + selected period combination changes and hasn't
+    // already been checked. Runs for both manual mode (using the
+    // chip-picked selectedClassId) and quick-collect mode (using
+    // derivedClassId, resolved above from the row's class name) — see
+    // checkEarlierPeriods above.
+    useEffect(() => {
+        if (!activeStudent?.studentId || !derivedClassId || !selectedPeriodId) {
+            setUnpaidEarlierPeriods([]);
+            return;
+        }
+        const key = `${activeStudent.studentId}:${selectedPeriodId}`;
+        if (lastEarlierCheckRef.current === key) return;
+        lastEarlierCheckRef.current = key;
+        checkEarlierPeriods(activeStudent.studentId, derivedClassId, selectedPeriodId);
+    }, [activeStudent?.studentId, derivedClassId, selectedPeriodId, checkEarlierPeriods]);
+
     if (!open) return null;
 
     const isOverdue = activeStudent?.status === STATUSES.OVERDUE;
@@ -1024,10 +1144,14 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         const studentBalance = Number(s.balanceDue) || 0;
         const paidSoFar = Number(s.paidAmount) || 0;
         academicTouchedRef.current = false; transportTouchedRef.current = false;
-        // Selecting a fresh student means any previous period-sync is no
-        // longer valid — the effect above will re-run and re-confirm balance
-        // for this student + the currently selected period.
+        // Selecting a fresh student means any previous period-sync (and any
+        // previous earlier-periods check) is no longer valid — the effects
+        // above will re-run and re-confirm both for this student + the
+        // currently selected period.
         lastPeriodSyncRef.current = '';
+        lastEarlierCheckRef.current = '';
+        setUnpaidEarlierPeriods([]);
+        setUnpaidPopup({ open: false, periods: [] });
 
         setActiveStudent({
             studentId: s.id || s.studentId,
@@ -1056,6 +1180,18 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     const handleSubmit = async () => {
         if (!activeStudent) { toast.warning(COLLECTION_HISTORY_STRINGS.TOAST_NO_STUDENT_SELECTED, COLLECTION_HISTORY_STRINGS.TOAST_PLEASE_SELECT_STUDENT); return; }
         if (periodSyncLoading) { toast.info('Syncing fee period', 'Please wait — confirming the balance for the selected fee period.'); return; }
+        // FIX (requested): earlier-unpaid-period guard — checked and blocked
+        // before anything else about the amounts themselves, since it's not
+        // about what's being entered but about whether this period should
+        // even be payable yet.
+        if (earlierPeriodsChecking) { toast.info('Checking earlier periods', 'Please wait while we confirm earlier fee periods are settled.'); return; }
+        if (unpaidEarlierPeriods.length > 0) {
+            toast.error(
+                'Earlier fee periods unpaid',
+                `Please collect ${unpaidEarlierPeriods.map((p) => p.label).join(', ')} first before collecting ${selectedPeriodLabel || 'this period'}.`
+            );
+            return;
+        }
         if (canViewTransport && isTransportOnlyStudent) { toast.warning('Transport-only fee', 'This student has no academic fee for this period — collect the transport fee via Transport → Billing.'); return; }
         if (isFullyPaid) { toast.info(COLLECTION_HISTORY_STRINGS.TOAST_NO_BALANCE_DUE, `${activeStudent.studentName} has no outstanding balance.`); return; }
         // FIX: an assigned-but-mismatched fee structure blocks academic
@@ -1139,7 +1275,8 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     };
 
     const submitDisabled =
-        loading || periodSyncLoading || !activeStudent || isFullyPaid || (canViewTransport && isTransportOnlyStudent) ||
+        loading || periodSyncLoading || earlierPeriodsChecking || unpaidEarlierPeriods.length > 0 ||
+        !activeStudent || isFullyPaid || (canViewTransport && isTransportOnlyStudent) ||
         (academicAmountNum > 0 && structureMismatch) ||
         (academicAmountNum <= 0 && (!canViewTransport || transportAmountNum <= 0)) ||
         academicBelowMinimum || (canViewTransport && transportBelowMinimum) ||
@@ -1147,52 +1284,58 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         discountReasonMissing;
 
     return (
-        <Modal open={open} onClose={onClose}
-               title={COLLECTION_HISTORY_STRINGS.BTN_COLLECT_FEE}
-               subtitle={COLLECTION_HISTORY_STRINGS.HEADER_SUBTITLE}
-               wide
-               footer={
-                   <>
-                       <Btn variant="secondary" onClick={onClose} className="w-full sm:w-auto">{COLLECTION_HISTORY_STRINGS.BTN_CANCEL}</Btn>
-                       <div className="relative group w-full sm:w-auto">
-                           <Btn variant="success" onClick={handleSubmit} disabled={submitDisabled} className="w-full sm:w-auto">
-                               {(loading || periodSyncLoading) && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
-                               {loading ? COLLECTION_HISTORY_STRINGS.BTN_RECORDING : periodSyncLoading ? 'Syncing…' : COLLECTION_HISTORY_STRINGS.BTN_RECORD_RECEIPT}
-                           </Btn>
-                           {activeStudent && isFullyPaid && (
-                               <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                                   ✓ Fully paid
-                               </div>
-                           )}
-                       </div>
-                   </>
-               }>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                            Fee Period <span className="text-gray-400">*</span>
-                            {periodSyncLoading && <span className="text-blue-500 font-normal ml-1">(syncing balance…)</span>}
-                        </label>
-                        <select value={selectedPeriodId} onChange={(e) => setSelectedPeriodId(e.target.value)}
-                                disabled={!isManualMode}
-                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed">
-                            <option value="">-- Select fee period --</option>
-                            {periodOptions.map((p) => <option key={p.value} value={String(p.value)}>{p.label}</option>)}
-                        </select>
-                        {/* FIX (requested): fee structure name shown immediately
+        <>
+            <Modal open={open} onClose={onClose}
+                   title={COLLECTION_HISTORY_STRINGS.BTN_COLLECT_FEE}
+                   subtitle={COLLECTION_HISTORY_STRINGS.HEADER_SUBTITLE}
+                   wide
+                   footer={
+                       <>
+                           <Btn variant="secondary" onClick={onClose} className="w-full sm:w-auto">{COLLECTION_HISTORY_STRINGS.BTN_CANCEL}</Btn>
+                           <div className="relative group w-full sm:w-auto">
+                               <Btn variant="success" onClick={handleSubmit} disabled={submitDisabled} className="w-full sm:w-auto">
+                                   {(loading || periodSyncLoading || earlierPeriodsChecking) && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+                                   {loading ? COLLECTION_HISTORY_STRINGS.BTN_RECORDING : periodSyncLoading ? 'Syncing…' : earlierPeriodsChecking ? 'Checking…' : COLLECTION_HISTORY_STRINGS.BTN_RECORD_RECEIPT}
+                               </Btn>
+                               {activeStudent && isFullyPaid && (
+                                   <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                       ✓ Fully paid
+                                   </div>
+                               )}
+                               {activeStudent && unpaidEarlierPeriods.length > 0 && (
+                                   <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                       ⚠ Earlier period(s) unpaid
+                                   </div>
+                               )}
+                           </div>
+                       </>
+                   }>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                                Fee Period <span className="text-gray-400">*</span>
+                                {periodSyncLoading && <span className="text-blue-500 font-normal ml-1">(syncing balance…)</span>}
+                            </label>
+                            <select value={selectedPeriodId} onChange={(e) => setSelectedPeriodId(e.target.value)}
+                                    disabled={!isManualMode}
+                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed">
+                                <option value="">-- Select fee period --</option>
+                                {periodOptions.map((p) => <option key={p.value} value={String(p.value)}>{p.label}</option>)}
+                            </select>
+                            {/* FIX (requested): fee structure name shown immediately
                   after the selected period, wherever a structure has been
                   resolved for the current period/class/student — so the
                   person can see at a glance which fee structure will be
                   applied without needing to open the breakdown below.
                   getStructureLabel returns null when there's no name, so
                   this line only renders when a name genuinely exists. */}
-                        {activeStructure && getStructureLabel(activeStructure.name || activeStructure.structureName) && (
-                            <p className="text-[10.5px] text-gray-500 mt-1 truncate">
-                                Fee Structure: <span className="font-semibold text-gray-700">{getStructureLabel(activeStructure.name || activeStructure.structureName)}</span>
-                            </p>
-                        )}
-                        {/* FIX (requested): when this modal is opened via a table
+                            {activeStructure && getStructureLabel(activeStructure.name || activeStructure.structureName) && (
+                                <p className="text-[10.5px] text-gray-500 mt-1 truncate">
+                                    Fee Structure: <span className="font-semibold text-gray-700">{getStructureLabel(activeStructure.name || activeStructure.structureName)}</span>
+                                </p>
+                            )}
+                            {/* FIX (requested): when this modal is opened via a table
                   row's "Collect" button (quick-collect mode), the period
                   is fixed to whatever that row represents — changing it
                   here would silently collect against a different period
@@ -1201,209 +1344,230 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                   pre-selected student) still allows picking any period
                   freely, and the resync logic below keeps the balance
                   accurate whenever it's changed. */}
-                        {!isManualMode && (
-                            <p className="text-[10.5px] text-gray-400 mt-1">Period is fixed for this collection.</p>
-                        )}
-                        {activeStudent && periodSyncLoading && (
-                            <p className="text-[10.5px] text-blue-600 font-medium mt-1 flex items-center gap-1.5">
-                                <span className="w-2.5 h-2.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                                Re-checking {activeStudent.studentName}'s balance for {selectedPeriodLabel || 'this period'}…
-                            </p>
-                        )}
-                    </div>
-
-                    {isManualMode && selectedPeriodId && (
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                                Class <span className="text-gray-400">*</span>
-                                {classesLoading && <span className="text-gray-400 font-normal ml-1">(loading…)</span>}
-                            </label>
-                            {!classesLoading && periodClasses.length === 0 ? (
-                                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
-                                    {COLLECTION_HISTORY_STRINGS.MSG_NO_CLASSES}
-                                </div>
-                            ) : (
-                                <div className="flex flex-wrap gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50/50 max-h-32 overflow-y-auto">
-                                    {classesLoading
-                                        ? <div className="text-xs text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_CLASSES}</div>
-                                        : periodClasses.map((c) => (
-                                            <button key={c.id} type="button"
-                                                    onClick={() => { setSelectedClassId(String(c.id)); setStudentSearch(''); setActiveStudent(null); }}
-                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border whitespace-nowrap ${selectedClassId === String(c.id)
-                                                        ? 'bg-blue-950 text-white border-blue-950'
-                                                        : 'bg-white text-gray-700 border-gray-200 hover:border-blue-950/50 hover:text-blue-950'
-                                                    }`}>
-                                                {c.name}
-                                            </button>
-                                        ))
-                                    }
+                            {!isManualMode && (
+                                <p className="text-[10.5px] text-gray-400 mt-1">Period is fixed for this collection.</p>
+                            )}
+                            {activeStudent && periodSyncLoading && (
+                                <p className="text-[10.5px] text-blue-600 font-medium mt-1 flex items-center gap-1.5">
+                                    <span className="w-2.5 h-2.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                                    Re-checking {activeStudent.studentName}'s balance for {selectedPeriodLabel || 'this period'}…
+                                </p>
+                            )}
+                            {/* FIX (requested): persistent inline warning for unpaid
+                  earlier fee periods — stays visible (and keeps the
+                  submit button disabled, see submitDisabled above) for as
+                  long as the condition holds. Now shown in BOTH manual and
+                  quick-collect mode, independent of the one-time popup
+                  below. */}
+                            {activeStudent && earlierPeriodsChecking && (
+                                <p className="text-[10.5px] text-blue-600 font-medium mt-1 flex items-center gap-1.5">
+                                    <span className="w-2.5 h-2.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                                    Checking earlier fee periods…
+                                </p>
+                            )}
+                            {unpaidEarlierPeriods.length > 0 && (
+                                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2 mt-2">
+                                    <AlertTriangle size={13} className="text-red-600 mt-0.5 flex-shrink-0" />
+                                    <div className="text-[11.5px] text-red-700">
+                                        <span className="font-bold">Unpaid earlier period{unpaidEarlierPeriods.length !== 1 ? 's' : ''}:</span>{' '}
+                                        {unpaidEarlierPeriods.map((p) => `${p.label} (${fmt(p.balanceDue)})`).join(', ')}. Collect {unpaidEarlierPeriods.length !== 1 ? 'these' : 'this'} first.
+                                    </div>
                                 </div>
                             )}
                         </div>
-                    )}
 
-                    {isManualMode && selectedClassId && !activeStudent && (
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                                Student <span className="text-gray-400">*</span>
-                                {studentsLoading && <span className="text-gray-400 font-normal ml-1">(loading…)</span>}
-                            </label>
-                            <div className="relative mb-2">
-                                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)}
-                                       placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_STUDENT}
-                                       className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 bg-white" />
-                            </div>
-                            <div className="border border-gray-200 rounded-xl overflow-hidden max-h-52 overflow-y-auto">
-                                {studentsLoading ? (
-                                    <div className="flex items-center justify-center py-8 gap-2">
-                                        <span className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                                        <span className="text-xs text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_STUDENTS}</span>
+                        {isManualMode && selectedPeriodId && (
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                                    Class <span className="text-gray-400">*</span>
+                                    {classesLoading && <span className="text-gray-400 font-normal ml-1">(loading…)</span>}
+                                </label>
+                                {!classesLoading && periodClasses.length === 0 ? (
+                                    <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
+                                        {COLLECTION_HISTORY_STRINGS.MSG_NO_CLASSES}
                                     </div>
-                                ) : filteredStudents.length === 0 ? (
-                                    <div className="text-center py-8 text-sm text-gray-400">
-                                        {studentSearch ? COLLECTION_HISTORY_STRINGS.MSG_NO_STUDENT_MATCH : COLLECTION_HISTORY_STRINGS.MSG_NO_STUDENTS_CLASS}
+                                ) : (
+                                    <div className="flex flex-wrap gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50/50 max-h-32 overflow-y-auto">
+                                        {classesLoading
+                                            ? <div className="text-xs text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_CLASSES}</div>
+                                            : periodClasses.map((c) => (
+                                                <button key={c.id} type="button"
+                                                        onClick={() => { setSelectedClassId(String(c.id)); setStudentSearch(''); setActiveStudent(null); }}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border whitespace-nowrap ${selectedClassId === String(c.id)
+                                                            ? 'bg-blue-950 text-white border-blue-950'
+                                                            : 'bg-white text-gray-700 border-gray-200 hover:border-blue-950/50 hover:text-blue-950'
+                                                        }`}>
+                                                    {c.name}
+                                                </button>
+                                            ))
+                                        }
                                     </div>
-                                ) : filteredStudents.map((s) => {
-                                    const fullName = `${s.firstName || ''} ${s.lastName || ''}`.trim();
-                                    const isSelected = activeStudent?.studentId === (s.id || s.studentId);
-                                    const sBalance = s.balanceDue ?? s.balance ?? 0;
-                                    const isPaid = sBalance <= 0;
-                                    return (
-                                        <div key={s.id || s.studentId} onClick={() => selectStudent(s)}
-                                             className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${isSelected ? 'bg-blue-50 border-l-4 border-l-[#1E3A5F]'
-                                                 : isPaid ? 'bg-emerald-50/50 hover:bg-emerald-50'
-                                                     : 'hover:bg-gray-50'
-                                             }`}>
-                                            <Av name={fullName} size="sm" />
-                                            <div className="flex-1 min-w-0">
-                                                <div className="font-semibold text-sm text-gray-900 truncate">{fullName}</div>
-                                                <div className="text-xs text-gray-500 truncate">{s.admissionNumber || s.studentCode || '—'}</div>
-                                            </div>
-                                            <div className="flex-shrink-0 flex items-center gap-1.5">
-                                                {isPaid
-                                                    ? <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md whitespace-nowrap">Paid</span>
-                                                    : <span className="text-[10px] font-semibold text-orange-600 whitespace-nowrap">{fmt(sBalance)}</span>
-                                                }
-                                                {isSelected && <span className="text-[10px] font-bold text-[#1E3A5F] bg-blue-100 px-2 py-0.5 rounded-md whitespace-nowrap">Selected</span>}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                )}
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {activeStudent && (
-                        <div className={`border rounded-xl p-3 flex flex-wrap items-center gap-3 ${isFullyPaid ? 'bg-emerald-50 border-emerald-200' : (canViewTransport && isTransportOnlyStudent) ? 'bg-sky-50 border-sky-200' : structureMismatch ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
-                            <Av name={activeStudent.studentName} status={activeStudent.status} size="lg" />
-                            <div className="min-w-0 flex-1">
-                                <div className="font-bold text-gray-900 truncate">{activeStudent.studentName}</div>
-                                {/* Class comes straight from the API — no hardcoded "Class" label duplication */}
-                                <div className="text-xs text-gray-600 truncate">{activeStudent.studentCode} · {activeStudent.class}</div>
-                                {/* Roll number and section shown below student name */}
-                                <div className="text-[11px] text-gray-500 truncate">
-                                    Roll No: {activeStudent.rollNo || activeStudent.studentId || '—'} · Section: {activeStudent.section || '—'}
+                        {isManualMode && selectedClassId && !activeStudent && (
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                                    Student <span className="text-gray-400">*</span>
+                                    {studentsLoading && <span className="text-gray-400 font-normal ml-1">(loading…)</span>}
+                                </label>
+                                <div className="relative mb-2">
+                                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)}
+                                           placeholder={COLLECTION_HISTORY_STRINGS.PLACEHOLDER_SEARCH_STUDENT}
+                                           className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 bg-white" />
                                 </div>
-                                {activeStudent.parentName && <div className="text-[11px] text-gray-500 mt-0.5 truncate">Parent: {activeStudent.parentName}</div>}
-                                {isFullyPaid && (
-                                    <div className="flex items-center gap-1 mt-1">
-                                        <CheckCircle size={12} className="text-emerald-600 flex-shrink-0" />
-                                        <span className="text-[11px] font-bold text-emerald-700">Fully paid</span>
-                                    </div>
-                                )}
-                                {canViewTransport && isTransportOnlyStudent && (
-                                    <div className="flex items-center gap-1 mt-1">
-                                        <Bus size={12} className="text-sky-600 flex-shrink-0" />
-                                        <span className="text-[11px] font-bold text-sky-700">Transport fee only — use Transport module</span>
-                                    </div>
-                                )}
-                                {structureMismatch && (
-                                    <div className="flex items-center gap-1 mt-1">
-                                        <AlertCircle size={12} className="text-red-600 flex-shrink-0" />
-                                        <span className="text-[11px] font-bold text-red-700">Fee structure not configured for this class</span>
-                                    </div>
-                                )}
+                                <div className="border border-gray-200 rounded-xl overflow-hidden max-h-52 overflow-y-auto">
+                                    {studentsLoading ? (
+                                        <div className="flex items-center justify-center py-8 gap-2">
+                                            <span className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                                            <span className="text-xs text-gray-400">{COLLECTION_HISTORY_STRINGS.MSG_LOADING_STUDENTS}</span>
+                                        </div>
+                                    ) : filteredStudents.length === 0 ? (
+                                        <div className="text-center py-8 text-sm text-gray-400">
+                                            {studentSearch ? COLLECTION_HISTORY_STRINGS.MSG_NO_STUDENT_MATCH : COLLECTION_HISTORY_STRINGS.MSG_NO_STUDENTS_CLASS}
+                                        </div>
+                                    ) : filteredStudents.map((s) => {
+                                        const fullName = `${s.firstName || ''} ${s.lastName || ''}`.trim();
+                                        const isSelected = activeStudent?.studentId === (s.id || s.studentId);
+                                        const sBalance = s.balanceDue ?? s.balance ?? 0;
+                                        const isPaid = sBalance <= 0;
+                                        return (
+                                            <div key={s.id || s.studentId} onClick={() => selectStudent(s)}
+                                                 className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${isSelected ? 'bg-blue-50 border-l-4 border-l-[#1E3A5F]'
+                                                     : isPaid ? 'bg-emerald-50/50 hover:bg-emerald-50'
+                                                         : 'hover:bg-gray-50'
+                                                 }`}>
+                                                <Av name={fullName} size="sm" />
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-semibold text-sm text-gray-900 truncate">{fullName}</div>
+                                                    <div className="text-xs text-gray-500 truncate">{s.admissionNumber || s.studentCode || '—'}</div>
+                                                </div>
+                                                <div className="flex-shrink-0 flex items-center gap-1.5">
+                                                    {isPaid
+                                                        ? <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md whitespace-nowrap">Paid</span>
+                                                        : <span className="text-[10px] font-semibold text-orange-600 whitespace-nowrap">{fmt(sBalance)}</span>
+                                                    }
+                                                    {isSelected && <span className="text-[10px] font-bold text-[#1E3A5F] bg-blue-100 px-2 py-0.5 rounded-md whitespace-nowrap">Selected</span>}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                            {/* FIX (requested): once a student is selected, the
+                        )}
+
+                        {activeStudent && (
+                            <div className={`border rounded-xl p-3 flex flex-wrap items-center gap-3 ${isFullyPaid ? 'bg-emerald-50 border-emerald-200' : (canViewTransport && isTransportOnlyStudent) ? 'bg-sky-50 border-sky-200' : structureMismatch ? 'bg-red-50 border-red-200' : unpaidEarlierPeriods.length > 0 ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
+                                <Av name={activeStudent.studentName} status={activeStudent.status} size="lg" />
+                                <div className="min-w-0 flex-1">
+                                    <div className="font-bold text-gray-900 truncate">{activeStudent.studentName}</div>
+                                    {/* Class comes straight from the API — no hardcoded "Class" label duplication */}
+                                    <div className="text-xs text-gray-600 truncate">{activeStudent.studentCode} · {activeStudent.class}</div>
+                                    {/* Roll number and section shown below student name */}
+                                    <div className="text-[11px] text-gray-500 truncate">
+                                        Roll No: {activeStudent.rollNo || activeStudent.studentId || '—'} · Section: {activeStudent.section || '—'}
+                                    </div>
+                                    {activeStudent.parentName && <div className="text-[11px] text-gray-500 mt-0.5 truncate">Parent: {activeStudent.parentName}</div>}
+                                    {isFullyPaid && (
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <CheckCircle size={12} className="text-emerald-600 flex-shrink-0" />
+                                            <span className="text-[11px] font-bold text-emerald-700">Fully paid</span>
+                                        </div>
+                                    )}
+                                    {canViewTransport && isTransportOnlyStudent && (
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <Bus size={12} className="text-sky-600 flex-shrink-0" />
+                                            <span className="text-[11px] font-bold text-sky-700">Transport fee only — use Transport module</span>
+                                        </div>
+                                    )}
+                                    {structureMismatch && (
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <AlertCircle size={12} className="text-red-600 flex-shrink-0" />
+                                            <span className="text-[11px] font-bold text-red-700">Fee structure not configured for this class</span>
+                                        </div>
+                                    )}
+                                </div>
+                                {/* FIX (requested): once a student is selected, the
                       search/list panel above hides itself (see the
                       `!activeStudent` guard added to that block) so the
                       person isn't looking at a picker and a selected-card
                       at the same time. This "Change" link is the only way
                       back into the picker in manual mode. */}
-                            {isManualMode && (
-                                <button type="button"
-                                        onClick={() => { setActiveStudent(null); setStudentSearch(''); }}
-                                        className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 flex-shrink-0 self-start">
-                                    Change
-                                </button>
-                            )}
-                        </div>
-                    )}
-
-                    {activeStudent && selectedPeriodId && (
-                        <div className="space-y-2">
-                            <div className="flex items-baseline justify-between gap-2 flex-wrap">
-                                <div className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">Fee Breakdown</div>
-                                {hasAcademicStructure && activeStructure && getStructureLabel(activeStructure.name || activeStructure.structureName) && (
-                                    <div className="text-[10.5px] text-gray-400 truncate">
-                                        {selectedPeriodLabel} · {getStructureLabel(activeStructure.name || activeStructure.structureName)}
-                                    </div>
+                                {isManualMode && (
+                                    <button type="button"
+                                            onClick={() => { setActiveStudent(null); setStudentSearch(''); }}
+                                            className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 flex-shrink-0 self-start">
+                                        Change
+                                    </button>
                                 )}
                             </div>
+                        )}
 
-                            {hasAcademicStructure ? (
-                                <LineItemBlock
-                                    title="Academic Subtotal"
-                                    icon={<IndianRupee size={12} />}
-                                    items={academicItems}
-                                    subtotal={academicSubtotal}
-                                    tone="slate"
-                                />
-                            ) : structureMismatch ? (
-                                // FIX (requested): instead of silently showing nothing
-                                // (leaving the person to wonder why there's no
-                                // academic breakdown), explain WHY — a structure is
-                                // assigned but doesn't apply to this student's class,
-                                // instead of rendering a normal-looking breakdown for
-                                // a structure the backend will reject.
-                                <div className="border border-red-200 bg-red-50 rounded-xl p-3 flex items-start gap-2">
-                                    <AlertCircle size={13} className="text-red-600 mt-0.5 flex-shrink-0" />
-                                    <div className="text-xs text-red-700">
-                                        The fee structure assigned to this student isn't configured for class <strong>{activeStudent.class || '—'}</strong>. Academic fee can't be collected until this is corrected in Fee Structures — contact admin.
-                                    </div>
+                        {activeStudent && selectedPeriodId && (
+                            <div className="space-y-2">
+                                <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                                    <div className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">Fee Breakdown</div>
+                                    {hasAcademicStructure && activeStructure && getStructureLabel(activeStructure.name || activeStructure.structureName) && (
+                                        <div className="text-[10.5px] text-gray-400 truncate">
+                                            {selectedPeriodLabel} · {getStructureLabel(activeStructure.name || activeStructure.structureName)}
+                                        </div>
+                                    )}
                                 </div>
-                            ) : null}
 
-                            {canViewTransport && (
-                                <LineItemBlock
-                                    title="Transport Subtotal"
-                                    icon={<Bus size={12} />}
-                                    items={transportLoading ? [] : transportItems}
-                                    subtotal={transportDue}
-                                    tone="sky"
-                                    extra={
-                                        transportLoading ? (
-                                            <div className="text-xs text-sky-600 flex items-center gap-2 mt-2">
-                                                <span className="w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" /> Loading…
-                                            </div>
-                                        ) : !transportInfo ? (
-                                            <div className="text-xs text-sky-600 mt-2">No transport allocation for this student/period.</div>
-                                        ) : (
-                                            <div className="text-[11px] text-sky-500 mt-2">
-                                                {transportInfo.routeName || transportInfo.routeCode || 'Route'} · {transportInfo.stopName || '—'}
-                                            </div>
-                                        )
-                                    }
-                                />
-                            )}
-                        </div>
-                    )}
-                </div>
+                                {hasAcademicStructure ? (
+                                    <LineItemBlock
+                                        title="Academic Subtotal"
+                                        icon={<IndianRupee size={12} />}
+                                        items={academicItems}
+                                        subtotal={academicSubtotal}
+                                        tone="slate"
+                                    />
+                                ) : structureMismatch ? (
+                                    // FIX (requested): instead of silently showing nothing
+                                    // (leaving the person to wonder why there's no
+                                    // academic breakdown), explain WHY — a structure is
+                                    // assigned but doesn't apply to this student's class,
+                                    // instead of rendering a normal-looking breakdown for
+                                    // a structure the backend will reject.
+                                    <div className="border border-red-200 bg-red-50 rounded-xl p-3 flex items-start gap-2">
+                                        <AlertCircle size={13} className="text-red-600 mt-0.5 flex-shrink-0" />
+                                        <div className="text-xs text-red-700">
+                                            The fee structure assigned to this student isn't configured for class <strong>{activeStudent.class || '—'}</strong>. Academic fee can't be collected until this is corrected in Fee Structures — contact admin.
+                                        </div>
+                                    </div>
+                                ) : null}
 
-                <div className={`space-y-4 ${(isFullyPaid || (canViewTransport && isTransportOnlyStudent)) ? 'opacity-40 pointer-events-none select-none' : ''}`}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {/* ── Academic amount column ──
+                                {canViewTransport && (
+                                    <LineItemBlock
+                                        title="Transport Subtotal"
+                                        icon={<Bus size={12} />}
+                                        items={transportLoading ? [] : transportItems}
+                                        subtotal={transportDue}
+                                        tone="sky"
+                                        extra={
+                                            transportLoading ? (
+                                                <div className="text-xs text-sky-600 flex items-center gap-2 mt-2">
+                                                    <span className="w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" /> Loading…
+                                                </div>
+                                            ) : !transportInfo ? (
+                                                <div className="text-xs text-sky-600 mt-2">No transport allocation for this student/period.</div>
+                                            ) : (
+                                                <div className="text-[11px] text-sky-500 mt-2">
+                                                    {transportInfo.routeName || transportInfo.routeCode || 'Route'} · {transportInfo.stopName || '—'}
+                                                </div>
+                                            )
+                                        }
+                                    />
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className={`space-y-4 ${(isFullyPaid || (canViewTransport && isTransportOnlyStudent) || unpaidEarlierPeriods.length > 0) ? 'opacity-40 pointer-events-none select-none' : ''}`}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* ── Academic amount column ──
                   FIX (requested): "check first, then show amount only when
                   present". Three explicit states instead of one input that
                   was always rendered (sometimes editable, sometimes
@@ -1412,74 +1576,25 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                     2. Structure assigned but mismatched to this class → ₹0, disabled, explained.
                     3. Structure applies but balance already 0 (fully paid) → ₹0, disabled, "fully paid".
                     4. Structure applies and balance > 0 → normal editable field. */}
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                                Amount to collect <span className="text-gray-400">*</span>
-                            </label>
-                            {!activeStudent?.feeStructureId ? (
-                                <>
-                                    <Inp type="number" value="0" disabled className="bg-gray-50 text-gray-400" />
-                                    <p className="text-[10.5px] text-gray-400 mt-1">No academic fee this period</p>
-                                </>
-                            ) : structureMismatch ? (
-                                <>
-                                    <Inp type="number" value="0" disabled className="bg-red-50 text-red-400" />
-                                    <p className="text-[10.5px] text-red-600 font-medium mt-1">Fee structure not applicable to this class</p>
-                                </>
-                            ) : !academicDueExists ? (
-                                <>
-                                    <Inp type="number" value="0" disabled className="bg-emerald-50 text-emerald-600" />
-                                    <p className="text-[10.5px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
-                                        <CheckCircle size={11} className="flex-shrink-0" /> Academic fee fully paid
-                                    </p>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="relative">
-                                        <Inp
-                                            type="number"
-                                            value={form.academicAmount}
-                                            disabled={periodSyncLoading}
-                                            className={`pr-16 ${(academicExceedsBalance || academicBelowMinimum) ? 'border-orange-400 bg-orange-50' : ''}`}
-                                            onChange={(e) => { academicTouchedRef.current = true; setForm((p) => ({ ...p, academicAmount: clampAmount(e.target.value) })); }}
-                                            max={Math.min(academicBalance, MAX_AMOUNT)} min={MIN_COLLECT_AMOUNT}
-                                            placeholder={`Max ${fmt(academicBalance)}`}
-                                        />
-                                        <button type="button"
-                                                onClick={() => { academicTouchedRef.current = true; setForm((p) => ({ ...p, academicAmount: String(Math.min(academicBalance, MAX_AMOUNT)) })); }}
-                                                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#1E3A5F] bg-blue-50 hover:bg-blue-100 border border-blue-200 px-1.5 py-1 rounded whitespace-nowrap">
-                                            Full
-                                        </button>
-                                    </div>
-                                    {academicBelowMinimum && (
-                                        <p className="text-[10.5px] text-orange-600 font-medium mt-1">Amount must be at least {fmt(MIN_COLLECT_AMOUNT)}</p>
-                                    )}
-                                    {academicExceedsBalance && (
-                                        <p className="text-[10.5px] text-orange-600 font-medium mt-1">Exceeds academic due ({fmt(academicBalance)})</p>
-                                    )}
-                                    {/* FIX (requested): balance-after-payment preview for partial collections. */}
-                                    {!academicExceedsBalance && academicAmountNum > 0 && academicBalanceAfterPayment > 0 && (
-                                        <p className="text-[10.5px] text-blue-600 font-medium mt-1">Balance after payment: {fmt(academicBalanceAfterPayment)}</p>
-                                    )}
-                                </>
-                            )}
-                        </div>
-
-                        {/* ── Transport amount column — same "check first" treatment ── */}
-                        {canViewTransport && (
                             <div>
-                                <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1">
-                                    <Bus size={11} className="text-sky-600 flex-shrink-0" /> Transport Amount
+                                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                                    Amount to collect <span className="text-gray-400">*</span>
                                 </label>
-                                {transportLoading ? (
-                                    <div className="flex items-center gap-2 px-3 py-2 text-xs text-sky-600 border border-sky-100 bg-sky-50 rounded-lg">
-                                        <span className="w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" /> Checking transport dues…
-                                    </div>
-                                ) : !transportDueExists ? (
+                                {!activeStudent?.feeStructureId ? (
+                                    <>
+                                        <Inp type="number" value="0" disabled className="bg-gray-50 text-gray-400" />
+                                        <p className="text-[10.5px] text-gray-400 mt-1">No academic fee this period</p>
+                                    </>
+                                ) : structureMismatch ? (
+                                    <>
+                                        <Inp type="number" value="0" disabled className="bg-red-50 text-red-400" />
+                                        <p className="text-[10.5px] text-red-600 font-medium mt-1">Fee structure not applicable to this class</p>
+                                    </>
+                                ) : !academicDueExists ? (
                                     <>
                                         <Inp type="number" value="0" disabled className="bg-emerald-50 text-emerald-600" />
                                         <p className="text-[10.5px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
-                                            <CheckCircle size={11} className="flex-shrink-0" /> No transport dues
+                                            <CheckCircle size={11} className="flex-shrink-0" /> Academic fee fully paid
                                         </p>
                                     </>
                                 ) : (
@@ -1487,213 +1602,298 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                                         <div className="relative">
                                             <Inp
                                                 type="number"
-                                                value={form.transportAmount}
-                                                className={`pr-16 ${(transportExceedsBalance || transportBelowMinimum) ? 'border-orange-400 bg-orange-50' : ''}`}
-                                                onChange={(e) => { transportTouchedRef.current = true; setForm((p) => ({ ...p, transportAmount: clampAmount(e.target.value) })); }}
-                                                max={Math.min(transportDue, MAX_AMOUNT)} min={MIN_COLLECT_AMOUNT}
-                                                placeholder={`Max ${fmt(transportDue)}`}
+                                                value={form.academicAmount}
+                                                disabled={periodSyncLoading}
+                                                className={`pr-16 ${(academicExceedsBalance || academicBelowMinimum) ? 'border-orange-400 bg-orange-50' : ''}`}
+                                                onChange={(e) => { academicTouchedRef.current = true; setForm((p) => ({ ...p, academicAmount: clampAmount(e.target.value) })); }}
+                                                max={Math.min(academicBalance, MAX_AMOUNT)} min={MIN_COLLECT_AMOUNT}
+                                                placeholder={`Max ${fmt(academicBalance)}`}
                                             />
                                             <button type="button"
-                                                    onClick={() => { transportTouchedRef.current = true; setForm((p) => ({ ...p, transportAmount: String(Math.min(transportDue, MAX_AMOUNT)) })); }}
-                                                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-1.5 py-1 rounded whitespace-nowrap">
+                                                    onClick={() => { academicTouchedRef.current = true; setForm((p) => ({ ...p, academicAmount: String(Math.min(academicBalance, MAX_AMOUNT)) })); }}
+                                                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#1E3A5F] bg-blue-50 hover:bg-blue-100 border border-blue-200 px-1.5 py-1 rounded whitespace-nowrap">
                                                 Full
                                             </button>
                                         </div>
-                                        {transportBelowMinimum && (
+                                        {academicBelowMinimum && (
                                             <p className="text-[10.5px] text-orange-600 font-medium mt-1">Amount must be at least {fmt(MIN_COLLECT_AMOUNT)}</p>
                                         )}
-                                        {transportExceedsBalance && (
-                                            <p className="text-[10.5px] text-orange-600 font-medium mt-1">Exceeds transport due ({fmt(transportDue)})</p>
+                                        {academicExceedsBalance && (
+                                            <p className="text-[10.5px] text-orange-600 font-medium mt-1">Exceeds academic due ({fmt(academicBalance)})</p>
                                         )}
-                                        {!transportExceedsBalance && transportAmountNum > 0 && transportBalanceAfterPayment > 0 && (
-                                            <p className="text-[10.5px] text-blue-600 font-medium mt-1">Balance after payment: {fmt(transportBalanceAfterPayment)}</p>
+                                        {/* FIX (requested): balance-after-payment preview for partial collections. */}
+                                        {!academicExceedsBalance && academicAmountNum > 0 && academicBalanceAfterPayment > 0 && (
+                                            <p className="text-[10.5px] text-blue-600 font-medium mt-1">Balance after payment: {fmt(academicBalanceAfterPayment)}</p>
                                         )}
                                     </>
                                 )}
                             </div>
-                        )}
-                    </div>
 
-                    {(academicAmountNum > 0 && academicAmountNum < academicBalance) || (canViewTransport && transportAmountNum > 0 && transportAmountNum < transportDue) ? (
-                        <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
-                            <Info size={13} className="text-amber-500 mt-0.5 flex-shrink-0" />
-                            <div className="text-[11px] text-amber-700">
-                                Partial payment — the remainder will stay outstanding for that column.
+                            {/* ── Transport amount column — same "check first" treatment ── */}
+                            {canViewTransport && (
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1">
+                                        <Bus size={11} className="text-sky-600 flex-shrink-0" /> Transport Amount
+                                    </label>
+                                    {transportLoading ? (
+                                        <div className="flex items-center gap-2 px-3 py-2 text-xs text-sky-600 border border-sky-100 bg-sky-50 rounded-lg">
+                                            <span className="w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" /> Checking transport dues…
+                                        </div>
+                                    ) : !transportDueExists ? (
+                                        <>
+                                            <Inp type="number" value="0" disabled className="bg-emerald-50 text-emerald-600" />
+                                            <p className="text-[10.5px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
+                                                <CheckCircle size={11} className="flex-shrink-0" /> No transport dues
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="relative">
+                                                <Inp
+                                                    type="number"
+                                                    value={form.transportAmount}
+                                                    className={`pr-16 ${(transportExceedsBalance || transportBelowMinimum) ? 'border-orange-400 bg-orange-50' : ''}`}
+                                                    onChange={(e) => { transportTouchedRef.current = true; setForm((p) => ({ ...p, transportAmount: clampAmount(e.target.value) })); }}
+                                                    max={Math.min(transportDue, MAX_AMOUNT)} min={MIN_COLLECT_AMOUNT}
+                                                    placeholder={`Max ${fmt(transportDue)}`}
+                                                />
+                                                <button type="button"
+                                                        onClick={() => { transportTouchedRef.current = true; setForm((p) => ({ ...p, transportAmount: String(Math.min(transportDue, MAX_AMOUNT)) })); }}
+                                                        className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-1.5 py-1 rounded whitespace-nowrap">
+                                                    Full
+                                                </button>
+                                            </div>
+                                            {transportBelowMinimum && (
+                                                <p className="text-[10.5px] text-orange-600 font-medium mt-1">Amount must be at least {fmt(MIN_COLLECT_AMOUNT)}</p>
+                                            )}
+                                            {transportExceedsBalance && (
+                                                <p className="text-[10.5px] text-orange-600 font-medium mt-1">Exceeds transport due ({fmt(transportDue)})</p>
+                                            )}
+                                            {!transportExceedsBalance && transportAmountNum > 0 && transportBalanceAfterPayment > 0 && (
+                                                <p className="text-[10.5px] text-blue-600 font-medium mt-1">Balance after payment: {fmt(transportBalanceAfterPayment)}</p>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {(academicAmountNum > 0 && academicAmountNum < academicBalance) || (canViewTransport && transportAmountNum > 0 && transportAmountNum < transportDue) ? (
+                            <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                                <Info size={13} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                                <div className="text-[11px] text-amber-700">
+                                    Partial payment — the remainder will stay outstanding for that column.
+                                </div>
+                            </div>
+                        ) : null}
+
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                                {COLLECTION_HISTORY_STRINGS.LBL_PAYMENT_MODE} <span className="text-gray-400">*</span>
+                            </label>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                {PAYMENT_MODES_WITH_ICON.map(([mode, icon, label]) => (
+                                    <button key={mode} type="button"
+                                            onClick={() => setForm((p) => ({
+                                                ...p,
+                                                paymentMode: mode,
+                                                // Cash carries no reference number — clear any
+                                                // value typed while a different mode was active
+                                                // so a stale TXN/cheque/DD number can never be
+                                                // silently submitted with a cash payment.
+                                                referenceNo: mode === STATUSES.CASH ? '' : p.referenceNo,
+                                            }))}
+                                            className={`flex flex-col items-center gap-1 sm:gap-1.5 px-2 py-2 sm:py-2.5 rounded-xl border-2 transition-all ${form.paymentMode === mode
+                                                ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F]'
+                                                : 'border-gray-200 bg-white text-gray-600 hover:border-[#1E3A5F]/40'
+                                            }`}>
+                                        <span className="text-lg sm:text-xl">{icon}</span>
+                                        <span className="text-[10px] sm:text-[11px] font-bold whitespace-nowrap">{label}</span>
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                    ) : null}
 
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                            {COLLECTION_HISTORY_STRINGS.LBL_PAYMENT_MODE} <span className="text-gray-400">*</span>
-                        </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            {PAYMENT_MODES_WITH_ICON.map(([mode, icon, label]) => (
-                                <button key={mode} type="button"
-                                        onClick={() => setForm((p) => ({
-                                            ...p,
-                                            paymentMode: mode,
-                                            // Cash carries no reference number — clear any
-                                            // value typed while a different mode was active
-                                            // so a stale TXN/cheque/DD number can never be
-                                            // silently submitted with a cash payment.
-                                            referenceNo: mode === STATUSES.CASH ? '' : p.referenceNo,
-                                        }))}
-                                        className={`flex flex-col items-center gap-1 sm:gap-1.5 px-2 py-2 sm:py-2.5 rounded-xl border-2 transition-all ${form.paymentMode === mode
-                                            ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F]'
-                                            : 'border-gray-200 bg-white text-gray-600 hover:border-[#1E3A5F]/40'
-                                        }`}>
-                                    <span className="text-lg sm:text-xl">{icon}</span>
-                                    <span className="text-[10px] sm:text-[11px] font-bold whitespace-nowrap">{label}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Payment Date + Reference No render inline on the same row on
+                        {/* Payment Date + Reference No render inline on the same row on
                 all sizes ≥ sm. Reference field label changes per payment
                 mode — "Cheque Number" for Cheque, "Transaction ID" for
                 Online, "Demand Draft Number" for DD — and is hidden
                 entirely for Cash. */}
-                    <div className={`grid grid-cols-1 ${showReferenceField ? 'sm:grid-cols-2' : ''} gap-3`}>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                                {COLLECTION_HISTORY_STRINGS.LBL_PAYMENT_DATE} <span className="text-gray-400">*</span>
-                            </label>
-                            <Inp type="date" value={form.paymentDate}
-                                 onChange={(e) => setForm((p) => ({ ...p, paymentDate: e.target.value }))} />
-                        </div>
-                        {showReferenceField && (
+                        <div className={`grid grid-cols-1 ${showReferenceField ? 'sm:grid-cols-2' : ''} gap-3`}>
                             <div>
                                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                                    {referenceFieldConfig?.label || COLLECTION_HISTORY_STRINGS.LBL_REFERENCE_NO}
+                                    {COLLECTION_HISTORY_STRINGS.LBL_PAYMENT_DATE} <span className="text-gray-400">*</span>
                                 </label>
-                                <Inp value={form.referenceNo}
-                                     placeholder={referenceFieldConfig?.placeholder || 'Reference no.'}
-                                     onChange={(e) => setForm((p) => ({ ...p, referenceNo: e.target.value }))} />
+                                <Inp type="date" value={form.paymentDate}
+                                     onChange={(e) => setForm((p) => ({ ...p, paymentDate: e.target.value }))} />
                             </div>
-                        )}
-                    </div>
+                            {showReferenceField && (
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                                        {referenceFieldConfig?.label || COLLECTION_HISTORY_STRINGS.LBL_REFERENCE_NO}
+                                    </label>
+                                    <Inp value={form.referenceNo}
+                                         placeholder={referenceFieldConfig?.placeholder || 'Reference no.'}
+                                         onChange={(e) => setForm((p) => ({ ...p, referenceNo: e.target.value }))} />
+                                </div>
+                            )}
+                        </div>
 
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                            {COLLECTION_HISTORY_STRINGS.LBL_DISCOUNT} <span className="text-gray-400 font-normal">(academic only, max = amount to collect)</span>
-                        </label>
-                        {/* FIX (requested): discount can never be typed greater than
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                                {COLLECTION_HISTORY_STRINGS.LBL_DISCOUNT} <span className="text-gray-400 font-normal">(academic only, max = amount to collect)</span>
+                            </label>
+                            {/* FIX (requested): discount can never be typed greater than
                   the current "amount to collect" — every keystroke is
                   clamped live to that ceiling instead of only warning
                   after the fact. */}
-                        <Inp
-                            type="number"
-                            min={0}
-                            max={Math.min(academicAmountNum || 0, MAX_AMOUNT)}
-                            step={1}
-                            value={form.discount}
-                            disabled={academicAmountNum <= 0}
-                            placeholder={academicAmountNum > 0 ? 'Discount amount' : 'Enter amount to collect first'}
-                            className={discountExceedsAmount ? 'border-orange-400 bg-orange-50' : ''}
-                            onChange={(e) => setForm((p) => ({ ...p, discount: clampToCeiling(e.target.value, academicAmountNum) }))}
-                        />
-                        {discountExceedsAmount && (
-                            <p className="text-[11px] text-orange-600 font-medium mt-1 flex items-center gap-1">
-                                <AlertCircle size={11} /> {COLLECTION_HISTORY_STRINGS.MSG_DISCOUNT_EXCEEDS}
-                            </p>
-                        )}
-                        {discountNum > 0 && !discountExceedsAmount && (
-                            <p className="text-[11px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
-                                <CheckCircle size={11} /> Discount of {fmt(discountNum)} applied
-                            </p>
-                        )}
-                        {/* Discount reason: dropdown instead of free-text, with an "Others" follow-up field.
-                  FIX (requested): mandatory whenever a discount is entered. */}
-                        <Sel
-                            value={form.discountReason}
-                            onChange={(v) => setForm((p) => ({ ...p, discountReason: v, discountReasonOther: v === 'Others' ? p.discountReasonOther : '' }))}
-                            options={DISCOUNT_REASON_OPTIONS}
-                            placeholder={COLLECTION_HISTORY_STRINGS.LBL_REASON}
-                            className="w-full mt-2"
-                        />
-                        {form.discountReason === 'Others' && (
                             <Inp
-                                value={form.discountReasonOther}
-                                onChange={(e) => setForm((p) => ({ ...p, discountReasonOther: e.target.value }))}
-                                placeholder="Specify reason"
-                                className="mt-2"
+                                type="number"
+                                min={0}
+                                max={Math.min(academicAmountNum || 0, MAX_AMOUNT)}
+                                step={1}
+                                value={form.discount}
+                                disabled={academicAmountNum <= 0}
+                                placeholder={academicAmountNum > 0 ? 'Discount amount' : 'Enter amount to collect first'}
+                                className={discountExceedsAmount ? 'border-orange-400 bg-orange-50' : ''}
+                                onChange={(e) => setForm((p) => ({ ...p, discount: clampToCeiling(e.target.value, academicAmountNum) }))}
                             />
-                        )}
-                        {discountReasonMissing && (
-                            <p className="text-[11px] text-orange-600 font-medium mt-1 flex items-center gap-1">
-                                <AlertCircle size={11} /> A reason is required when a discount is applied.
-                            </p>
-                        )}
-                    </div>
-
-                    {isOverdue && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                            <div className="flex items-start gap-2 mb-2">
-                                <AlertTriangle size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
-                                <div>
-                                    <div className="text-sm font-bold text-amber-800">{COLLECTION_HISTORY_STRINGS.MSG_LATE_FINE_PROMPT}</div>
-                                    <div className="text-[11px] text-amber-700 mt-0.5">
-                                        Due: {fmtDate(activeStudent?.dueDate)} · {activeStudent?.daysLate} day{activeStudent?.daysLate !== 1 ? 's' : ''} overdue
-                                    </div>
-                                </div>
-                            </div>
-                            {/* FIX (requested): late fine can never be typed greater
-                      than the current "amount to collect" — clamped live
-                      to that ceiling on every keystroke, same treatment as
-                      Discount above. */}
-                            <Inp type="number" min={0} max={Math.min(academicAmountNum || 0, MAX_AMOUNT)} step={1}
-                                 value={form.lateFine}
-                                 disabled={academicAmountNum <= 0}
-                                 placeholder={academicAmountNum > 0 ? 'Fine amount (₹)' : 'Enter amount to collect first'}
-                                 className={lateFineExceedsAmount ? 'border-orange-400 bg-orange-50' : ''}
-                                 onChange={(e) => setForm((p) => ({ ...p, lateFine: clampToCeiling(e.target.value, academicAmountNum) }))} />
-                            {lateFineExceedsAmount && (
+                            {discountExceedsAmount && (
                                 <p className="text-[11px] text-orange-600 font-medium mt-1 flex items-center gap-1">
-                                    <AlertCircle size={11} /> Late fine cannot exceed the amount to collect ({fmt(academicAmountNum)}).
+                                    <AlertCircle size={11} /> {COLLECTION_HISTORY_STRINGS.MSG_DISCOUNT_EXCEEDS}
+                                </p>
+                            )}
+                            {discountNum > 0 && !discountExceedsAmount && (
+                                <p className="text-[11px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
+                                    <CheckCircle size={11} /> Discount of {fmt(discountNum)} applied
+                                </p>
+                            )}
+                            {/* Discount reason: dropdown instead of free-text, with an "Others" follow-up field.
+                  FIX (requested): mandatory whenever a discount is entered. */}
+                            <Sel
+                                value={form.discountReason}
+                                onChange={(v) => setForm((p) => ({ ...p, discountReason: v, discountReasonOther: v === 'Others' ? p.discountReasonOther : '' }))}
+                                options={DISCOUNT_REASON_OPTIONS}
+                                placeholder={COLLECTION_HISTORY_STRINGS.LBL_REASON}
+                                className="w-full mt-2"
+                            />
+                            {form.discountReason === 'Others' && (
+                                <Inp
+                                    value={form.discountReasonOther}
+                                    onChange={(e) => setForm((p) => ({ ...p, discountReasonOther: e.target.value }))}
+                                    placeholder="Specify reason"
+                                    className="mt-2"
+                                />
+                            )}
+                            {discountReasonMissing && (
+                                <p className="text-[11px] text-orange-600 font-medium mt-1 flex items-center gap-1">
+                                    <AlertCircle size={11} /> A reason is required when a discount is applied.
                                 </p>
                             )}
                         </div>
-                    )}
 
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">{COLLECTION_HISTORY_STRINGS.LBL_REMARKS}</label>
-                        <textarea value={form.remarks} rows={2}
-                                  onChange={(e) => setForm((p) => ({ ...p, remarks: e.target.value }))}
-                                  placeholder={COLLECTION_HISTORY_STRINGS.LBL_OPTIONAL_NOTE}
-                                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 resize-none" />
-                    </div>
+                        {isOverdue && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                                <div className="flex items-start gap-2 mb-2">
+                                    <AlertTriangle size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <div className="text-sm font-bold text-amber-800">{COLLECTION_HISTORY_STRINGS.MSG_LATE_FINE_PROMPT}</div>
+                                        <div className="text-[11px] text-amber-700 mt-0.5">
+                                            Due: {fmtDate(activeStudent?.dueDate)} · {activeStudent?.daysLate} day{activeStudent?.daysLate !== 1 ? 's' : ''} overdue
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* FIX (requested): late fine can never be typed greater
+                      than the current "amount to collect" — clamped live
+                      to that ceiling on every keystroke, same treatment as
+                      Discount above. */}
+                                <Inp type="number" min={0} max={Math.min(academicAmountNum || 0, MAX_AMOUNT)} step={1}
+                                     value={form.lateFine}
+                                     disabled={academicAmountNum <= 0}
+                                     placeholder={academicAmountNum > 0 ? 'Fine amount (₹)' : 'Enter amount to collect first'}
+                                     className={lateFineExceedsAmount ? 'border-orange-400 bg-orange-50' : ''}
+                                     onChange={(e) => setForm((p) => ({ ...p, lateFine: clampToCeiling(e.target.value, academicAmountNum) }))} />
+                                {lateFineExceedsAmount && (
+                                    <p className="text-[11px] text-orange-600 font-medium mt-1 flex items-center gap-1">
+                                        <AlertCircle size={11} /> Late fine cannot exceed the amount to collect ({fmt(academicAmountNum)}).
+                                    </p>
+                                )}
+                            </div>
+                        )}
 
-                    <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-[#1E3A5F] rounded-xl px-4 py-3 gap-2">
                         <div>
-                            <div className="text-[10px] text-white/50 uppercase tracking-wider">{COLLECTION_HISTORY_STRINGS.LBL_RECEIPT_NO}</div>
-                            <div className="text-white font-bold text-sm mt-0.5">{COLLECTION_HISTORY_STRINGS.LBL_AUTO_GENERATED}</div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">{COLLECTION_HISTORY_STRINGS.LBL_REMARKS}</label>
+                            <textarea value={form.remarks} rows={2}
+                                      onChange={(e) => setForm((p) => ({ ...p, remarks: e.target.value }))}
+                                      placeholder={COLLECTION_HISTORY_STRINGS.LBL_OPTIONAL_NOTE}
+                                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 resize-none" />
                         </div>
-                        <div className="text-left sm:text-right">
-                            <div className="text-[10px] text-white/50 uppercase tracking-wider">{COLLECTION_HISTORY_STRINGS.LBL_NET_COLLECTED}</div>
-                            {/* Shows ₹0 instead of a bare dash when nothing has been entered yet. */}
-                            <div className={`font-extrabold text-xl ${netTotal > 0 ? 'text-white' : 'text-white/30'}`}>
-                                {fmt(netTotal)}
+
+                        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-[#1E3A5F] rounded-xl px-4 py-3 gap-2">
+                            <div>
+                                <div className="text-[10px] text-white/50 uppercase tracking-wider">{COLLECTION_HISTORY_STRINGS.LBL_RECEIPT_NO}</div>
+                                <div className="text-white font-bold text-sm mt-0.5">{COLLECTION_HISTORY_STRINGS.LBL_AUTO_GENERATED}</div>
                             </div>
-                            <div className="text-[10px] text-white/50 mt-0.5">
-                                Academic {fmt(netAcademicAmount)}{lateFineNum > 0 ? ` + ${fmt(lateFineNum)} fine` : ''}
-                                {canViewTransport && transportAmountNum > 0 ? ` + Transport ${fmt(transportAmountNum)}` : ''}
-                            </div>
-                            {/* FIX (requested): combined remaining-balance preview
+                            <div className="text-left sm:text-right">
+                                <div className="text-[10px] text-white/50 uppercase tracking-wider">{COLLECTION_HISTORY_STRINGS.LBL_NET_COLLECTED}</div>
+                                {/* Shows ₹0 instead of a bare dash when nothing has been entered yet. */}
+                                <div className={`font-extrabold text-xl ${netTotal > 0 ? 'text-white' : 'text-white/30'}`}>
+                                    {fmt(netTotal)}
+                                </div>
+                                <div className="text-[10px] text-white/50 mt-0.5">
+                                    Academic {fmt(netAcademicAmount)}{lateFineNum > 0 ? ` + ${fmt(lateFineNum)} fine` : ''}
+                                    {canViewTransport && transportAmountNum > 0 ? ` + Transport ${fmt(transportAmountNum)}` : ''}
+                                </div>
+                                {/* FIX (requested): combined remaining-balance preview
                     after this payment, across both columns. Now correctly
                     reflects discount-waived amounts (see
                     academicBalanceAfterPayment above). */}
-                            {(academicBalanceAfterPayment > 0 || (canViewTransport && transportBalanceAfterPayment > 0)) && (academicAmountNum > 0 || transportAmountNum > 0) && (
-                                <div className="text-[10px] text-amber-300 mt-1">
-                                    Remaining after this payment: {fmt(academicBalanceAfterPayment + (canViewTransport ? transportBalanceAfterPayment : 0))}
-                                </div>
-                            )}
+                                {(academicBalanceAfterPayment > 0 || (canViewTransport && transportBalanceAfterPayment > 0)) && (academicAmountNum > 0 || transportAmountNum > 0) && (
+                                    <div className="text-[10px] text-amber-300 mt-1">
+                                        Remaining after this payment: {fmt(academicBalanceAfterPayment + (canViewTransport ? transportBalanceAfterPayment : 0))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </Modal>
+            </Modal>
+
+            {/* FIX (requested): one-time popup that fires the moment an unpaid
+            earlier fee period is detected for the selected student + period —
+            works from BOTH the header "Collect Fee" button and a table row's
+            "Collect" button. Closing it does NOT clear unpaidEarlierPeriods —
+            the inline banner above and the disabled Record Receipt button are
+            what actually enforce the restriction; this popup exists purely
+            to make sure it's impossible to miss. */}
+            <Modal
+                open={unpaidPopup.open}
+                onClose={() => setUnpaidPopup({ open: false, periods: [] })}
+                title="Earlier Fee Periods Unpaid"
+                subtitle={activeStudent?.studentName}
+                footer={
+                    <Btn variant="primary" onClick={() => setUnpaidPopup({ open: false, periods: [] })} className="w-full sm:w-auto">
+                        OK, Got It
+                    </Btn>
+                }>
+                <div className="space-y-3">
+                    <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+                        <AlertTriangle size={15} className="text-red-600 mt-0.5 flex-shrink-0" />
+                        <div className="text-[12.5px] text-red-700">
+                            {activeStudent?.studentName} has an unpaid balance in {unpaidPopup.periods.length} earlier fee period{unpaidPopup.periods.length !== 1 ? 's' : ''}. Please collect {unpaidPopup.periods.length !== 1 ? 'those periods' : 'that period'} before collecting {selectedPeriodLabel || 'this period'}.
+                        </div>
+                    </div>
+                    <div className="border border-gray-200 rounded-xl divide-y divide-gray-100">
+                        {unpaidPopup.periods.map((p) => (
+                            <div key={p.periodId} className="flex justify-between items-center px-3 py-2 text-sm">
+                                <span className="text-gray-700 font-semibold">{p.label}</span>
+                                <span className="text-red-600 font-bold">{fmt(p.balanceDue)}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </Modal>
+        </>
     );
 };
 
@@ -2250,7 +2450,19 @@ const CollectionsHistory = () => {
                 setClassOptions(records.map((c) => ({ value: String(c.id), label: c.name || c.className })));
 
                 if (Array.isArray(periodsData)) {
-                    setPeriodOptions(periodsData.map((p) => ({ value: String(p.id), label: p.periodName || p.name })));
+                    // FIX (requested): carry each period's `dueDate` through into
+                    // periodOptions (confirmed field name from the
+                    // /fee/periods?academicYearId=... response) — this is what
+                    // CollectFeeModal's earlier-unpaid-period check uses to
+                    // determine which periods come "before" the one currently
+                    // being collected. Without it, that check has no reliable
+                    // way to order periods and safely skips itself instead of
+                    // guessing.
+                    setPeriodOptions(periodsData.map((p) => ({
+                        value: String(p.id),
+                        label: p.periodName || p.name,
+                        dueDate: p.dueDate || null,
+                    })));
                 }
             } catch (e) {
                 console.error('Failed to load filter options:', e);

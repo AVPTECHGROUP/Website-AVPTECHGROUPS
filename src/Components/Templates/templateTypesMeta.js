@@ -1,7 +1,7 @@
 import {
   FileText, CreditCard, Ticket, Award, Receipt, IndianRupee,
   FileOutput, ShieldCheck, ArrowRightLeft, ClipboardCheck, DoorOpen,
-  Bike, UserCheck,
+  Bike, UserCheck, CheckSquare,
 } from 'lucide-react'
 // Keys must match backend `templateType` enum values used by
 // /v1/print-templates (see Constants/Endpoints.js -> PRINT_TEMPLATES).
@@ -12,6 +12,10 @@ import {
 // accept these 4 values, same as it already accepts CERTIFICATE.
 //
 // NOTE: SALARY_SLIP is also a NEW key — backend `templateType` enum +
+// validation on POST/PUT /v1/print-templates must be updated to accept
+// this value too, same as above.
+//
+// NOTE: NO_DUES is also a NEW key — backend `templateType` enum +
 // validation on POST/PUT /v1/print-templates must be updated to accept
 // this value too, same as above.
 export const TEMPLATE_TYPES = {
@@ -1026,6 +1030,154 @@ export const TEMPLATE_TYPES = {
   </div>
 
   <div class="vp-footer">🛡 PLEASE DISPLAY THIS PASS WHILE ON CAMPUS 🛡</div>
+
+</div>`,
+  },
+  NO_DUES: {
+    key: 'NO_DUES',
+    label: 'No Dues Form Templates',
+    shortLabel: 'No Dues Form',
+    icon: CheckSquare,
+    // Print-and-sign clearance certificate, same family as GATE_PASS /
+    // VISITOR_PASS (bands + numbered rows). departmentRows is fully
+    // data-driven — one row per department returned by the API, via
+    // {{#departmentRows}}...{{/departmentRows}}; add/remove clearance
+    // departments on the backend and the table updates automatically.
+    // Status/Signature cells stay blank on purpose — departments sign
+    // off by hand once cleared.
+    stub: `<div class="nd-premium">
+<style>
+  .nd-premium { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; max-width: 700px; margin: 0 auto; border: 2px solid #0f766e; border-radius: 14px; overflow: hidden; background: #ffffff; color: #1f2937; box-shadow: 0 12px 32px rgba(15,118,110,0.14); }
+
+  .nd-header { display: flex; align-items: center; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid #e5e7eb; }
+  .nd-logo { width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg,#0f766e,#0891b2); color: #fff; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; border: 2px solid #a7f3d0; overflow: hidden; }
+  .nd-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .nd-school-block { flex: 1; min-width: 0; }
+  .nd-school-name { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.2px; color: #0f766e; text-transform: uppercase; }
+  .nd-school-meta { font-size: 10px; color: #4b5563; display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; }
+
+  .nd-pass-box { flex-shrink: 0; border: 1.5px solid #0f766e; border-radius: 10px; padding: 8px 14px; text-align: center; min-width: 118px; }
+  .nd-pass-box .nd-pb-label { font-size: 8px; font-weight: 800; letter-spacing: .06em; color: #6b7280; }
+  .nd-pass-box .nd-pb-value { font-size: 12px; font-weight: 800; color: #0f766e; margin: 1px 0 6px; }
+  .nd-pass-box .nd-pb-value.nd-pb-date { margin-bottom: 0; }
+
+  .nd-title-banner { text-align: center; background: #0f766e; color: #fff; font-size: 17px; font-weight: 800; letter-spacing: .15em; padding: 9px; margin: 16px 22px 0; border-radius: 8px; }
+
+  .nd-band { background: #0f766e; color: #fff; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 7px; margin: 18px 0 0; }
+
+  .nd-section { padding: 16px 22px 0; }
+  .nd-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #e5e7eb; }
+  .nd-row:last-child { border-bottom: none; }
+  .nd-num { flex-shrink: 0; width: 20px; height: 20px; border-radius: 5px; background: #0f766e; color: #fff; font-size: 10.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .nd-row-label { flex-shrink: 0; width: 150px; font-size: 12px; font-weight: 700; color: #374151; }
+  .nd-row-value { flex: 1; font-size: 12.5px; font-weight: 700; color: #111827; border-bottom: 1px solid #d1d5db; padding-bottom: 3px; }
+
+  .nd-declaration { padding: 14px 22px 0; font-size: 11.5px; color: #374151; line-height: 1.7; text-align: justify; }
+
+  table.nd-dues { width: calc(100% - 44px); margin: 14px 22px 0; border-collapse: collapse; font-size: 12px; }
+  table.nd-dues thead th { background: #0f766e; color: #fff; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: 8px 10px; text-align: left; }
+  table.nd-dues thead th:first-child { width: 34px; text-align: center; }
+  table.nd-dues thead th:last-child { width: 100px; text-align: center; }
+  table.nd-dues tbody td { padding: 9px 10px; font-size: 12px; border-bottom: 1px solid #f1f2f6; color: #374151; }
+  table.nd-dues tbody td:first-child { text-align: center; font-weight: 700; color: #0f766e; }
+  table.nd-dues tbody tr:nth-child(even) { background: #f0fdfa; }
+  .nd-status-pill { display: inline-block; font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; padding: 3px 10px; border-radius: 999px; background: #ecfdf5; color: #15803d; border: 1px solid #a7f3d0; }
+  .nd-sign-cell { height: 30px; border-bottom: 1px dashed #9ca3af; }
+
+  .nd-remarks-row { padding: 14px 22px 0; }
+  .nd-remarks-box { border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 12px; font-size: 11.5px; color: #4b5563; min-height: 32px; }
+  .nd-remarks-box .nd-remarks-label { display: block; font-weight: 700; color: #374151; font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+
+  .nd-final-line { text-align: center; font-size: 12.5px; font-weight: 800; color: #0f766e; margin: 16px 22px 0; padding: 10px; border: 1.5px dashed #0f766e; border-radius: 8px; background: #f0fdfa; }
+
+  .nd-signatures { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; padding: 18px 22px 6px; }
+  .nd-sign-box { border: 1px solid #d1d5db; border-radius: 8px; padding: 20px 8px 8px; text-align: center; position: relative; min-height: 66px; }
+  .nd-sign-box .nd-sign-title { position: absolute; top: 7px; left: 8px; right: 8px; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: #6b7280; text-align: left; }
+  .nd-sign-line { border-top: 1px solid #9ca3af; font-size: 9px; color: #6b7280; padding-top: 3px; }
+
+  .nd-footer { text-align: center; font-size: 10px; color: #9ca3af; padding: 6px 22px 18px; border-top: 1px dashed #e5e7eb; margin-top: 10px; }
+</style>
+
+  <!-- ══ Header ══ -->
+  <div class="nd-header">
+    <div class="nd-logo"><img src="{{schoolLogo}}" alt="{{schoolInitials}}" onerror="this.onerror=null;this.parentElement.textContent='{{schoolInitials}}'"></div>
+    <div class="nd-school-block">
+      <h1 class="nd-school-name">{{schoolName}}</h1>
+      <div class="nd-school-meta">
+        <span>📍 {{schoolAddress}}</span>
+        <span>{{schoolPhone}} &middot; {{schoolEmail}}</span>
+      </div>
+    </div>
+    <div class="nd-pass-box">
+      <div class="nd-pb-label">FORM NO.</div>
+      <div class="nd-pb-value">{{formNo}}</div>
+      <div class="nd-pb-label">DATE</div>
+      <div class="nd-pb-value nd-pb-date">{{issueDate}}</div>
+    </div>
+  </div>
+
+  <div class="nd-title-banner">NO DUES CERTIFICATE</div>
+
+  <!-- ══ Student Details ══ -->
+  <div class="nd-section">
+    <div class="nd-row"><span class="nd-num">1</span><span class="nd-row-label">Student Name</span><span class="nd-row-value">{{studentName}}</span></div>
+    <div class="nd-row"><span class="nd-num">2</span><span class="nd-row-label">Admission No.</span><span class="nd-row-value">{{admissionNumber}}</span></div>
+    <div class="nd-row"><span class="nd-num">3</span><span class="nd-row-label">Class &amp; Section</span><span class="nd-row-value">{{className}} - {{sectionName}}</span></div>
+    <div class="nd-row"><span class="nd-num">4</span><span class="nd-row-label">Roll No.</span><span class="nd-row-value">{{rollNo}}</span></div>
+    <div class="nd-row"><span class="nd-num">5</span><span class="nd-row-label">Father's / Guardian's Name</span><span class="nd-row-value">{{parentName}}</span></div>
+    <div class="nd-row"><span class="nd-num">6</span><span class="nd-row-label">Contact Number</span><span class="nd-row-value">{{parentMobile}}</span></div>
+    <div class="nd-row"><span class="nd-num">7</span><span class="nd-row-label">Academic Session</span><span class="nd-row-value">{{academicSession}}</span></div>
+    <div class="nd-row"><span class="nd-num">8</span><span class="nd-row-label">Last Date of Attendance</span><span class="nd-row-value">{{lastAttendanceDate}}</span></div>
+  </div>
+
+  <p class="nd-declaration">
+    This is to certify that the above-named student has been verified against records held by the
+    departments listed below at <strong>{{schoolName}}</strong>. This certificate is issued for the purpose of
+    <strong>{{reasonForLeaving}}</strong>.
+  </p>
+
+  <!-- ══ Department Clearance ══ -->
+  <!-- {{#departmentRows}}...{{/departmentRows}} repeats this row once per
+       department returned by the API — add/remove clearance departments
+       on the backend and this table updates automatically. -->
+  <table class="nd-dues">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Department</th>
+        <th>Status</th>
+        <th>Signature</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#departmentRows}}
+      <tr>
+        <td>{{index}}</td>
+        <td>{{departmentName}}</td>
+        <td><span class="nd-status-pill">Cleared</span></td>
+        <td class="nd-sign-cell"></td>
+      </tr>
+      {{/departmentRows}}
+    </tbody>
+  </table>
+
+  <div class="nd-remarks-row">
+    <div class="nd-remarks-box">
+      <span class="nd-remarks-label">Remarks (If Any)</span>
+      {{remarks}}
+    </div>
+  </div>
+
+  <div class="nd-final-line">No dues are pending against the student in any of the departments listed above as on {{issueDate}}.</div>
+
+  <!-- ══ Signatures ══ -->
+  <div class="nd-signatures">
+    <div class="nd-sign-box"><span class="nd-sign-title">Class Teacher</span><div class="nd-sign-line">Signature</div></div>
+    <div class="nd-sign-box"><span class="nd-sign-title">Accounts Office</span><div class="nd-sign-line">Signature</div></div>
+    <div class="nd-sign-box"><span class="nd-sign-title">Principal / Head of School</span><div class="nd-sign-line">Signature</div></div>
+  </div>
+
+  <div class="nd-footer">This is a system-generated document from {{schoolName}} and does not require a physical seal for internal verification.</div>
 
 </div>`,
   },
