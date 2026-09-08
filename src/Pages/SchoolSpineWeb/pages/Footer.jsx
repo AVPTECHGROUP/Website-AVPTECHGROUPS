@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react'
-import { FaFacebookF, FaWhatsapp, FaInstagram } from 'react-icons/fa';
+import { FaFacebookF, FaWhatsapp, FaInstagram } from 'react-icons/fa'
 import { FaXTwitter } from 'react-icons/fa6'
 import { FiMail, FiPhone, FiMapPin, FiSend, FiArrowUp } from 'react-icons/fi'
 import Logo from '../../../assets/Images/SS_logo_3.png'
@@ -13,7 +13,6 @@ const APP_STORE_URL = "https://apps.apple.com/ng/app/schoolspine/id6800739236"
 const footerLinks = {
     Product: [
         'Features',
-        // 'Pricing',
         { name: 'Blog', path: '/blog' },
     ],
     Company: [
@@ -46,7 +45,7 @@ const socialIcons = [
         label: 'WhatsApp',
         href: 'https://wa.me/919511117450'
     },
-];
+]
 
 const Footer = () => {
     const { theme } = useContext(UserContext)
@@ -60,44 +59,34 @@ const Footer = () => {
         window.scrollTo({
             top: 0,
             behavior: 'smooth'
-        });
-    };
+        })
+    }
 
     const handleFooterLinkClick = (e, link) => {
-        const isObject = typeof link === 'object';
-        const label = isObject ? link.name : link;
+        const isObject = typeof link === 'object'
+        const label = isObject ? link.name : link
 
         if (label === 'Features') {
-            e.preventDefault();
+            e.preventDefault()
             if (location.pathname === '/') {
-                document.getElementById('features-section')?.scrollIntoView({ behavior: 'smooth' });
+                document.getElementById('features-section')?.scrollIntoView({ behavior: 'smooth' })
             } else {
-                navigate('/#features-section');
+                navigate('/#features-section')
             }
-        }
-        else if (label === 'Our Clients') {
-            e.preventDefault();
+        } else if (label === 'Reviews') {
+            e.preventDefault()
             if (location.pathname === '/') {
-                document.getElementById('clients-section')?.scrollIntoView({ behavior: 'smooth' });
+                document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' })
             } else {
-                navigate('/#clients-section');
+                navigate('/#reviews-section')
             }
-        }
-        else if (label === 'Reviews') {
-            e.preventDefault();
-            if (location.pathname === '/') {
-                document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' });
-            } else {
-                navigate('/#reviews-section');
-            }
-        }
-        else if (isObject) {
+        } else if (isObject) {
             if (!link.external) {
-                e.preventDefault();
-                navigate(link.path);
+                e.preventDefault()
+                navigate(link.path)
             }
         }
-    };
+    }
 
     return (
         <footer
@@ -115,7 +104,10 @@ const Footer = () => {
             <div className="max-w-7xl mx-auto px-6 pt-16 pb-8 relative z-10">
 
                 {/* ─── ROW 1: NEWSLETTER BANNER ─── */}
-                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-12 mb-12 border-b" style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }}>
+                <div
+                    className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-12 mb-12 border-b"
+                    style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }}
+                >
                     <div className="max-w-xl">
                         <h3 className="text-xl md:text-2xl font-heading font-bold tracking-tight" style={{ color: isDark ? 'white' : '#0f172a' }}>
                             Stay updated with SchoolSpine
@@ -124,7 +116,14 @@ const Footer = () => {
                             Join our newsletter to receive the latest updates, feature releases, and modern school management insights.
                         </p>
                     </div>
-                    <form onSubmit={(e) => e.preventDefault()} className="flex items-center gap-2 w-full lg:w-auto max-w-md bg-white/[0.03] border p-1.5 rounded-xl focus-within:border-[#00C9B1]/40 transition-all duration-300" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
+                    <form
+                        onSubmit={(e) => e.preventDefault()}
+                        className="flex items-center gap-2 w-full lg:w-auto max-w-md border p-1.5 rounded-xl focus-within:border-[#00C9B1]/40 transition-all duration-300"
+                        style={{
+                            backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                            borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+                        }}
+                    >
                         <input
                             type="email"
                             value={email}
@@ -134,18 +133,21 @@ const Footer = () => {
                             style={{ color: isDark ? 'white' : '#0f172a' }}
                             required
                         />
-                        <button type="submit" className="h-10 px-5 text-slate-950 bg-gradient-to-r from-[#00C9B1] to-[#F5A623] rounded-xl font-bold transition-transform duration-200 shadow-md flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap active:scale-[0.98]">
+                        <button
+                            type="submit"
+                            className="h-10 px-5 text-slate-950 bg-gradient-to-r from-[#00C9B1] to-[#F5A623] rounded-xl font-bold transition-transform duration-200 shadow-md flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap active:scale-[0.98]"
+                        >
                             <span>Subscribe</span>
                             <FiSend size={14} />
                         </button>
                     </form>
                 </div>
 
-                {/* ─── ROW 2: 5-COLUMN GRID ─── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-12 gap-10 lg:gap-8 pb-12">
+                {/* ─── ROW 2: BALANCED RESPONSIVE GRID ─── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-8 lg:gap-6 xl:gap-8 pb-12">
 
-                    {/* Brand Info & App Download Promotion */}
-                    <div className="flex flex-col gap-4 lg:col-span-4">
+                    {/* Brand Info & App Download Promotion (4 cols on desktop) */}
+                    <div className="flex flex-col gap-4 sm:col-span-2 md:col-span-12 lg:col-span-3 xl:col-span-4">
                         <a href="/" className="w-fit block transition-transform duration-200 hover:scale-[1.02]">
                             <img src={Logo} alt="SchoolSpine Logo" className="h-14 md:h-16 object-contain" />
                         </a>
@@ -153,14 +155,12 @@ const Footer = () => {
                             Redefining educational ecosystems with a secure, intelligent, and future-ready interface built to sync administrators, instructors, parents, and students seamlessly.
                         </p>
 
-                        {/* App Store & Play Store Promotional Badges */}
                         <div className="pt-2 flex flex-col gap-2.5">
                             <p className="text-xs font-bold uppercase tracking-wider text-[#00C9B1]">
                                 Experience on Mobile
                             </p>
 
                             <div className="flex flex-wrap items-center gap-2.5">
-                                {/* Google Play Badge */}
                                 <a
                                     href={PLAY_STORE_URL}
                                     target="_blank"
@@ -183,7 +183,6 @@ const Footer = () => {
                                     </div>
                                 </a>
 
-                                {/* Apple App Store Badge */}
                                 <a
                                     href={APP_STORE_URL}
                                     target="_blank"
@@ -206,10 +205,10 @@ const Footer = () => {
                         </div>
                     </div>
 
-                    {/* Links Columns */}
-                    <div className="lg:col-span-2 lg:pl-4">
+                    {/* Product Column */}
+                    <div className="md:col-span-3 lg:col-span-2">
                         <h4 className="font-semibold text-sm tracking-wider uppercase mb-4" style={{ color: isDark ? 'white' : '#1e293b' }}>Product</h4>
-                        <ul className="space-y-2">
+                        <ul className="space-y-2.5">
                             {footerLinks.Product.map((link, idx) => (
                                 <li key={idx}>
                                     <a
@@ -225,9 +224,10 @@ const Footer = () => {
                         </ul>
                     </div>
 
-                    <div className="lg:col-span-2">
+                    {/* Company Column */}
+                    <div className="md:col-span-3 lg:col-span-2">
                         <h4 className="font-semibold text-sm tracking-wider uppercase mb-4" style={{ color: isDark ? 'white' : '#1e293b' }}>Company</h4>
-                        <ul className="space-y-3">
+                        <ul className="space-y-2.5">
                             {footerLinks.Company.map((link, idx) => (
                                 <li key={idx}>
                                     <a
@@ -243,9 +243,10 @@ const Footer = () => {
                         </ul>
                     </div>
 
-                    <div className="lg:col-span-2">
+                    {/* Legal Column */}
+                    <div className="md:col-span-3 lg:col-span-2">
                         <h4 className="font-semibold text-sm tracking-wider uppercase mb-4" style={{ color: isDark ? 'white' : '#1e293b' }}>Legal</h4>
-                        <ul className="space-y-3">
+                        <ul className="space-y-2.5">
                             {footerLinks.Legal.map((link, idx) => (
                                 <li key={idx}>
                                     <a
@@ -263,21 +264,26 @@ const Footer = () => {
                         </ul>
                     </div>
 
-                    {/* Contact Column */}
-                    <div className="flex flex-col gap-4 lg:col-span-2">
-                        <h4 className="font-semibold text-sm tracking-wider uppercase mb-1" style={{ color: isDark ? 'white' : '#1e293b' }}>Get in Touch</h4>
+                    {/* Contact Column (Expanded width + right buffer for sticky WhatsApp/Call icons) */}
+                    <div className="md:col-span-3 lg:col-span-3 xl:col-span-2 pr-6 sm:pr-8 md:pr-0">
+                        <h4 className="font-semibold text-sm tracking-wider uppercase mb-3" style={{ color: isDark ? 'white' : '#1e293b' }}>Get in Touch</h4>
                         <ul className="space-y-3.5 text-sm" style={{ color: isDark ? '#94a3b8' : '#475569' }}>
                             <li className="flex items-start gap-2.5">
-                                <FiMapPin size={16} className="text-[#00C9B1] mt-0.5 flex-shrink-0" />
-                                <span className="leading-5">Sushant Golf City, Lucknow, 226030</span>
-                            </li >
-                            <li className="flex items-center gap-2.5">
-                                <FiPhone size={15} className="text-[#00C9B1] flex-shrink-0" />
-                                <a href="tel:9511117450" className="hover:text-[#00C9B1] transition-colors">+91 9511117450</a>
+                                <FiMapPin size={16} className="text-[#00C9B1] mt-0.5 shrink-0" />
+                                <span className="leading-snug">Sushant Golf City, Lucknow, 226030</span>
                             </li>
                             <li className="flex items-center gap-2.5">
-                                <FiMail size={15} className="text-[#00C9B1] flex-shrink-0" />
-                                <a href="mailto:info@computesofttech.com" className="hover:text-[#00C9B1] transition-colors block max-w-[160px] lg:max-w-none">info@computesofttech.com</a>
+                                <FiPhone size={15} className="text-[#00C9B1] shrink-0" />
+                                <a href="tel:9511117450" className="hover:text-[#00C9B1] transition-colors whitespace-nowrap">+91 9511117450</a>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                                <FiMail size={15} className="text-[#00C9B1] mt-0.5 shrink-0" />
+                                <a
+                                    href="mailto:info@computesofttech.com"
+                                    className="hover:text-[#00C9B1] transition-colors break-all leading-snug"
+                                >
+                                    info@computesofttech.com
+                                </a>
                             </li>
                         </ul>
                     </div>
@@ -289,15 +295,10 @@ const Footer = () => {
                 {/* ─── ROW 3: BOTTOM BAR ─── */}
                 <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-6 pt-4 text-center md:text-left">
 
-                    <div onClick={handleScrollToTop}
-                        className="group flex items-center gap-3 cursor-pointer"
-                    >
-                        <div className="w-12 h-12 rounded-full border border-[#00C9B1]/30 flex items-center justify-center relative overflow-hidden">
+                    <div onClick={handleScrollToTop} className="group flex items-center gap-3 cursor-pointer">
+                        <div className="w-11 h-11 rounded-full border border-[#00C9B1]/30 flex items-center justify-center relative overflow-hidden">
                             <div className="absolute inset-0 bg-[#00C9B1] scale-0 group-hover:scale-100 transition duration-500 rounded-full" />
-                            <FiArrowUp
-                                size={20}
-                                className="relative z-10 text-[#00C9B1] group-hover:text-white transition"
-                            />
+                            <FiArrowUp size={18} className="relative z-10 text-[#00C9B1] group-hover:text-white transition" />
                         </div>
                     </div>
 
@@ -336,4 +337,4 @@ const Footer = () => {
     )
 }
 
-export default Footer;
+export default Footer

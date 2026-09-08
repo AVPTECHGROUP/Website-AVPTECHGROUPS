@@ -26,27 +26,27 @@ const FloatingContact = () => {
                 }
             `}</style>
 
-            {/* Fixed Floating Container (Always visible on scroll) */}
-            <div className="fixed right-4 sm:right-6 bottom-8 sm:top-90 z-50 flex flex-col items-center gap-10 select-none">
+            {/* Sticky Floating Container - Exactly in Vertical Middle of the viewport */}
+            <div className="fixed right-3 sm:right-6 top-1/2 -translate-y-1/2 z-50 flex flex-col items-center gap-3.5 sm:gap-4 select-none pointer-events-auto">
 
-                {/* Phone Call Button (White Circular Button with Green Icon) */}
+                {/* Phone Call Button (White Circle with Green Icon) */}
                 <a
                     href={`tel:${phoneNumber}`}
                     aria-label="Call Us"
-                    className="animate-sticky-bounce w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-white text-[#22c55e] flex items-center justify-center shadow-[0_8px_25px_rgba(0,0,0,0.18)] hover:scale-110 active:scale-95 transition-all duration-300 border border-slate-100 cursor-pointer group"
+                    className="animate-sticky-bounce w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-white text-[#22c55e] flex items-center justify-center shadow-[0_8px_25px_rgba(0,0,0,0.22)] hover:scale-110 active:scale-95 transition-all duration-300 border border-slate-100 cursor-pointer group"
                 >
-                    <Phone size={22} className="fill-current group-hover:rotate-12 transition-transform duration-300" />
+                    <Phone size={20} className="sm:w-[22px] sm:h-[22px] fill-current group-hover:rotate-12 transition-transform duration-300" />
                 </a>
 
-                {/* WhatsApp Button (Vibrant Green Button with White Icon) */}
+                {/* WhatsApp Button (Brand Green Circle with White Icon) */}
                 <a
                     href={whatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Chat on WhatsApp"
-                    className="animate-sticky-bounce-delayed w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-[0_8px_25px_rgba(37,211,102,0.4)] hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer group"
+                    className="animate-sticky-bounce-delayed w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-[0_8px_25px_rgba(37,211,102,0.45)] hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer group"
                 >
-                    <FaWhatsapp size={26} className="group-hover:scale-105 transition-transform duration-300" />
+                    <FaWhatsapp size={24} className="sm:w-[26px] sm:h-[26px] group-hover:scale-105 transition-transform duration-300" />
                 </a>
 
             </div>
@@ -54,4 +54,4 @@ const FloatingContact = () => {
     )
 }
 
-export default FloatingContact;
+export default FloatingContact

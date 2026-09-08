@@ -491,21 +491,6 @@ const Navbar = () => {
                                     </div>
                                 </div>
 
-                                <div className={`grid grid-cols-3 divide-x text-center pt-4 border-t ${theme === 'dark' ? 'divide-slate-800 border-slate-800' : 'divide-slate-200 border-slate-200'
-                                    }`}>
-                                    <div>
-                                        <p className="font-heading font-extrabold text-xl sm:text-2xl text-[#00C9B1]">50+</p>
-                                        <p className="text-[10px] font-bold uppercase tracking-wider text-theme-subtext mt-0.5">PARTNERS</p>
-                                    </div>
-                                    <div>
-                                        <p className="font-heading font-extrabold text-xl sm:text-2xl text-[#00B8C8]">100%</p>
-                                        <p className="text-[10px] font-bold uppercase tracking-wider text-theme-subtext mt-0.5">SECURE</p>
-                                    </div>
-                                    <div>
-                                        <p className="font-heading font-extrabold text-xl sm:text-2xl text-[#F5A623]">B2B</p>
-                                        <p className="text-[10px] font-bold uppercase tracking-wider text-theme-subtext mt-0.5">GROWTH</p>
-                                    </div>
-                                </div>
                             </div>
 
                             {/* Right Side: Form */}
@@ -638,7 +623,7 @@ const Navbar = () => {
                                             </button>
 
                                             <p className="text-[9px] uppercase tracking-wider text-center text-theme-subtext/75 font-semibold mt-1">
-                                                © ComputeSoft Technologies B2B Portal[cite: 2, 5]
+                                                © ComputeSoft Technologies Pvt. Ltd.
                                             </p>
                                         </form>
                                     )}
