@@ -118,13 +118,11 @@ export default function Header() {
             ],
             type: "image",
             image: crousel5,
-            // Optimized without scale to prevent top/bottom clipping
             sizeClass: "max-h-[430px] sm:max-h-[480px] lg:max-h-[520px] w-full max-w-[500px]",
             showLogos: true
         }
     ]
 
-    // Automatic slide change every 3 seconds
     const nextSlide = useCallback(() => {
         setActiveSlide((prev) => (prev + 1) % slides.length)
     }, [slides.length])
@@ -211,16 +209,16 @@ export default function Header() {
                     {/* LEFT SIDE: Portrait Indicators Beside the Text Content */}
                     <div className="flex items-start gap-3 sm:gap-5 w-full lg:w-[48%] xl:w-[46%]">
 
-                        {/* Portrait Carousel Indicators */}
-                        <div className="flex flex-col items-center gap-2 pt-12 sm:pt-14 shrink-0">
+                        {/* Portrait Carousel Indicators (HIDDEN ON MOBILE via hidden sm:flex) */}
+                        <div className="hidden sm:flex flex-col items-center gap-2 pt-12 sm:pt-14 shrink-0">
                             {slides.map((_, idx) => (
                                 <button
                                     key={idx}
                                     onClick={() => setActiveSlide(idx)}
                                     aria-label={`Slide ${idx + 1}`}
                                     className={`transition-all duration-300 rounded-full cursor-pointer ${activeSlide === idx
-                                            ? 'w-2 sm:w-2.5 h-7 sm:h-8 bg-gradient-to-b from-[#00C9B1] to-[#00B8C8] shadow-[0_0_10px_rgba(0,201,177,0.7)]'
-                                            : 'w-2 sm:w-2.5 h-2 sm:h-2.5 bg-theme-subtext/35 hover:bg-theme-subtext/70'
+                                        ? 'w-2 sm:w-2.5 h-7 sm:h-8 bg-gradient-to-b from-[#00C9B1] to-[#00B8C8] shadow-[0_0_10px_rgba(0,201,177,0.7)]'
+                                        : 'w-2 sm:w-2.5 h-2 sm:h-2.5 bg-theme-subtext/35 hover:bg-theme-subtext/70'
                                         }`}
                                 />
                             ))}
@@ -305,7 +303,7 @@ export default function Header() {
                                 </a>
                             </div>
 
-                            {/* Logos section under text/buttons */}
+                            {/* Logos section */}
                             {slides[activeSlide].showLogos && (
                                 <div className="mt-7 w-full max-w-sm sm:max-w-md flex justify-center lg:justify-start animate-[fadeUp_0.6s_ease_both]">
                                     <img
@@ -319,11 +317,11 @@ export default function Header() {
 
                     </div>
 
-                    {/* RIGHT SIDE: Visual Showcase (Fully unclipped with safe bounding) */}
+                    {/* RIGHT SIDE: Visual Showcase */}
                     <div
                         className={`w-full lg:flex-1 flex items-center justify-center lg:justify-end relative overflow-visible transition-all duration-700 ease-out ${hasExplored
-                                ? 'translate-y-0 opacity-100 scale-100 filter drop-shadow-[0_0_50px_rgba(0,210,185,0.15)]'
-                                : 'lg:translate-y-2 opacity-100'
+                            ? 'translate-y-0 opacity-100 scale-100 filter drop-shadow-[0_0_50px_rgba(0,210,185,0.15)]'
+                            : 'lg:translate-y-2 opacity-100'
                             }`}
                     >
                         {/* Ambient Glow */}
