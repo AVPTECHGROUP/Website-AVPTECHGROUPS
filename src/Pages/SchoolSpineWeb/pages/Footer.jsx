@@ -7,6 +7,9 @@ import cst from '../../../assets/Images/cst.png'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { UserContext } from '../../../ContextAPI/UserContext'
 
+const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.cst.schoolspine&hl=en_IN"
+const APP_STORE_URL = "https://apps.apple.com/ng/app/schoolspine/id6800739236"
+
 const footerLinks = {
     Product: [
         'Features',
@@ -27,7 +30,6 @@ const footerLinks = {
     ],
 }
 
-// Updated social configurations with new links, Instagram addition, and labels
 const socialIcons = [
     {
         icon: <FaFacebookF size={16} />,
@@ -106,13 +108,13 @@ const Footer = () => {
                 color: isDark ? '#cbd5e1' : '#334155'
             }}
         >
-            {/* Ambient subtle backdrop glows */}
+            {/* Ambient backdrop glows */}
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#00C9B1]/5 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#F5A623]/5 rounded-full blur-3xl pointer-events-none" />
 
             <div className="max-w-7xl mx-auto px-6 pt-16 pb-8 relative z-10">
 
-                {/* ─── ROW 1: PREMIUM UNIFIED NEWSLETTER BANNER ─── */}
+                {/* ─── ROW 1: NEWSLETTER BANNER ─── */}
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-12 mb-12 border-b" style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }}>
                     <div className="max-w-xl">
                         <h3 className="text-xl md:text-2xl font-heading font-bold tracking-tight" style={{ color: isDark ? 'white' : '#0f172a' }}>
@@ -139,17 +141,69 @@ const Footer = () => {
                     </form>
                 </div>
 
-                {/* ─── ROW 2: BALANCED 5-COLUMN GRID ─── */}
+                {/* ─── ROW 2: 5-COLUMN GRID ─── */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-12 gap-10 lg:gap-8 pb-12">
 
-                    {/* Brand Info & Core Description */}
-                    <div className="flex flex-col gap-5 lg:col-span-4">
+                    {/* Brand Info & App Download Promotion */}
+                    <div className="flex flex-col gap-4 lg:col-span-4">
                         <a href="/" className="w-fit block transition-transform duration-200 hover:scale-[1.02]">
                             <img src={Logo} alt="SchoolSpine Logo" className="h-14 md:h-16 object-contain" />
                         </a>
                         <p className="text-sm leading-6" style={{ color: isDark ? '#94a3b8' : '#475569' }}>
                             Redefining educational ecosystems with a secure, intelligent, and future-ready interface built to sync administrators, instructors, parents, and students seamlessly.
                         </p>
+
+                        {/* App Store & Play Store Promotional Badges */}
+                        <div className="pt-2 flex flex-col gap-2.5">
+                            <p className="text-xs font-bold uppercase tracking-wider text-[#00C9B1]">
+                                Experience on Mobile
+                            </p>
+
+                            <div className="flex flex-wrap items-center gap-2.5">
+                                {/* Google Play Badge */}
+                                <a
+                                    href={PLAY_STORE_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label="Download on Google Play Store"
+                                    className={`group inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl border transition-all duration-300 hover:-translate-y-0.5 shadow-sm ${isDark
+                                            ? 'bg-slate-900/90 border-slate-800 hover:border-[#00C9B1] hover:bg-slate-800'
+                                            : 'bg-white border-slate-200 hover:border-[#00C9B1] hover:shadow-md'
+                                        }`}
+                                >
+                                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                                        <path d="M3.609 1.814L13.793 12 3.61 22.186A2.213 2.213 0 0 1 3 20.627V3.373c0-.613.226-1.18.609-1.559z" fill="#00C9B1" />
+                                        <path d="M17.207 8.586L13.793 12l3.414 3.414 3.904-2.231c.883-.505.883-1.861 0-2.366L17.207 8.586z" fill="#F5A623" />
+                                        <path d="M13.793 12L3.61 1.814A2.327 2.327 0 0 1 4.708 1.55c.489 0 .964.128 1.385.369l11.114 6.667L13.793 12z" fill="#00E5CC" />
+                                        <path d="M13.793 12l3.414 3.414-11.114 6.667a2.76 2.76 0 0 1-1.385.369 2.327 2.327 0 0 1-1.098-.264L13.793 12z" fill="#FF5722" />
+                                    </svg>
+                                    <div className="flex flex-col text-left leading-tight">
+                                        <span className="text-[9px] uppercase tracking-tight text-slate-400 font-medium">Get it on</span>
+                                        <span className="text-xs font-bold text-theme-text group-hover:text-[#00C9B1] transition-colors">Google Play</span>
+                                    </div>
+                                </a>
+
+                                {/* Apple App Store Badge */}
+                                <a
+                                    href={APP_STORE_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label="Download on Apple App Store"
+                                    className={`group inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl border transition-all duration-300 hover:-translate-y-0.5 shadow-sm ${isDark
+                                            ? 'bg-slate-900/90 border-slate-800 hover:border-[#F5A623] hover:bg-slate-800'
+                                            : 'bg-white border-slate-200 hover:border-[#F5A623] hover:shadow-md'
+                                        }`}
+                                >
+                                    <svg className="w-4 h-4 fill-current text-theme-text group-hover:text-[#F5A623] transition-colors shrink-0" viewBox="0 0 170 170">
+                                        <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.69-7.85-11.97-14.44-6.19-9.58-10.87-20.47-14.04-32.66-3.17-12.19-4.76-23.77-4.76-34.73 0-16.14 4.15-29.6 12.44-40.38 8.29-10.78 18.7-16.29 31.25-16.53 4.8 0 10.3 1.25 16.51 3.75 6.21 2.5 10.02 3.8 11.43 3.91 1.74-.22 5.82-1.63 12.24-4.24 6.42-2.61 11.97-3.8 16.65-3.59 13.06.65 23.59 5.38 31.6 14.19-11.54 6.96-17.15 16.52-16.84 28.69.33 9.79 4.13 18.06 11.4 24.81 7.27 6.75 16.03 10.77 26.27 12.08-2.61 7.84-5.94 15.79-9.98 23.85zm-43.24-118.9c0 7.84-2.83 15.01-8.49 21.52-5.66 6.52-12.74 10.77-21.23 12.74-.22-1.09-.33-2.18-.33-3.27 0-7.62 3.05-15.01 9.15-22.18 6.1-7.18 13.44-11.31 22.02-12.4.11 1.2.17 2.4.17 3.59z" />
+                                    </svg>
+                                    <div className="flex flex-col text-left leading-tight">
+                                        <span className="text-[9px] uppercase tracking-tight text-slate-400 font-medium">Download on</span>
+                                        <span className="text-xs font-bold text-theme-text group-hover:text-[#F5A623] transition-colors">App Store</span>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Links Columns */}
@@ -232,10 +286,9 @@ const Footer = () => {
 
                 <div className="w-full my-4 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }} />
 
-                {/* ─── ROW 3: FOOTER BOTTOM BAR WITH BACK TO TOP TRIGGER ─── */}
+                {/* ─── ROW 3: BOTTOM BAR ─── */}
                 <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-6 pt-4 text-center md:text-left">
 
-                    {/* Left Section: Back to top interface */}
                     <div onClick={handleScrollToTop}
                         className="group flex items-center gap-3 cursor-pointer"
                     >
@@ -246,11 +299,8 @@ const Footer = () => {
                                 className="relative z-10 text-[#00C9B1] group-hover:text-white transition"
                             />
                         </div>
-                        <div>
-                        </div>
                     </div>
 
-                    {/* Middle Section: Copyright parameters */}
                     <div className="flex flex-col sm:flex-row items-center gap-2 text-xs md:text-sm" style={{ color: isDark ? '#94a3b8' : '#475569' }}>
                         <div className="flex items-center justify-center gap-1.5">
                             <span>© 2026</span>
@@ -261,7 +311,6 @@ const Footer = () => {
                         </div>
                     </div>
 
-                    {/* Right Section: Updated Social channels supporting target="_blank" dynamically */}
                     <div className="flex items-center gap-2.5">
                         {socialIcons.map(({ icon, label, href }) => (
                             <a

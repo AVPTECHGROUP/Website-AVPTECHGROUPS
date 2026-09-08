@@ -251,7 +251,22 @@ const Student = () => {
         );
     };
 
-    // ── FULL CSV EXPORT (ALL STUDENTS & ALL IMPORTANT FIELDS) ────────────────────
+    // Helper: Find selected class and section info for dynamic filename/labels
+    const getSelectedClassAndSection = () => {
+        if (!selectedSectionId) return null;
+        for (const grp of groupedSections) {
+            const found = grp.sections.find((s) => String(s.id) === String(selectedSectionId));
+            if (found) {
+                return {
+                    className: grp.className,
+                    sectionName: found.name,
+                };
+            }
+        }
+        return null;
+    };
+
+    // ── FULL CSV EXPORT (FILTERED / ALL STUDENTS) ────────────────────
     const csvCell = (val) => {
         if (val === null || val === undefined) return '""';
         const str = typeof val === 'boolean' ? (val ? 'Yes' : 'No') : String(val).trim();
@@ -265,7 +280,13 @@ const Student = () => {
         }
 
         setIsExporting(true);
-        const exportToast = toast.loading("Fetching all student records for export...");
+
+        const selectedInfo = getSelectedClassAndSection();
+        const exportContext = selectedInfo
+            ? `${selectedInfo.className} - ${selectedInfo.sectionName}`
+            : 'students';
+
+        const exportToast = toast.loading(`Fetching ${exportContext} records for export...`);
 
         try {
             const hasFilters =
@@ -410,19 +431,27 @@ const Student = () => {
             const anchor = document.createElement('a');
             const dateStr = new Date().toISOString().slice(0, 10);
 
+            // Dynamic filename based on Class/Section filter
+            let fileName = `Students_All_${allStudents.length}_Records_${dateStr}.csv`;
+            if (selectedInfo) {
+                const sanitizedClass = selectedInfo.className.replace(/[^a-zA-Z0-9_-]/g, '_');
+                const sanitizedSection = selectedInfo.sectionName.replace(/[^a-zA-Z0-9_-]/g, '_');
+                fileName = `Students_${sanitizedClass}_Sec-${sanitizedSection}_${allStudents.length}_Records_${dateStr}.csv`;
+            }
+
             anchor.href = url;
-            anchor.download = `All_Students_Export_${allStudents.length}_Records_${dateStr}.csv`;
+            anchor.download = fileName;
             document.body.appendChild(anchor);
             anchor.click();
             document.body.removeChild(anchor);
             URL.revokeObjectURL(url);
 
             toast.dismiss(exportToast);
-            toast.success(`Successfully exported all ${allStudents.length} student records to CSV!`);
+            toast.success(`Successfully exported ${allStudents.length} student records!`);
         } catch (err) {
             console.error("Export CSV Error:", err);
             toast.dismiss(exportToast);
-            toast.error(err.message || "Failed to export all student data.");
+            toast.error(err.message || "Failed to export student data.");
         } finally {
             setIsExporting(false);
         }
@@ -547,7 +576,7 @@ const Student = () => {
                             {isExporting ? (
                                 <>
                                     <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                                    <span>Exporting All...</span>
+                                    <span>Exporting...</span>
                                 </>
                             ) : (
                                 <>

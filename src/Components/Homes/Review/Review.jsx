@@ -5,8 +5,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 const reviews = [
   {
     quote: "SchoolSpine has completely transformed how we manage our school. The automation saves us hours every week, and parents love the real-time updates.",
-    name: "Dr. Priya Sharma",
-    role: "Principal, Delhi Public School",
+    name: "Kartikey Katiyar",
+    role: "Principal, Delhi Public International School",
     rating: 5,
   },
   {
@@ -17,8 +17,8 @@ const reviews = [
   },
   {
     quote: "As a teacher, I can focus more on teaching now. Attendance, grades, everything is just a few clicks away. Absolutely love it!",
-    name: "Anita Desai",
-    role: "Senior Teacher, Modern School",
+    name: "Shyam Singh",
+    role: "Principal, Shyam children public school",
     rating: 5,
   },
   {
