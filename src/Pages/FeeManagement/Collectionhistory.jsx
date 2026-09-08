@@ -489,7 +489,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     // "August" would still submit (and receipt) July's fee structure/amount
     // against an August payment.
     const [periodSyncLoading, setPeriodSyncLoading] = useState(false);
-    const lastPeriodSyncRef = useRef(''); // `${studentId}:${periodId}` already synced
+    const lastPeriodSyncRef = useRef(''); // `${studentId}:${periodId}` already synced (or currently in flight for)
 
     // FIX (requested): before allowing a payment to be collected — from
     // EITHER the top-level "Collect Fee" button (manual mode) OR a table
@@ -504,7 +504,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     const [unpaidEarlierPeriods, setUnpaidEarlierPeriods] = useState([]);
     const [earlierPeriodsChecking, setEarlierPeriodsChecking] = useState(false);
     const [unpaidPopup, setUnpaidPopup] = useState({ open: false, periods: [] });
-    const lastEarlierCheckRef = useRef(''); // `${studentId}:${periodId}` already checked
+    const lastEarlierCheckRef = useRef(''); // `${studentId}:${periodId}` already checked (or currently in flight for)
 
     const academicTouchedRef = useRef(false);
     const transportTouchedRef = useRef(false);
@@ -712,8 +712,25 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     // proven reliable elsewhere in this file, with a real page size, and
     // find the student's record client-side. This returns the authoritative
     // balanceDue straight from the server instead of reconstructing it.
+    //
+    // FIX (race condition guard, second bug reported): this function — and
+    // checkEarlierPeriods below — are async and can be in flight when the
+    // person switches the Fee Period dropdown again before the previous
+    // request resolves. Previously, whichever request happened to resolve
+    // LAST would win and overwrite state, even if it was for a period the
+    // person had already navigated away from. That let a STALE result
+    // (computed for the period the person just left) get applied against
+    // whatever period is now selected — see checkEarlierPeriods for the
+    // concrete symptom this caused ("Test1 blocked by Test1").
+    //
+    // Fix: the caller (the effect below) now sets `lastPeriodSyncRef` to
+    // this request's `${studentId}:${periodId}` key BEFORE calling this
+    // function, and this function re-checks that the ref still matches its
+    // own key after every await — bailing out without touching state if
+    // the selection has moved on since the request was fired.
     const resyncBalanceForCurrentPeriod = useCallback(async (studentId, periodId, studentClassName) => {
         if (!studentId || !periodId) return;
+        const requestKey = `${studentId}:${periodId}`;
         setPeriodSyncLoading(true);
         try {
             const res = await getOutstandingFees(
@@ -721,8 +738,12 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                     ? { periodId, classId: selectedClassId, page: 0, size: 500 }
                     : { periodId, page: 0, size: 500 }
             );
+            // Stale check: bail out silently if the person has since
+            // selected a different student/period — a newer request either
+            // already ran, or is about to.
+            if (lastPeriodSyncRef.current !== requestKey) return;
+
             const rec = (res?.records || []).find((r) => String(r.studentId) === String(studentId));
-            lastPeriodSyncRef.current = `${studentId}:${periodId}`;
 
             if (rec) {
                 const totalFee = Number(rec.totalFee) || 0;
@@ -763,6 +784,10 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             if (!structures.length) {
                 try { structures = await getFeeStructures(parseInt(periodId)); } catch { structures = []; }
             }
+            // Stale check again — the getFeeStructures call above is itself an
+            // await point the selection could have moved past.
+            if (lastPeriodSyncRef.current !== requestKey) return;
+
             const className = (studentClassName || '').trim().toLowerCase();
             const matched = structures.find((s) => (s.classes || []).some((c) =>
                 String(c.id) === String(selectedClassId) ||
@@ -788,6 +813,9 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                         .filter((h) => String(h.studentId ?? h.student?.id ?? '') === String(studentId))
                         .reduce((s, h) => s + (Number(h.amountPaid) || 0), 0);
                 } catch { /* assume nothing paid yet if history lookup fails */ }
+
+                // Stale check once more after the history-lookup await.
+                if (lastPeriodSyncRef.current !== requestKey) return;
 
                 const balanceDue = Math.max(0, totalFee - paidSoFar);
                 setActiveStudent((p) => (p && p.studentId === studentId) ? {
@@ -824,7 +852,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             // A failed resync shouldn't block collection outright — but it does
             // mean the currently-shown balance may be stale.
         } finally {
-            setPeriodSyncLoading(false);
+            if (lastPeriodSyncRef.current === requestKey) setPeriodSyncLoading(false);
         }
     }, [periodStructures, selectedClassId]);
 
@@ -853,19 +881,80 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     // reliable way to say they're "before" anything), so this check quietly
     // does nothing if the fee-periods API in a given environment doesn't
     // return dates.
+    //
+    // FIX (bug reported): paying the EARLIEST fee period that exists (e.g.
+    // "Test1", due 7 Sep, with only a later "Test2", due 8 Sep, also in the
+    // system) was incorrectly blocked with a popup saying "Test1 unpaid —
+    // collect it before collecting Test1": the period appeared to be
+    // blocking itself. The date-comparison logic below is actually correct
+    // — a period can never be counted as "earlier than itself", and only
+    // STRICTLY smaller due dates ever qualify — so a genuinely single- or
+    // earliest-period case was never supposed to produce this result.
+    //
+    // Root cause was a race condition: this check is async (it calls
+    // getOutstandingFees per candidate "earlier" period), and the person
+    // can switch the Fee Period dropdown again before an in-flight check
+    // for the PREVIOUSLY selected period resolves. Concretely: switching
+    // Test2 → Test1 quickly — the check that started for Test2 correctly
+    // finds Test1 as an earlier, unpaid period (Test1's due date really is
+    // before Test2's). If that check resolves AFTER the dropdown has
+    // already moved to Test1, its result — "Test1 is unpaid" — was
+    // previously applied unconditionally, landing against the NOW-current
+    // selection (also Test1), which made it look like Test1 was blocking
+    // itself.
+    //
+    // Fix: same guard pattern as resyncBalanceForCurrentPeriod above — the
+    // caller (the effect below) sets `lastEarlierCheckRef` to this
+    // request's key BEFORE calling, and this function re-checks that the
+    // ref still matches its own key after the async work, discarding the
+    // result without touching state if the selection has moved on since.
+    //
+    // FIX (bug reported, second): "switching from a later period straight
+    // back to an earlier one leaves the Record Receipt button stuck on
+    // 'Checking…' forever, even though there's nothing left to check."
+    // Root cause: `earlierPeriodsChecking` was previously only ever cleared
+    // inside the async branch below, in a `finally` block guarded by the
+    // same staleness check used for `unpaidEarlierPeriods`. That guard is
+    // correct for the *result* — a stale response should never overwrite a
+    // newer one — but it was wrong for the *loading flag*. Concretely: a
+    // later period (e.g. one with real earlier unpaid periods) sets
+    // `earlierPeriodsChecking(true)` and goes async; if the person switches
+    // to an earlier period before that resolves, and the earlier period's
+    // own check exits through one of the synchronous early-returns below
+    // (no earlier periods at all, or no resolvable due date), that
+    // synchronous exit never touched `earlierPeriodsChecking` — and by the
+    // time the OLDER, now-superseded check finally resolves, its own
+    // cleanup is (correctly) skipped because the ref no longer matches its
+    // key. Net effect: nothing was ever left to turn the flag back off, and
+    // the newer (earlier) period's Record Receipt button stayed disabled on
+    // "Checking…" indefinitely, which looked identical to a genuine
+    // unpaid-earlier-period block.
+    //
+    // Fix: every early-return below now explicitly clears
+    // `earlierPeriodsChecking`. Since nothing async has happened yet at any
+    // of those points, each call is still guaranteed to be the most recent
+    // one when it reaches them, so clearing it there is always safe — no
+    // staleness check needed for these three, unlike the result-state
+    // updates further down after the actual network calls.
     const checkEarlierPeriods = useCallback(async (studentId, classId, periodId) => {
         if (!studentId || !classId || !periodId) return;
+        const requestKey = `${studentId}:${periodId}`;
         const current = periodOptions.find((p) => String(p.value) === String(periodId));
-        if (!current?.dueDate) { setUnpaidEarlierPeriods([]); return; }
+        if (!current?.dueDate) { setUnpaidEarlierPeriods([]); setEarlierPeriodsChecking(false); return; }
         const currentDue = new Date(current.dueDate).getTime();
-        if (Number.isNaN(currentDue)) { setUnpaidEarlierPeriods([]); return; }
+        if (Number.isNaN(currentDue)) { setUnpaidEarlierPeriods([]); setEarlierPeriodsChecking(false); return; }
 
+        // The currently selected period is always excluded here by id — it
+        // can never be counted as its own "earlier" period — and only
+        // periods with a STRICTLY smaller due date are ever considered. If
+        // this is the earliest (or only) period in the system, `earlier` is
+        // correctly empty and nothing further happens.
         const earlier = periodOptions.filter((p) => {
             if (String(p.value) === String(periodId) || !p.dueDate) return false;
             const t = new Date(p.dueDate).getTime();
             return !Number.isNaN(t) && t < currentDue;
         });
-        if (earlier.length === 0) { setUnpaidEarlierPeriods([]); return; }
+        if (earlier.length === 0) { setUnpaidEarlierPeriods([]); setEarlierPeriodsChecking(false); return; }
 
         setEarlierPeriodsChecking(true);
         try {
@@ -876,11 +965,24 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
                         .catch(() => ({ period: p, records: [] }))
                 )
             );
+
+            // Stale check: if the person has since selected a different
+            // student/period, a newer check has already taken over (or is
+            // about to) — never let this older result overwrite it. This is
+            // what previously allowed a check computed for a PREVIOUS period
+            // selection to land against whatever period is selected now.
+            if (lastEarlierCheckRef.current !== requestKey) return;
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
             const unpaid = results
                 .map(({ period, records }) => {
                     const rec = records.find((r) => String(r.studentId) === String(studentId));
                     const balanceDue = Number(rec?.balanceDue) || 0;
-                    return balanceDue > 0
+                    const periodDueDate = new Date(period.dueDate);
+                    periodDueDate.setHours(0, 0, 0, 0);
+                    return balanceDue > 0 && periodDueDate <= today
                         ? { periodId: period.value, label: period.label, balanceDue, dueDate: period.dueDate }
                         : null;
                 })
@@ -894,7 +996,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             // leave whatever was already known; reselecting the period will
             // retry via the effect below.
         } finally {
-            setEarlierPeriodsChecking(false);
+            if (lastEarlierCheckRef.current === requestKey) setEarlierPeriodsChecking(false);
         }
     }, [periodOptions]);
 
@@ -905,6 +1007,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         academicTouchedRef.current = false; transportTouchedRef.current = false;
         lastPeriodSyncRef.current = ''; setPeriodSyncLoading(false);
         lastEarlierCheckRef.current = ''; setUnpaidEarlierPeriods([]); setUnpaidPopup({ open: false, periods: [] });
+        setEarlierPeriodsChecking(false);
         if (initialStudent) {
             const totalFee = Number(initialStudent.totalFee) || 0;
             const balance = Number(initialStudent.balance) || 0;
@@ -1100,15 +1203,21 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     // overdue info) for THIS period from the server — instead of trusting
     // whatever balance/feeStructureId happened to be loaded for the
     // previously selected period.
+    //
+    // FIX (race guard): `lastPeriodSyncRef` is now set to this request's key
+    // SYNCHRONOUSLY, right here, BEFORE calling resyncBalanceForCurrentPeriod
+    // — not merely cleared/left for the async function to set on completion.
+    // This lets resyncBalanceForCurrentPeriod check, after each of its
+    // awaits, whether it is still the most recently requested sync for this
+    // modal — and discard its result if the person has since switched to a
+    // different student/period. See that function's comments for the bug
+    // this fixes.
     useEffect(() => {
         if (!activeStudent?.studentId || !selectedPeriodId) return;
         const syncKey = `${activeStudent.studentId}:${selectedPeriodId}`;
         if (lastPeriodSyncRef.current === syncKey) return;
-        let cancelled = false;
-        resyncBalanceForCurrentPeriod(activeStudent.studentId, selectedPeriodId, activeStudent.class).then(() => {
-            if (cancelled) return;
-        });
-        return () => { cancelled = true; };
+        lastPeriodSyncRef.current = syncKey;
+        resyncBalanceForCurrentPeriod(activeStudent.studentId, selectedPeriodId, activeStudent.class);
     }, [selectedPeriodId, activeStudent?.studentId, resyncBalanceForCurrentPeriod]);
 
     // FIX (requested): re-runs the earlier-unpaid-periods check whenever the
@@ -1117,14 +1226,32 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
     // chip-picked selectedClassId) and quick-collect mode (using
     // derivedClassId, resolved above from the row's class name) — see
     // checkEarlierPeriods above.
+    //
+    // FIX (race condition): Clear the blocking state FIRST before checking
+    // the new period. This prevents old blocking results from persisting
+    // when switching to a period with no earlier unpaid periods.
+    //
+    // FIX (bug reported): also clear `earlierPeriodsChecking` here as soon
+    // as we know we're navigating to a new period — see the detailed notes
+    // above checkEarlierPeriods for why leaving this to that function alone
+    // could leave the "Checking…" state stuck on when jumping from a period
+    // with real earlier dues back to one without any.
     useEffect(() => {
         if (!activeStudent?.studentId || !derivedClassId || !selectedPeriodId) {
             setUnpaidEarlierPeriods([]);
+            setUnpaidPopup({ open: false, periods: [] });
+            setEarlierPeriodsChecking(false);
             return;
         }
         const key = `${activeStudent.studentId}:${selectedPeriodId}`;
         if (lastEarlierCheckRef.current === key) return;
         lastEarlierCheckRef.current = key;
+        // Clear previous blocking state before checking the new period —
+        // including any "Checking…" spinner left over from a still-settling
+        // check for the period we're navigating away from.
+        setUnpaidEarlierPeriods([]);
+        setUnpaidPopup({ open: false, periods: [] });
+        setEarlierPeriodsChecking(false);
         checkEarlierPeriods(activeStudent.studentId, derivedClassId, selectedPeriodId);
     }, [activeStudent?.studentId, derivedClassId, selectedPeriodId, checkEarlierPeriods]);
 
@@ -1152,6 +1279,7 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
         lastEarlierCheckRef.current = '';
         setUnpaidEarlierPeriods([]);
         setUnpaidPopup({ open: false, periods: [] });
+        setEarlierPeriodsChecking(false);
 
         setActiveStudent({
             studentId: s.id || s.studentId,
@@ -1267,8 +1395,11 @@ const CollectFeeModal = ({ open, onClose, student: initialStudent, periodOptions
             // settled through another channel). Force a fresh re-sync right
             // away instead of leaving the person staring at numbers that are
             // now known to be wrong.
-            lastPeriodSyncRef.current = '';
             if (activeStudent?.studentId && selectedPeriodId) {
+                // Set the in-flight key directly (same convention as the
+                // auto-sync effect above) so resyncBalanceForCurrentPeriod's
+                // own staleness guard lets this result through.
+                lastPeriodSyncRef.current = `${activeStudent.studentId}:${selectedPeriodId}`;
                 resyncBalanceForCurrentPeriod(activeStudent.studentId, selectedPeriodId, activeStudent.class);
             }
         } finally { setLoading(false); }
