@@ -13,9 +13,11 @@ import {
     ChevronDown,
     Upload,
     Loader2,
+    FileUp,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import CardComponent from '../../Components/CommonComp/CardComponent';
+import BulkStudentImport from '../../Components/Bulkstudentimport';
 import { getStudents, searchStudents } from '../../Api/Students/StudentsApi';
 import { getAllSections } from '../../Api/Teachers/TeachersAPI';
 import CardLoader from '../../Components/CommonComp/CardLoader';
@@ -48,6 +50,9 @@ const Student = () => {
     const [sectionsLoading, setSectionsLoading] = useState(false);
     const [selectedSectionId, setSelectedSectionId] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
+
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     useEffect(() => {
         const fetchSections = async () => {
@@ -159,7 +164,11 @@ const Student = () => {
         };
 
         fetchStudents();
-    }, [page, rowsPerPage, debouncedSearch, selectedSectionId, statusFilter]);
+    }, [page, rowsPerPage, debouncedSearch, selectedSectionId, statusFilter, refreshTrigger]);
+
+    // Re-runs the current page/search/filter query after a bulk import,
+    // without a full browser reload.
+    const handleImportComplete = () => setRefreshTrigger((prev) => prev + 1);
 
     const getAvatarColor = (name) => {
         const colors = [
@@ -457,6 +466,46 @@ const Student = () => {
         }
     };
 
+    // ── Small reusable pieces for the toolbar (used twice at different
+    // breakpoints so Class/Status can visually regroup at lg vs xl) ──
+    const renderClassDropdown = (extraClass = '') => (
+        <div className={`relative ${extraClass}`}>
+            <select
+                value={selectedSectionId}
+                onChange={handleSectionChange}
+                disabled={sectionsLoading}
+                className={dropdownClass}
+            >
+                <option value="">{SL.FILTERS.ALL_CLASSES}</option>
+                {groupedSections.map((grp) => (
+                    <optgroup key={grp.classId} label={grp.className}>
+                        {grp.sections.map((sec) => (
+                            <option key={sec.id} value={sec.id}>
+                                {grp.className} – {sec.name}
+                            </option>
+                        ))}
+                    </optgroup>
+                ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+        </div>
+    );
+
+    const renderStatusDropdown = (extraClass = '') => (
+        <div className={`relative ${extraClass}`}>
+            <select
+                value={statusFilter}
+                onChange={handleStatusChange}
+                className={dropdownClass}
+            >
+                <option value="">{SL.FILTERS.ALL_STATUS}</option>
+                <option value="ACTIVE">{SL.FILTERS.ACTIVE}</option>
+                <option value="INACTIVE">{SL.FILTERS.INACTIVE}</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+        </div>
+    );
+
     return (
         <div className="flex flex-col min-h-screen lg:h-screen lg:overflow-hidden bg-linear-to-b from-sky-50 to-sky-100">
             <div className="flex flex-col flex-1 lg:overflow-hidden p-3 sm:p-4 gap-3 min-h-0">
@@ -498,93 +547,91 @@ const Student = () => {
                         ))}
                 </div>
 
-                <div className="bg-white flex flex-col lg:flex-row lg:items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 shrink-0 w-full">
-                    {/* 1. Search */}
-                    <div className="w-full lg:flex-1 lg:min-w-0 flex items-center gap-2 border border-gray-200 rounded-lg bg-gray-100 px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-200 transition-all">
-                        <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
-                        <input
-                            value={searchInput}
-                            onChange={handleSearchChange}
-                            placeholder={SL.SEARCH_PLACEHOLDER}
-                            className="text-xs focus:outline-none text-gray-600 w-full bg-transparent placeholder:text-gray-400"
-                        />
-                        {searchInput && searchInput !== debouncedSearch && (
-                            <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin shrink-0" />
-                        )}
-                        {searchInput && (
-                            <button
-                                onClick={handleClearSearch}
-                                className="w-4 h-4 rounded-full bg-gray-300 hover:bg-gray-400 flex items-center justify-center shrink-0 text-gray-600 text-xs font-bold cursor-pointer"
-                            >
-                                ×
-                            </button>
-                        )}
-                    </div>
+                {/*
+                    ── Toolbar ──
+                    Breakpoint behaviour:
+                    - < lg (mobile/tablet):     Search (own row) / Class+Status (own row) / Buttons (own row)
+                    - lg (1024–1279, "mini laptop"): Search+Status (row 1) / Class+Buttons (row 2)
+                    - xl+ (>=1280, wide desktop): everything merges into a single row
+                    The `xl:contents` wrappers below make the row-groups disappear at xl so
+                    their children become direct flex items of the outer toolbar row.
+                */}
+                <div className="bg-white flex flex-col xl:flex-row xl:items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 shrink-0 w-full">
 
-                    {/* 2. Dropdowns */}
-                    <div className="flex items-center gap-2 w-full lg:w-auto lg:shrink-0">
-                        <div className="relative flex-1 lg:w-36">
-                            <select
-                                value={selectedSectionId}
-                                onChange={handleSectionChange}
-                                disabled={sectionsLoading}
-                                className={dropdownClass}
-                            >
-                                <option value="">{SL.FILTERS.ALL_CLASSES}</option>
-                                {groupedSections.map((grp) => (
-                                    <optgroup key={grp.classId} label={grp.className}>
-                                        {grp.sections.map((sec) => (
-                                            <option key={sec.id} value={sec.id}>
-                                                {grp.className} – {sec.name}
-                                            </option>
-                                        ))}
-                                    </optgroup>
-                                ))}
-                            </select>
-                            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                        </div>
-
-                        <div className="relative flex-1 lg:w-28">
-                            <select
-                                value={statusFilter}
-                                onChange={handleStatusChange}
-                                className={dropdownClass}
-                            >
-                                <option value="">{SL.FILTERS.ALL_STATUS}</option>
-                                <option value="ACTIVE">{SL.FILTERS.ACTIVE}</option>
-                                <option value="INACTIVE">{SL.FILTERS.INACTIVE}</option>
-                            </select>
-                            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                        </div>
-                    </div>
-
-                    {/* 3. Action Buttons */}
-                    <div className="flex items-center gap-2 w-full lg:w-auto lg:shrink-0">
-                        <button
-                            onClick={() => navigate('/students/addStudents')}
-                            className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-blue-600 hover:bg-blue-700 active:scale-[0.97] text-white transition-all whitespace-nowrap cursor-pointer shadow-sm"
-                        >
-                            <UserPlus className="w-4 h-4" />
-                            {SL.ACTIONS.ADD_STUDENT}
-                        </button>
-
-                        <button
-                            onClick={handleExportStudentsCSV}
-                            disabled={isExporting || totalElements === 0}
-                            className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 active:scale-[0.97] transition-all whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                        >
-                            {isExporting ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                                    <span>Exporting...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Upload className="w-4 h-4 text-gray-500" />
-                                    <span>{SL.ACTIONS.EXPORT_CSV}</span>
-                                </>
+                    {/* Row 1: Search (+ Status, only paired here at lg) */}
+                    <div className="flex items-center gap-2 w-full xl:contents">
+                        {/* Search box */}
+                        <div className="flex-1 min-w-0 flex items-center gap-2 border border-gray-200 rounded-lg bg-gray-100 px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-200 transition-all xl:flex-1">
+                            <SearchIcon className="w-4 h-4 text-gray-400 shrink-0" />
+                            <input
+                                value={searchInput}
+                                onChange={handleSearchChange}
+                                placeholder={SL.SEARCH_PLACEHOLDER}
+                                className="text-xs focus:outline-none text-gray-600 w-full bg-transparent placeholder:text-gray-400"
+                            />
+                            {searchInput && searchInput !== debouncedSearch && (
+                                <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin shrink-0" />
                             )}
-                        </button>
+                            {searchInput && (
+                                <button
+                                    onClick={handleClearSearch}
+                                    className="w-4 h-4 rounded-full bg-gray-300 hover:bg-gray-400 flex items-center justify-center shrink-0 text-gray-600 text-xs font-bold cursor-pointer"
+                                >
+                                    ×
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Status — only shown here at lg (mini laptop); hidden below lg and at xl+ */}
+                        {renderStatusDropdown('hidden lg:block xl:hidden w-28 shrink-0')}
+                    </div>
+
+                    {/* Row 2: Class + Status (base/xl) OR Class + Buttons (lg) */}
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-2 w-full xl:contents">
+
+                        {/* Class (+ Status, paired here everywhere except lg) */}
+                        <div className="flex items-center gap-2 w-full lg:w-auto xl:contents">
+                            {renderClassDropdown('flex-1 lg:w-36')}
+                            {/* Status — shown here at base and xl+, hidden at lg (moved up to Row 1 there) */}
+                            {renderStatusDropdown('block lg:hidden xl:block flex-1 lg:flex-none xl:w-28 shrink-0')}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2 w-full lg:w-auto xl:contents">
+                            <button
+                                onClick={() => navigate('/students/addStudents')}
+                                className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-blue-600 hover:bg-blue-700 active:scale-[0.97] text-white transition-all whitespace-nowrap cursor-pointer shadow-sm"
+                            >
+                                <UserPlus className="w-4 h-4" />
+                                {SL.ACTIONS.ADD_STUDENT}
+                            </button>
+
+                            <button
+                                onClick={() => setIsImportModalOpen(true)}
+                                className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 active:scale-[0.97] transition-all whitespace-nowrap cursor-pointer shadow-sm"
+                            >
+                                <FileUp className="w-4 h-4 text-gray-500" />
+                                <span>Import Students</span>
+                            </button>
+
+                            <button
+                                onClick={handleExportStudentsCSV}
+                                disabled={isExporting || totalElements === 0}
+                                className="flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg font-semibold text-xs bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 active:scale-[0.97] transition-all whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                            >
+                                {isExporting ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                                        <span>Exporting...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Upload className="w-4 h-4 text-gray-500" />
+                                        <span>{SL.ACTIONS.EXPORT_CSV}</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -749,7 +796,7 @@ const Student = () => {
                                             </td>
                                             <td className="px-2 py-2.5 text-left">
                                                 {student.sectionName
-                                                    ? <span className="inline-flex px-8 py-0.5 rounded-md bg-purple-50 text-purple-700 font-medium text-[10px] leading-tight">{student.sectionName}</span>
+                                                    ? <span className="inline-flex py-0.5 rounded-md bg-purple-50 text-purple-700 font-medium text-[10px] leading-tight">{student.sectionName}</span>
                                                     : <span className="text-gray-300">—</span>}
                                             </td>
                                             <td className="px-2 py-2.5 text-left">
@@ -851,6 +898,13 @@ const Student = () => {
                 </div>
 
             </div>
+
+            <BulkStudentImport
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                groupedSections={groupedSections}
+                onImportComplete={handleImportComplete}
+            />
         </div>
     );
 };

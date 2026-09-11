@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import {
     X, Download, Calendar, Users, CheckCircle2,
     Maximize2, Minimize2, ChevronDown, FileSpreadsheet, Loader2, RefreshCw
@@ -8,6 +8,10 @@ import {
     AVATAR_INITIALS_COLORS,
     STATUS_NOT_MARKED,
 } from "../../../Constants/StringConstants/AttendanceConstants";
+
+// Persistent memory cache outside component lifecycle
+const STUDENT_MONTHLY_CACHE = new Map();
+const CACHE_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes TTL
 
 const MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
@@ -35,6 +39,17 @@ const mapStatusToCode = (statusStr) => {
     return null;
 };
 
+// Batching utility to prevent browser TCP connection queuing
+const fetchInBatches = async (items, batchSize, fn) => {
+    const results = [];
+    for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        const batchResults = await Promise.allSettled(batch.map(fn));
+        results.push(...batchResults);
+    }
+    return results;
+};
+
 export default function MonthlyAttendanceSheetModal({
     isOpen,
     onClose,
@@ -51,9 +66,7 @@ export default function MonthlyAttendanceSheetModal({
     const [loading, setLoading] = useState(false);
     const [monthlyDataMap, setMonthlyDataMap] = useState({});
     const [studentsList, setStudentsList] = useState([]);
-    const lastFetchedKeyRef = useRef("");
 
-    // Exact days in the SELECTED month only (28, 29, 30, or 31)
     const daysInMonth = useMemo(() => {
         return new Date(selectedYear, selectedMonth, 0).getDate();
     }, [selectedYear, selectedMonth]);
@@ -66,17 +79,21 @@ export default function MonthlyAttendanceSheetModal({
         return new Date(selectedYear, selectedMonth - 1, day).getDay() === 0;
     };
 
-    // Fetch strictly the days of this selected month (max 28–31 API calls)
     const fetchMonthlyRoster = useCallback(async (force = false) => {
         if (!isOpen || !selectedClass?.id || !selectedSection?.id) return;
 
-        const currentKey = `${selectedClass.id}_${selectedSection.id}_${selectedYear}_${selectedMonth}`;
-        if (!force && lastFetchedKeyRef.current === currentKey) {
-            return; // Cache guard: Avoid re-fetching if already loaded
+        const cacheKey = `${selectedClass.id}_${selectedSection.id}_${selectedYear}_${selectedMonth}`;
+        const cached = STUDENT_MONTHLY_CACHE.get(cacheKey);
+
+        // Instant Cache Hit (0ms response)
+        if (!force && cached && (Date.now() - cached.timestamp < CACHE_EXPIRY_MS)) {
+            setStudentsList(cached.studentsList);
+            setMonthlyDataMap(cached.monthlyDataMap);
+            setLoading(false);
+            return;
         }
 
         setLoading(true);
-        lastFetchedKeyRef.current = currentKey;
 
         try {
             const dateKeys = Array.from({ length: daysInMonth }, (_, i) => {
@@ -85,9 +102,9 @@ export default function MonthlyAttendanceSheetModal({
                 return `${selectedYear}-${m}-${d}`;
             });
 
-            // Parallel batch calls strictly for the selected month's dates
-            const responses = await Promise.allSettled(
-                dateKeys.map((k) => getAttendanceRoster(selectedClass.id, selectedSection.id, k))
+            // Controlled parallel fetch in chunks of 6
+            const responses = await fetchInBatches(dateKeys, 6, (k) =>
+                getAttendanceRoster(selectedClass.id, selectedSection.id, k)
             );
 
             const attendanceMap = {};
@@ -133,8 +150,17 @@ export default function MonthlyAttendanceSheetModal({
                 }
             });
 
+            const finalStudents = Object.values(studentProfiles);
+
+            // Store in persistent memory cache
+            STUDENT_MONTHLY_CACHE.set(cacheKey, {
+                studentsList: finalStudents,
+                monthlyDataMap: attendanceMap,
+                timestamp: Date.now(),
+            });
+
             setMonthlyDataMap(attendanceMap);
-            setStudentsList(Object.values(studentProfiles));
+            setStudentsList(finalStudents);
         } catch (err) {
             console.error("Monthly sheet fetch error:", err);
         } finally {
@@ -275,11 +301,11 @@ export default function MonthlyAttendanceSheetModal({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4">
             <div
                 className={`bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 border border-gray-300 ${isFullscreen
-                        ? "w-full h-full rounded-none"
-                        : "w-full max-w-[97vw] h-[92vh]"
+                    ? "w-full h-full rounded-none"
+                    : "w-full max-w-[97vw] h-[92vh]"
                     }`}
             >
-                {/* ── Header Toolbar ── */}
+                {/* Header Toolbar */}
                 <div className="bg-[#107c41] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-md">
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center border border-white/20">
@@ -329,12 +355,12 @@ export default function MonthlyAttendanceSheetModal({
                             <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-2 top-2.5 pointer-events-none" />
                         </div>
 
-                        {/* Refresh Button */}
+                        {/* Force Refresh Button */}
                         <button
                             onClick={() => fetchMonthlyRoster(true)}
                             disabled={loading}
                             className="p-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                            title="Force Refresh Data"
+                            title="Force Refresh Data (Bypass Cache)"
                         >
                             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                         </button>
@@ -364,7 +390,7 @@ export default function MonthlyAttendanceSheetModal({
                     </div>
                 </div>
 
-                {/* ── Sub-header Stats & Search ── */}
+                {/* Sub-header Stats & Search */}
                 <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
                     <div className="flex items-center gap-3 sm:gap-6 text-xs text-gray-600 flex-wrap">
                         <div className="flex items-center gap-1.5">
@@ -398,7 +424,7 @@ export default function MonthlyAttendanceSheetModal({
                     </div>
                 </div>
 
-                {/* ── Table Container ── */}
+                {/* Table Container */}
                 <div className="flex-1 overflow-auto bg-gray-100 p-2 sm:p-4 min-h-0 relative">
                     {loading && (
                         <div className="absolute inset-0 bg-white/70 backdrop-blur-xs z-40 flex flex-col items-center justify-center gap-2">
@@ -420,7 +446,6 @@ export default function MonthlyAttendanceSheetModal({
                         <div className="overflow-x-auto">
                             <table className="w-full border-collapse text-xs select-none">
                                 <thead>
-                                    {/* Excel Column Letters */}
                                     <tr className="bg-gray-100 text-gray-400 font-mono text-[10px] border-b border-gray-200">
                                         <th className="border-r border-gray-200 py-0.5 px-2 text-center w-12 sticky left-0 bg-gray-100 z-30">A</th>
                                         <th className="border-r border-gray-200 py-0.5 px-3 text-left w-52 min-w-[200px] sticky left-12 bg-gray-100 z-30">B</th>
@@ -436,7 +461,6 @@ export default function MonthlyAttendanceSheetModal({
                                         <th className="py-0.5 text-center w-16 bg-blue-100 text-blue-800 font-bold">%</th>
                                     </tr>
 
-                                    {/* Main Table Headers */}
                                     <tr className="bg-gray-50 text-gray-700 font-bold border-b-2 border-gray-300">
                                         <th className="border-r border-gray-300 py-2.5 px-2 text-center sticky left-0 bg-gray-50 z-30 shadow-[1px_0_0_rgba(0,0,0,0.1)]">#</th>
                                         <th className="border-r border-gray-300 py-2.5 px-3 text-left sticky left-12 bg-gray-50 z-30 shadow-[1px_0_0_rgba(0,0,0,0.1)]">Student Name</th>
@@ -448,8 +472,8 @@ export default function MonthlyAttendanceSheetModal({
                                                 <th
                                                     key={d}
                                                     className={`border-r border-gray-200 py-1.5 text-center min-w-[32px] ${isSun
-                                                            ? "bg-red-50 text-red-600 font-bold"
-                                                            : "text-gray-700"
+                                                        ? "bg-red-50 text-red-600 font-bold"
+                                                        : "text-gray-700"
                                                         }`}
                                                 >
                                                     <div className="font-bold text-xs">{d}</div>
@@ -520,14 +544,14 @@ export default function MonthlyAttendanceSheetModal({
                                                             <td
                                                                 key={d}
                                                                 className={`border-r border-gray-200 py-1 px-0.5 text-center font-bold text-[11px] ${isSun
-                                                                        ? "bg-gray-100/70 text-gray-400 font-normal"
-                                                                        : status === "P"
-                                                                            ? "bg-green-50 text-green-700"
-                                                                            : status === "L"
-                                                                                ? "bg-amber-50 text-amber-700"
-                                                                                : status === "A"
-                                                                                    ? "bg-red-50 text-red-700"
-                                                                                    : "text-gray-300 font-normal"
+                                                                    ? "bg-gray-100/70 text-gray-400 font-normal"
+                                                                    : status === "P"
+                                                                        ? "bg-green-50 text-green-700"
+                                                                        : status === "L"
+                                                                            ? "bg-amber-50 text-amber-700"
+                                                                            : status === "A"
+                                                                                ? "bg-red-50 text-red-700"
+                                                                                : "text-gray-300 font-normal"
                                                                     }`}
                                                             >
                                                                 {isSun ? (
@@ -557,10 +581,10 @@ export default function MonthlyAttendanceSheetModal({
                                                     <td className="py-2 text-center font-bold bg-blue-50/50">
                                                         <span
                                                             className={`px-2 py-0.5 rounded text-[11px] font-bold ${studentRate >= 75
-                                                                    ? "bg-green-100 text-green-800 border border-green-200"
-                                                                    : studentRate >= 50
-                                                                        ? "bg-amber-100 text-amber-800 border border-amber-200"
-                                                                        : "bg-red-100 text-red-800 border border-red-200"
+                                                                ? "bg-green-100 text-green-800 border border-green-200"
+                                                                : studentRate >= 50
+                                                                    ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                                                    : "bg-red-100 text-red-800 border border-red-200"
                                                                 }`}
                                                         >
                                                             {studentRate}%
@@ -605,7 +629,7 @@ export default function MonthlyAttendanceSheetModal({
                     </div>
                 </div>
 
-                {/* ── Footer ── */}
+                {/* Footer */}
                 <div className="bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-between gap-4 shrink-0">
                     <p className="text-xs text-gray-500">
                         Showing all <strong>{filteredStudents.length}</strong> students for {MONTH_NAMES[selectedMonth - 1]} {selectedYear}.
