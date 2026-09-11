@@ -9,6 +9,10 @@ import { getTeachers } from "../../Api/Teachers/TeachersAPI";
 import { allAttendanceDetails } from "../../Api/Attendance/AttendanceApi";
 import { AVATAR_INITIALS_COLORS } from "../../Constants/StringConstants/AttendanceConstants";
 
+// Persistent memory cache outside component lifecycle
+const MONTHLY_ATTENDANCE_CACHE = new Map();
+const CACHE_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes TTL
+
 const MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
@@ -38,6 +42,17 @@ const mapStatusToCode = (statusStr) => {
     return null;
 };
 
+// Concurrency helper to avoid choking browser connection limits
+const fetchInBatches = async (items, batchSize, fn) => {
+    const results = [];
+    for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        const batchResults = await Promise.allSettled(batch.map(fn));
+        results.push(...batchResults);
+    }
+    return results;
+};
+
 export default function MonthlyStaffAttendanceSheetModal({
     isOpen,
     onClose,
@@ -52,9 +67,7 @@ export default function MonthlyStaffAttendanceSheetModal({
     const [loading, setLoading] = useState(false);
     const [monthlyDataMap, setMonthlyDataMap] = useState({});
     const [staffList, setStaffList] = useState([]);
-    const lastFetchedKeyRef = useRef("");
 
-    // Exact days in the SELECTED month only (28, 29, 30, or 31)
     const daysInMonth = useMemo(() => {
         return new Date(selectedYear, selectedMonth, 0).getDate();
     }, [selectedYear, selectedMonth]);
@@ -67,23 +80,27 @@ export default function MonthlyStaffAttendanceSheetModal({
         return new Date(selectedYear, selectedMonth - 1, day).getDay() === 0;
     };
 
-    // Parallel batch fetch for ALL 63 Staff + Teachers of the selected month
     const fetchMonthlyStaffRoster = useCallback(async (force = false) => {
         if (!isOpen) return;
 
-        const currentKey = `${selectedRole}_${selectedYear}_${selectedMonth}`;
-        if (!force && lastFetchedKeyRef.current === currentKey) {
+        const cacheKey = `${selectedRole}_${selectedYear}_${selectedMonth}`;
+        const cached = MONTHLY_ATTENDANCE_CACHE.get(cacheKey);
+
+        // Instant Cache Hit (0ms network request)
+        if (!force && cached && (Date.now() - cached.timestamp < CACHE_EXPIRY_MS)) {
+            setStaffList(cached.staffList);
+            setMonthlyDataMap(cached.monthlyDataMap);
+            setLoading(false);
             return;
         }
 
         setLoading(true);
-        lastFetchedKeyRef.current = currentKey;
 
         try {
             const staffProfiles = {};
             const attendanceMap = {};
 
-            // 1. Fetch Staff and Teachers in Parallel to get all 63 members
+            // 1. Fetch Staff & Teachers
             const fetchPromises = [];
 
             if (selectedRole === "ALL" || selectedRole !== "TEACHER") {
@@ -104,7 +121,6 @@ export default function MonthlyStaffAttendanceSheetModal({
             const rawUsers = usersRes?.data || [];
             const rawTeachers = teachersRes?.data || [];
 
-            // Add General Staff
             rawUsers.forEach((u) => {
                 const uid = String(u.id);
                 staffProfiles[uid] = {
@@ -117,7 +133,6 @@ export default function MonthlyStaffAttendanceSheetModal({
                 attendanceMap[uid] = {};
             });
 
-            // Add Teachers
             rawTeachers.forEach((t) => {
                 const teacherUid = String(t.userId || t.id);
                 if (!staffProfiles[teacherUid]) {
@@ -134,21 +149,19 @@ export default function MonthlyStaffAttendanceSheetModal({
                 }
             });
 
-            // 2. Fetch Day-wise Attendance for the month
+            // 2. Controlled parallel fetch for day-wise attendance (Batch of 6 to prevent connection drops)
             const dateKeys = Array.from({ length: daysInMonth }, (_, i) => {
                 const d = String(i + 1).padStart(2, "0");
                 const m = String(selectedMonth).padStart(2, "0");
                 return `${selectedYear}-${m}-${d}`;
             });
 
-            const responses = await Promise.allSettled(
-                dateKeys.map((dateStr) =>
-                    allAttendanceDetails({
-                        attendanceDate: dateStr,
-                        role: selectedRole !== "ALL" ? selectedRole : undefined,
-                        size: 5000,
-                    })
-                )
+            const responses = await fetchInBatches(dateKeys, 6, (dateStr) =>
+                allAttendanceDetails({
+                    attendanceDate: dateStr,
+                    role: selectedRole !== "ALL" ? selectedRole : undefined,
+                    size: 5000,
+                })
             );
 
             responses.forEach((res, index) => {
@@ -180,8 +193,17 @@ export default function MonthlyStaffAttendanceSheetModal({
                 }
             });
 
+            const finalStaffList = Object.values(staffProfiles);
+
+            // Save to memory cache
+            MONTHLY_ATTENDANCE_CACHE.set(cacheKey, {
+                staffList: finalStaffList,
+                monthlyDataMap: attendanceMap,
+                timestamp: Date.now(),
+            });
+
             setMonthlyDataMap(attendanceMap);
-            setStaffList(Object.values(staffProfiles));
+            setStaffList(finalStaffList);
         } catch (err) {
             console.error("Staff monthly register fetch error:", err);
             toast.error(err.message || "Failed to load monthly staff attendance");
@@ -346,7 +368,7 @@ export default function MonthlyStaffAttendanceSheetModal({
                     : "w-full max-w-[98vw] xl:max-w-[96vw] h-[94vh] max-h-[96vh]"
                     }`}
             >
-                {/* ── Header Toolbar (Green Excel Theme) ── */}
+                {/* Header Toolbar */}
                 <div className="bg-[#107c41] text-white px-3 sm:px-4 py-2.5 sm:py-3 flex flex-wrap items-center justify-between gap-2.5 shrink-0 shadow-md">
                     <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/15 flex items-center justify-center border border-white/20 shrink-0">
@@ -411,12 +433,12 @@ export default function MonthlyStaffAttendanceSheetModal({
                             <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-1.5 top-2.5 pointer-events-none" />
                         </div>
 
-                        {/* Force Refresh */}
+                        {/* Force Refresh Button */}
                         <button
                             onClick={() => fetchMonthlyStaffRoster(true)}
                             disabled={loading}
                             className="p-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                            title="Force Refresh Data"
+                            title="Force Refresh Data (Bypass Cache)"
                         >
                             <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? "animate-spin" : ""}`} />
                         </button>
@@ -446,7 +468,7 @@ export default function MonthlyStaffAttendanceSheetModal({
                     </div>
                 </div>
 
-                {/* ── Sub-header Stats & Search ── */}
+                {/* Sub-header Stats & Search */}
                 <div className="bg-gray-50 border-b border-gray-200 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2.5 shrink-0">
                     <div className="flex items-center gap-3 sm:gap-5 text-xs text-gray-600 flex-wrap">
                         <div className="flex items-center gap-1.5">
@@ -481,7 +503,7 @@ export default function MonthlyStaffAttendanceSheetModal({
                     </div>
                 </div>
 
-                {/* ── Table Container: Full Horizontal & Vertical Scroll (No Squishing) ── */}
+                {/* Table Container */}
                 <div className="flex-1 overflow-auto bg-gray-100 p-2 sm:p-3 md:p-4 min-h-0 relative">
                     {loading && (
                         <div className="absolute inset-0 bg-white/70 backdrop-blur-xs z-40 flex flex-col items-center justify-center gap-2">
@@ -502,7 +524,6 @@ export default function MonthlyStaffAttendanceSheetModal({
 
                         <table className="border-collapse text-xs select-none min-w-max w-full">
                             <thead>
-                                {/* Excel Column Letters */}
                                 <tr className="bg-gray-100 text-gray-400 font-mono text-[10px] border-b border-gray-200">
                                     <th className="border-r border-gray-200 py-1 px-2 text-center w-12 min-w-[48px]">A</th>
                                     <th className="border-r border-gray-200 py-1 px-3 text-left w-72 min-w-[280px]">B</th>
@@ -519,7 +540,6 @@ export default function MonthlyStaffAttendanceSheetModal({
                                     <th className="py-1 text-center w-20 min-w-[76px] bg-blue-100 text-blue-800 font-bold">%</th>
                                 </tr>
 
-                                {/* Main Table Headers */}
                                 <tr className="bg-gray-50 text-gray-700 font-bold border-b-2 border-gray-300">
                                     <th className="border-r border-gray-300 py-2.5 px-2 text-center w-12 min-w-[48px]">#</th>
                                     <th className="border-r border-gray-300 py-2.5 px-3 text-left w-72 min-w-[280px]">Staff Name (Role)</th>
@@ -705,7 +725,7 @@ export default function MonthlyStaffAttendanceSheetModal({
                     </div>
                 </div>
 
-                {/* ── Modal Footer ── */}
+                {/* Modal Footer */}
                 <div className="bg-white border-t border-gray-200 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 shrink-0">
                     <p className="text-xs text-gray-500 truncate">
                         Showing all <strong>{filteredStaff.length}</strong> staff & teachers for {MONTH_NAMES[selectedMonth - 1]} {selectedYear}.

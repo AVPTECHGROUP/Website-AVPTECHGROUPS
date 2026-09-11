@@ -187,6 +187,64 @@ export const updateStudent = async (id, updatedStudent, imageFile) => {
   }
 };
 
+// ==================== BULK IMPORT ====================
+
+export const createStudentsBulk = async (studentsData) => {
+  try {
+    const deepClean = (value) => {
+      if (value === undefined) return undefined;
+      if (value === null) return null;
+      if (Array.isArray(value)) return value.map((v) => deepClean(v)).filter((v) => v !== undefined);
+      if (typeof value === "object") {
+        const out = {};
+        Object.entries(value).forEach(([k, v]) => {
+          const cleaned = deepClean(v);
+          if (cleaned !== undefined) out[k] = cleaned;
+        });
+        return out;
+      }
+      return value;
+    };
+
+    const cleaned = Array.isArray(studentsData)
+      ? studentsData.map((s) => deepClean(s))
+      : deepClean(studentsData);
+
+    const payloadArray = Array.isArray(cleaned) ? cleaned : [cleaned];
+    const bodyStr = JSON.stringify(payloadArray);
+
+    // Endpoint must hit /api/api/v1/students/bulk as registered in Swagger
+    const endpoint = API_ENDPOINTS.STUDENTS_BULK || `${API_ENDPOINTS.STUDENTS}/bulk`;
+
+    const res = await authFetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: bodyStr,
+    });
+
+    let json = null;
+    let text = null;
+    try {
+      json = await res.json();
+    } catch {
+      text = await res.text().catch(() => null);
+    }
+
+    if (!res.ok) {
+      const serverMsg = json?.message || json?.error || text || res.statusText || "Failed to import students";
+      throw new Error(serverMsg);
+    }
+
+    return json;
+  } catch (error) {
+    console.error("createStudentsBulk error:", error.message);
+    throw error;
+  }
+};
+
 // ==================== STUDENT DOCUMENTS ====================
 
 /**

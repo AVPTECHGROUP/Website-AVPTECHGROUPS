@@ -291,6 +291,7 @@ export const API_ENDPOINTS = {
   STUDENTS: `${BASE_URL_DOUBLE_V1}/students`,
   STUDENTS_PAGINATED: `${BASE_URL_DOUBLE_V1}/students/paginated`,
   STUDENTS_SEARCH: `${BASE_URL_DOUBLE_V1}/students/search/paginated`,
+  STUDENTS_BULK: `${BASE_URL_DOUBLE_V1}/students/bulk`,
 
   studentById: (id) => `${BASE_URL_DOUBLE_V1}/students/${id}`,
   studentByClass: (id) => `${BASE_URL_DOUBLE_V1}/students/class/${id}`,
