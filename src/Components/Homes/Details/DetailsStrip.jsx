@@ -14,11 +14,12 @@ const parseStatValue = (raw) => {
     return { numericTarget: num, suffix, decimals };
 };
 
+// Placeholder numbers (same as the About page) — replace with real figures before going live.
 const statsData = [
-    { value: "5+", label: "Schools Onboarded" },
-    { value: "3000+", label: "Students Managed" },
-    { value: "99.9%", label: "Uptime" },
-    { value: "4.9★", label: "Average Rating" },
+    { value: "5+", label: "Projects Delivered" },
+    { value: "60+", label: "Certified Trainers & Engineers" },
+    { value: "100+", label: "Professionals Trained" },
+    { value: "36+", label: "Courses & Certifications" },
 ];
 
 const DetailsStrip = () => {
@@ -84,8 +85,8 @@ const DetailsStrip = () => {
                                     ref={(el) => (numRefs.current[i] = el)}
                                     className={`font-mono font-bold leading-none bg-gradient-to-r bg-clip-text text-transparent select-none tracking-tight
                                         ${isDark
-                                            ? 'from-cyan-400 to-teal-400'
-                                            : 'from-cyan-600 to-teal-700'
+                                            ? 'from-[#3AA6E8] to-[#5CD6F5]'
+                                            : 'from-[#0D3F7A] to-[#2380CC]'
                                         }`}
                                     style={{ fontSize: 'clamp(2rem, 3.8vw, 3.2rem)' }}
                                 >

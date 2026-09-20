@@ -6,96 +6,98 @@ import {
     Sparkles,
     ArrowRight,
     CheckCircle2,
-    BookOpen,
-    GraduationCap,
-    PencilRuler,
-    Backpack,
-    Bell,
-    School,
+    Cloud,
+    ShieldCheck,
+    Server,
+    Laptop,
+    Code2,
+    Bot,
+    Handshake,
 } from "lucide-react";
 import { UserContext } from "../../../ContextAPI/UserContext";
 
-import Blog_1 from "../../../assets/Images/Blog/Blog_1.png";
-import Blog_2 from "../../../assets/Images/Blog/Blog_2.png";
-import Blog_3 from "../../../assets/Images/Blog/Blog_3.png";
-import Blog_4 from "../../../assets/Images/Blog/Blog_4.png";
-import Blog_5 from "../../../assets/Images/Blog/Blog_5.png";
+
+import Blog_1 from "../../../assets/Images/Blog/Blog_1.svg"
+import Blog_2 from "../../../assets/Images/Blog/Blog_2.svg";
+import Blog_3 from "../../../assets/Images/Blog/Blog_3.svg";
+import Blog_4 from "../../../assets/Images/Blog/Blog_4.svg";
+import Blog_5 from "../../../assets/Images/Blog/Blog_5.svg";
 
 const blogData = [
     {
         id: 1,
-        category: "The Digital School Revolution",
-        title: "Why Leading Institutions Are Reimagining Education Management",
-        description: "Education is experiencing one of the most significant transformations in history. Artificial Intelligence, digital learning environments, hybrid classrooms, data-driven decision-making, and evolving parent expectations are reshaping how schools operate across the world. Exceptional education requires exceptional operational efficiency.",
+        category: "The Unified IT Advantage",
+        title: "Why One IT Partner Beats Five Separate Vendors",
+        description: "Most organizations juggle one vendor for support, another for cloud, a third for training and a fourth for staffing. Every hand-off adds delay and blurs accountability. A single partner who understands your whole environment resolves problems faster and helps stop them from coming back.",
         image: Blog_1,
         points: [
-            "Exceptional operational efficiency across all departments",
-            "Intelligent platforms allowing teachers to focus on teaching",
-            "Data-driven insights to maximize student success channels"
+            "One accountable team for support, training and staffing",
+            "Faster resolution with no hand-offs between vendors",
+            "Solutions designed around your actual environment"
         ],
-        quote: "Every minute saved in administration is a minute invested in education."
+        quote: "The best IT support is the kind that teaches your team to need it less."
     },
     {
         id: 2,
-        category: "The New Parent Expectation",
-        title: "Transparency, Communication, and Trust",
-        description: "Parents today are more informed, connected, and involved than ever before. They no longer evaluate schools solely on academic performance — they assess communication standards, transparency, responsiveness, safety, and digital accessibility.",
+        category: "Security First",
+        title: "Zero Trust Starts at the Endpoint",
+        description: "Every laptop, phone and virtual desktop is a door into your business. Modern security means managing devices with Microsoft Intune, protecting them with Defender and verifying every identity through Entra ID, so protection is designed in from day one instead of added after an incident.",
         image: Blog_2,
         points: [
-            "Real-time access to student performance dashboards",
-            "Instant communication and broadcast channels",
-            "Transparent academic progress and secure fee tracking"
+            "Unified management for Windows, mobile and virtual desktops",
+            "Threat detection and response with Microsoft Defender XDR",
+            "Conditional access built on strong identity controls"
         ],
-        quote: "When parents, teachers, and administrators operate within a connected ecosystem, trust naturally grows."
+        quote: "Security is not a product you buy at the end; it is how you build from the start."
     },
     {
         id: 3,
-        category: "Data-Driven Education",
-        title: "The Competitive Advantage Schools Can No Longer Ignore",
-        description: "Every school generates thousands of data points every day — attendance, academic performance, assessments, enrollment trends, faculty productivity, and parent engagement metrics. The question is whether they're using it effectively.",
+        category: "Cloud Without the Chaos",
+        title: "Moving to Azure and Microsoft 365 the Right Way",
+        description: "A move to the cloud should simplify work, not disrupt it. A good migration starts with an honest assessment, a clear architecture and a plan for governance, cost and security, so the cloud becomes an advantage instead of a surprise bill.",
         image: Blog_3,
         points: [
-            "Identify at-risk students much earlier in the cycle",
-            "Optimize complex resource allocation seamlessly",
-            "Forecast enrollment and strengthen structural retention rates"
+            "Assessment and architecture before any migration begins",
+            "Secure, well-governed Azure and Microsoft 365 environments",
+            "Virtual desktops and collaboration tools that work anywhere"
         ],
-        quote: "Data is no longer a reporting tool — it is a strategic asset."
+        quote: "A cloud move succeeds or fails long before the first workload is migrated."
     },
     {
         id: 4,
-        category: "Beyond School Management",
-        title: "Building Future-Ready Educational Institutions",
-        description: "The education sector is changing faster than ever before. Artificial Intelligence is transforming learning, remote education has become mainstream, and parents expect consumer-grade digital experiences. Future-ready institutions build scalable systems.",
+        category: "Skills That Certify",
+        title: "Why Live, Instructor-Led Training Beats Self-Study",
+        description: "Videos and PDFs can teach concepts, but certification exams and real jobs demand judgment. Live training in small batches, with hands-on practice and mock tests, lets learners ask questions, make mistakes safely and walk into the exam and the workplace with confidence.",
         image: Blog_4,
         points: [
-            "Scalable systems engineered for tomorrow's challenges",
-            "Strategic investments in modern educational infrastructure",
-            "Environments where creative student innovation can thrive"
+            "Small batches of up to eight learners for personal attention",
+            "Trainers who work with these products every day",
+            "Mock tests and course material to prepare for the exam"
         ],
-        quote: "The institutions that lead tomorrow are the ones making strategic investments today."
+        quote: "You do not learn a platform by watching it; you learn it by running it."
     },
     {
         id: 5,
-        category: "Operational Excellence",
-        title: "Why Educational Excellence Starts With Operational Excellence",
-        description: "Behind every high-performing school is an invisible engine that keeps everything running smoothly — admissions, academics, finance, human resources, transportation, communication, and compliance.",
+        category: "People & Talent",
+        title: "Closing the Skills Gap: Train Your Team or Hire the Right One",
+        description: "Every growing IT environment reaches the same point: the tools outgrow the team. Some gaps are best closed by upskilling the people you already have, while others need experienced professionals on a project or permanent basis. The right partner can help with both.",
         image: Blog_5,
         points: [
-            "Seamless multi-channel admissions & academic control",
-            "Automated backend financial tracking systems",
-            "Integrated real-time transportation and safety compliance"
+            "Private corporate training on your schedule and your tools",
+            "Skilled IT professionals for short-term and long-term roles",
+            "Talent matched to your stack, not just a job description"
         ],
-        quote: "Operational excellence is not separate from academic excellence — it is the foundation that enables it."
+        quote: "Technology only delivers value in the hands of people who know how to use it."
     }
 ];
 
 const floatingIcons = [
-    { Icon: BookOpen, top: "6%", left: "5%", size: 32 },
-    { Icon: GraduationCap, top: "22%", left: "93%", size: 38 },
-    { Icon: PencilRuler, top: "45%", left: "3%", size: 26 },
-    { Icon: Backpack, top: "68%", left: "92%", size: 30 },
-    { Icon: Bell, top: "82%", left: "4%", size: 24 },
-    { Icon: School, top: "94%", left: "89%", size: 34 },
+    { Icon: Cloud, top: "6%", left: "5%", size: 32 },
+    { Icon: ShieldCheck, top: "22%", left: "93%", size: 38 },
+    { Icon: Server, top: "45%", left: "3%", size: 26 },
+    { Icon: Laptop, top: "68%", left: "92%", size: 30 },
+    { Icon: Code2, top: "82%", left: "4%", size: 24 },
+    { Icon: Bot, top: "94%", left: "89%", size: 34 },
 ];
 
 // Framer Motion Variants for Staggered Hero Elements
@@ -161,11 +163,11 @@ const Blog = () => {
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
                 <div
                     className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full opacity-20 blur-[120px]"
-                    style={{ background: "radial-gradient(circle, #00C9B1 0%, transparent 70%)" }}
+                    style={{ background: "radial-gradient(circle, #2380CC 0%, transparent 70%)" }}
                 />
                 <div
                     className="absolute top-[40%] right-[-200px] w-[500px] h-[500px] rounded-full opacity-10 blur-[100px]"
-                    style={{ background: "radial-gradient(circle, #F5A623 0%, transparent 70%)" }}
+                    style={{ background: "radial-gradient(circle, #5CD6F5 0%, transparent 70%)" }}
                 />
             </div>
 
@@ -180,7 +182,7 @@ const Blog = () => {
                     >
                         <Icon
                             size={size}
-                            className={isDark ? "text-[#00C9B1]/10" : "text-slate-400/20"}
+                            className={isDark ? "text-[#2380CC]/15" : "text-slate-400/20"}
                         />
                     </div>
                 ))}
@@ -195,12 +197,12 @@ const Blog = () => {
                     custom={1}
                     className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-6 text-xs sm:text-sm font-semibold tracking-wide border backdrop-blur-md"
                     style={{
-                        backgroundColor: isDark ? "rgba(0, 201, 177, 0.08)" : "rgba(0, 201, 177, 0.05)",
-                        borderColor: "rgba(0, 201, 177, 0.25)",
-                        color: "#00C9B1",
+                        backgroundColor: isDark ? "rgba(35, 128, 204, 0.08)" : "rgba(35, 128, 204, 0.05)",
+                        borderColor: "rgba(35, 128, 204, 0.25)",
+                        color: "#2380CC",
                     }}
                 >
-                    <Sparkles size={14} className="animate-pulse" /> SchoolSpine Blog
+                    <Sparkles size={14} className="animate-pulse" /> AVP Tech Group Blog
                 </motion.div>
 
                 <motion.h1
@@ -211,7 +213,7 @@ const Blog = () => {
                     className={`text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 ${isDark ? "text-white" : "text-slate-900"
                         }`}
                 >
-                    Insights for <span className="bg-gradient-to-r from-[#00C9B1] to-[#00E5CC] bg-clip-text text-transparent">Future-Ready</span> Schools
+                    Insights for <span className={`bg-gradient-to-r bg-clip-text text-transparent ${isDark ? "from-[#3AA6E8] to-[#5CD6F5]" : "from-[#0D3F7A] to-[#2380CC]"}`}>Future-Ready</span> IT Teams
                 </motion.h1>
 
                 <motion.p
@@ -222,7 +224,7 @@ const Blog = () => {
                     className={`text-base sm:text-lg max-w-3xl mx-auto leading-relaxed ${isDark ? "text-slate-400" : "text-slate-600"
                         }`}
                 >
-                    Ideas, trends, and perspectives on building smarter, more connected educational institutions.
+                    Practical ideas on Microsoft, cloud, security and the skills that keep modern organizations running.
                 </motion.p>
             </header>
 
@@ -233,8 +235,8 @@ const Blog = () => {
                 <div
                     className="absolute left-6 lg:left-1/2 top-0 bottom-0 w-[2px] -translate-x-1/2 opacity-60 z-0"
                     style={{
-                        background: "linear-gradient(to bottom, #00C9B1 0%, #F5A623 25%, #00C9B1 50%, #F5A623 75%, #00C9B1 100%)",
-                        boxShadow: "0 0 12px rgba(0, 201, 177, 0.3)"
+                        background: "linear-gradient(to bottom, #2380CC 0%, #5CD6F5 25%, #2380CC 50%, #5CD6F5 75%, #2380CC 100%)",
+                        boxShadow: "0 0 12px rgba(35, 128, 204, 0.3)"
                     }}
                 />
 
@@ -242,6 +244,7 @@ const Blog = () => {
                     {blogData.map((post, index) => {
                         const isEven = index % 2 === 0;
                         const stepNumber = String(post.id).padStart(2, '0');
+                        const stepColor = isEven ? "#2380CC" : (isDark ? "#5CD6F5" : "#0E7490");
 
                         return (
                             <motion.div
@@ -256,10 +259,10 @@ const Blog = () => {
                                 <div
                                     className="absolute left-6 lg:left-1/2 top-6 lg:top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 flex items-center justify-center w-10 h-10 rounded-full font-bold text-xs border backdrop-blur-md transition-all duration-300"
                                     style={{
-                                        borderColor: isEven ? "#00C9B1" : "#F5A623",
-                                        color: isEven ? "#00C9B1" : "#F5A623",
+                                        borderColor: stepColor,
+                                        color: stepColor,
                                         backgroundColor: isDark ? "#090d1a" : "#ffffff",
-                                        boxShadow: isEven ? "0 0 15px rgba(0, 201, 177, 0.25)" : "0 0 15px rgba(245, 166, 35, 0.25)"
+                                        boxShadow: isEven ? "0 0 15px rgba(35, 128, 204, 0.25)" : "0 0 15px rgba(92, 214, 245, 0.25)"
                                     }}
                                 >
                                     {stepNumber}
@@ -275,8 +278,8 @@ const Blog = () => {
                                 >
                                     <div
                                         className={`group relative rounded-2xl overflow-hidden border transition-all duration-500 ease-out transform hover:scale-[1.015] shadow-xl ${isDark
-                                                ? "border-slate-800/90 bg-slate-900/40 hover:border-[#00C9B1]/40"
-                                                : "border-slate-200 bg-white hover:border-teal-500/40"
+                                                ? "border-slate-800/90 bg-slate-900/40 hover:border-[#2380CC]/50"
+                                                : "border-slate-200 bg-white hover:border-[#2380CC]/50"
                                             }`}
                                     >
                                         <img
@@ -288,7 +291,7 @@ const Blog = () => {
                                         <div
                                             className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-500 mix-blend-screen"
                                             style={{
-                                                background: `radial-gradient(circle at center, rgba(${isEven ? '0,201,177' : '245,166,35'},0.08) 0%, transparent 75%)`
+                                                background: `radial-gradient(circle at center, rgba(${isEven ? '35,128,204' : '92,214,245'},0.08) 0%, transparent 75%)`
                                             }}
                                         />
                                     </div>
@@ -311,9 +314,9 @@ const Blog = () => {
                                         <span
                                             className="inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-4 border"
                                             style={{
-                                                color: "#00C9B1",
-                                                backgroundColor: isDark ? "rgba(0, 201, 177, 0.06)" : "rgba(0, 201, 177, 0.03)",
-                                                borderColor: "rgba(0, 201, 177, 0.15)"
+                                                color: "#2380CC",
+                                                backgroundColor: isDark ? "rgba(35, 128, 204, 0.06)" : "rgba(35, 128, 204, 0.03)",
+                                                borderColor: "rgba(35, 128, 204, 0.15)"
                                             }}
                                         >
                                             {post.category}
@@ -337,7 +340,7 @@ const Blog = () => {
                                             {post.points.map((point, idx) => (
                                                 <li key={idx} className="flex items-start gap-3 text-xs sm:text-sm">
                                                     <span className="mt-0.5 flex-shrink-0">
-                                                        <CheckCircle2 size={16} className="text-[#00C9B1]" />
+                                                        <CheckCircle2 size={16} className="text-[#2380CC]" />
                                                     </span>
                                                     <span className={isDark ? "text-slate-300" : "text-slate-700"}>
                                                         {point}
@@ -349,8 +352,8 @@ const Blog = () => {
                                         {post.quote && (
                                             <div
                                                 className={`pl-4 border-l-4 italic text-sm sm:text-base bg-gradient-to-r py-2 pr-2 rounded-r-lg ${isDark
-                                                        ? "from-amber-500/5 to-transparent border-[#F5A623] text-[#F5A623]"
-                                                        : "from-amber-500/5 to-transparent border-amber-600 text-amber-800"
+                                                        ? "from-[#5CD6F5]/5 to-transparent border-[#5CD6F5] text-[#5CD6F5]"
+                                                        : "from-[#1B57A0]/5 to-transparent border-[#1B57A0] text-[#0D3F7A]"
                                                     }`}
                                             >
                                                 “{post.quote}”
@@ -383,32 +386,32 @@ const Blog = () => {
                         className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-6 border ${isDark ? "bg-slate-900/80 border-slate-800" : "bg-slate-100 border-slate-200"
                             }`}
                     >
-                        <GraduationCap size={26} className="text-[#00C9B1]" />
+                        <Handshake size={26} className="text-[#2380CC]" />
                     </div>
 
                     <h3
                         className={`text-2xl sm:text-3xl font-bold mb-4 tracking-tight ${isDark ? "text-white" : "text-slate-900"
                             }`}
                     >
-                        Ready to build a future-ready school?
+                        Have an IT problem or a skills gap to close?
                     </h3>
 
                     <p
                         className={`text-sm sm:text-base max-w-md mx-auto mb-8 leading-relaxed ${isDark ? "text-slate-400" : "text-slate-600"
                             }`}
                     >
-                        See how SchoolSpine helps your institution move beyond traditional administration boundaries.
+                        Tell us what you need. We will recommend the right solution, course or team.
                     </p>
 
                     <Link
                         to="/contact"
                         className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full font-semibold text-sm sm:text-base text-white transition-all duration-300 transform hover:scale-[1.03]"
                         style={{
-                            background: "linear-gradient(135deg, #00C9B1 0%, #00a38f 100%)",
-                            boxShadow: "0 4px 20px rgba(0, 201, 177, 0.25)"
+                            background: "linear-gradient(135deg, #0D3F7A 0%, #2380CC 100%)",
+                            boxShadow: "0 4px 20px rgba(35, 128, 204, 0.35)"
                         }}
                     >
-                        Contact Support <ArrowRight size={18} />
+                        Talk to Our Experts <ArrowRight size={18} />
                     </Link>
                 </div>
             </motion.section>

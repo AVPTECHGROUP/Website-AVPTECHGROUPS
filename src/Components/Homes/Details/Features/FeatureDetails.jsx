@@ -5,28 +5,28 @@ import {
     ArrowRight,
     CheckCircle2,
     Sparkles,
+    Wrench,
     GraduationCap,
-    CalendarCheck,
-    Wallet,
-    FileBarChart,
-    Bus,
-    Users,
+    Building2,
+    Handshake,
     Smartphone,
-    Store,
+    ShieldCheck,
+    Cloud,
+    Layers,
     MessageCircle,
 } from "lucide-react";
 import { getFeatureBySlug } from "../../../../assets/data/featureData";
 import { UserContext } from "../../../../ContextAPI/UserContext";
 
 const ICONS = {
+    Wrench,
     GraduationCap,
-    CalendarCheck,
-    Wallet,
-    FileBarChart,
-    Bus,
-    Users,
+    Building2,
+    Handshake,
     Smartphone,
-    Store,
+    ShieldCheck,
+    Cloud,
+    Layers,
 };
 
 const FeatureDetails = () => {
@@ -36,6 +36,10 @@ const FeatureDetails = () => {
 
     const { theme } = useContext(UserContext);
 
+    // Brand colors (AVP Tech Group)
+    const primaryText = theme === 'dark' ? '#3AA6E8' : '#1B57A0';
+    const accent = theme === 'dark' ? '#5CD6F5' : '#0E7490';
+
     // ── Fallback for unknown slug ──
     if (!feature) {
         return (
@@ -43,19 +47,19 @@ const FeatureDetails = () => {
                 }`}>
                 <div
                     className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5"
-                    style={{ background: theme === 'dark' ? "rgba(0,201,177,0.15)" : "rgba(26,138,138,0.08)" }}
+                    style={{ background: theme === 'dark' ? "rgba(35,128,204,0.15)" : "rgba(27,87,160,0.08)" }}
                 >
-                    <Sparkles size={28} className={theme === 'dark' ? "text-[#00C9B1]" : "text-teal-dark"} />
+                    <Sparkles size={28} className={theme === 'dark' ? "text-[#3AA6E8]" : "text-[#1B57A0]"} />
                 </div>
                 <h1 className="font-heading text-2xl font-bold mb-2">
-                    Feature not found
+                    Service not found
                 </h1>
                 <p className={`font-body text-sm max-w-xs mx-auto mb-6 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
-                    We couldn't find the feature you're looking for.
+                    We couldn't find the service you're looking for.
                 </p>
                 <button
                     onClick={() => navigate("/")}
-                    className={`inline-flex items-center gap-2 px-6 py-3 rounded-full font-body font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer ${theme === 'dark' ? 'bg-[#00C9B1] text-slate-950 hover:bg-[#00b09b]' : 'bg-teal-dark text-white hover:bg-teal'
+                    className={`inline-flex items-center gap-2 px-6 py-3 rounded-full font-body font-semibold text-sm shadow-md transition-all duration-200 cursor-pointer ${theme === 'dark' ? 'bg-[#2380CC] text-white hover:bg-[#3AA6E8]' : 'bg-[#0D3F7A] text-white hover:bg-[#2380CC]'
                         }`}
                 >
                     <ArrowLeft size={16} /> Back to Home
@@ -97,11 +101,11 @@ const FeatureDetails = () => {
                 {/* Abstract Accent Radial Gradients */}
                 <div
                     className="absolute -top-40 -left-40 w-[480px] h-[480px] rounded-full opacity-10 pointer-events-none"
-                    style={{ background: "radial-gradient(circle, #00C9B1 0%, transparent 70%)" }}
+                    style={{ background: "radial-gradient(circle, #2380CC 0%, transparent 70%)" }}
                 />
                 <div
                     className="absolute -bottom-32 -right-32 w-[420px] h-[420px] rounded-full opacity-10 pointer-events-none"
-                    style={{ background: "radial-gradient(circle, #F5A623 0%, transparent 70%)" }}
+                    style={{ background: "radial-gradient(circle, #5CD6F5 0%, transparent 70%)" }}
                 />
 
                 {/* Faint grid texture for a "premium dashboard" feel */}
@@ -123,7 +127,7 @@ const FeatureDetails = () => {
                                 <div
                                     className="absolute -inset-4 rounded-[2rem] blur-2xl opacity-40 pointer-events-none"
                                     style={{
-                                        background: "linear-gradient(135deg, rgba(0,201,177,0.35) 0%, rgba(245,166,35,0.25) 100%)",
+                                        background: "linear-gradient(135deg, rgba(35,128,204,0.35) 0%, rgba(92,214,245,0.25) 100%)",
                                     }}
                                 />
 
@@ -150,7 +154,7 @@ const FeatureDetails = () => {
                                         </div>
                                     ) : (
                                         <div className="w-full aspect-[13/9] flex items-center justify-center">
-                                            <Icon size={96} className={theme === 'dark' ? "text-[#00C9B1]/60" : "text-teal-dark/40"} />
+                                            <Icon size={96} className={theme === 'dark' ? "text-[#3AA6E8]/60" : "text-[#1B57A0]/40"} />
                                         </div>
                                     )}
 
@@ -170,8 +174,8 @@ const FeatureDetails = () => {
                                     }`}
                                     style={{
                                         background: theme === 'dark'
-                                            ? "linear-gradient(135deg, #00C9B1 0%, #009e8a 100%)"
-                                            : "linear-gradient(135deg, #1A8A8A 0%, #106868 100%)",
+                                            ? "linear-gradient(135deg, #2380CC 0%, #1B57A0 100%)"
+                                            : "linear-gradient(135deg, #1B57A0 0%, #0D3F7A 100%)",
                                     }}
                                 >
                                     <Icon size={30} className="text-white" strokeWidth={1.8} />
@@ -185,16 +189,16 @@ const FeatureDetails = () => {
                                 >
                                     <div
                                         className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                                        style={{ background: theme === 'dark' ? "rgba(245,166,35,0.18)" : "rgba(245,166,35,0.12)" }}
+                                        style={{ background: theme === 'dark' ? "rgba(92,214,245,0.18)" : "rgba(14,116,144,0.12)" }}
                                     >
-                                        <CheckCircle2 size={16} className="text-amber-500" />
+                                        <CheckCircle2 size={16} style={{ color: accent }} />
                                     </div>
                                     <div className="text-left">
                                         <p className={`font-heading text-sm font-bold leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                                            {feature.features?.length || 0}+ Features
+                                            {feature.features?.length || 0}+ Key Areas
                                         </p>
                                         <p className={`font-body text-[11px] mt-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-                                            Built for schools
+                                            Delivered by experts
                                         </p>
                                     </div>
                                 </div>
@@ -207,8 +211,8 @@ const FeatureDetails = () => {
                                 className="fd-anim inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-6 text-xs sm:text-sm font-body font-semibold shadow-sm"
                                 style={{
                                     animationDelay: "60ms",
-                                    background: theme === 'dark' ? "rgba(0,201,177,0.16)" : "rgba(26,138,138,0.08)",
-                                    color: theme === 'dark' ? "#00C9B1" : "#1A8A8A",
+                                    background: theme === 'dark' ? "rgba(35,128,204,0.16)" : "rgba(27,87,160,0.08)",
+                                    color: primaryText,
                                 }}
                             >
                                 <Icon size={14} /> {feature.title}
@@ -239,20 +243,20 @@ const FeatureDetails = () => {
                                 <Link
                                     to="/contact"
                                     className={`inline-flex items-center gap-2 px-7 py-3.5 rounded-full font-body font-semibold text-sm sm:text-base shadow-lg transition-all duration-200 hover:-translate-y-0.5 ${
-                                        theme === 'dark' ? 'bg-[#00C9B1] text-slate-950 hover:bg-[#00b09b]' : 'bg-teal-dark text-white hover:bg-teal'
+                                        theme === 'dark' ? 'bg-[#2380CC] text-white hover:bg-[#3AA6E8]' : 'bg-[#0D3F7A] text-white hover:bg-[#2380CC]'
                                     }`}
                                 >
-                                    Contact Support <ArrowRight size={16} />
+                                    Talk to Our Experts <ArrowRight size={16} />
                                 </Link>
                                 <button
                                     onClick={() => navigate(-1)}
                                     className={`inline-flex items-center gap-2 px-7 py-3.5 rounded-full font-body font-semibold text-sm sm:text-base transition-all duration-200 border cursor-pointer ${
                                         theme === 'dark'
-                                            ? 'border-slate-700 text-slate-200 hover:border-[#00C9B1]/50 hover:text-[#00C9B1]'
-                                            : 'border-slate-200 text-slate-700 hover:border-teal-dark/40 hover:text-teal-dark'
+                                            ? 'border-slate-700 text-slate-200 hover:border-[#2380CC]/60 hover:text-[#3AA6E8]'
+                                            : 'border-slate-200 text-slate-700 hover:border-[#1B57A0]/40 hover:text-[#1B57A0]'
                                     }`}
                                 >
-                                    <ArrowLeft size={16} /> All Features
+                                    <ArrowLeft size={16} /> All Services
                                 </button>
                             </div>
                         </div>
@@ -266,17 +270,17 @@ const FeatureDetails = () => {
                 {/* Key Features Section */}
                 <div className="mb-16">
                     <div className="flex items-center gap-3 mb-8">
-                        <div className={`h-px flex-1 bg-gradient-to-r to-transparent ${theme === 'dark' ? 'from-[#00C9B1]/30' : 'from-teal-dark/30'}`} />
+                        <div className={`h-px flex-1 bg-gradient-to-r to-transparent ${theme === 'dark' ? 'from-[#2380CC]/40' : 'from-[#1B57A0]/30'}`} />
                         <span
                             className="font-body text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full transition-all"
                             style={{
-                                color: theme === 'dark' ? '#00C9B1' : '#1A8A8A',
-                                background: theme === 'dark' ? 'rgba(0,201,177,0.15)' : 'rgba(26,138,138,0.08)'
+                                color: primaryText,
+                                background: theme === 'dark' ? 'rgba(35,128,204,0.15)' : 'rgba(27,87,160,0.08)'
                             }}
                         >
-                            Key Features
+                            What We Cover
                         </span>
-                        <div className={`h-px flex-1 bg-gradient-to-l to-transparent ${theme === 'dark' ? 'from-[#00C9B1]/30' : 'from-teal-dark/30'}`} />
+                        <div className={`h-px flex-1 bg-gradient-to-l to-transparent ${theme === 'dark' ? 'from-[#2380CC]/40' : 'from-[#1B57A0]/30'}`} />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -284,16 +288,16 @@ const FeatureDetails = () => {
                             <div
                                 key={i}
                                 className={`fd-anim flex items-start gap-3 p-5 rounded-2xl border transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${theme === 'dark'
-                                        ? 'border-slate-800 bg-slate-900/40 hover:border-[#00C9B1]/40'
-                                        : 'border-gray-100 bg-white hover:border-teal-dark/30'
+                                        ? 'border-slate-800 bg-slate-900/40 hover:border-[#2380CC]/50'
+                                        : 'border-gray-100 bg-white hover:border-[#1B57A0]/30'
                                     }`}
                                 style={{ animationDelay: `${100 + i * 70}ms` }}
                             >
                                 <div
                                     className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5"
-                                    style={{ background: theme === 'dark' ? "rgba(0,201,177,0.15)" : "rgba(26,138,138,0.1)" }}
+                                    style={{ background: theme === 'dark' ? "rgba(35,128,204,0.15)" : "rgba(27,87,160,0.1)" }}
                                 >
-                                    <CheckCircle2 size={16} className={theme === 'dark' ? "text-[#00C9B1]" : "text-teal-dark"} />
+                                    <CheckCircle2 size={16} className={theme === 'dark' ? "text-[#3AA6E8]" : "text-[#1B57A0]"} />
                                 </div>
                                 <p className={`font-body font-medium text-sm sm:text-base leading-snug pt-1 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'
                                     }`}>
@@ -307,17 +311,17 @@ const FeatureDetails = () => {
                 {/* Benefits Section */}
                 <div className="mb-16">
                     <div className="flex items-center gap-3 mb-8">
-                        <div className="h-px flex-1 bg-gradient-to-r from-amber-400/30 to-transparent" />
+                        <div className={`h-px flex-1 bg-gradient-to-r to-transparent ${theme === 'dark' ? 'from-[#5CD6F5]/30' : 'from-[#0E7490]/30'}`} />
                         <span
                             className="font-body text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full transition-all"
                             style={{
-                                color: theme === 'dark' ? '#F5A623' : '#C8860A',
-                                background: theme === 'dark' ? 'rgba(245,166,35,0.15)' : 'rgba(245,166,35,0.08)'
+                                color: accent,
+                                background: theme === 'dark' ? 'rgba(92,214,245,0.15)' : 'rgba(14,116,144,0.08)'
                             }}
                         >
                             Benefits
                         </span>
-                        <div className="h-px flex-1 bg-gradient-to-l from-amber-400/30 to-transparent" />
+                        <div className={`h-px flex-1 bg-gradient-to-l to-transparent ${theme === 'dark' ? 'from-[#5CD6F5]/30' : 'from-[#0E7490]/30'}`} />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -327,15 +331,15 @@ const FeatureDetails = () => {
                                 className="fd-anim flex items-center gap-3 p-5 rounded-2xl transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
                                 style={{
                                     background: theme === 'dark'
-                                        ? "linear-gradient(135deg, rgba(0,201,177,0.08) 0%, rgba(245,166,35,0.06) 100%)"
-                                        : "linear-gradient(135deg, rgba(26,138,138,0.06) 0%, rgba(245,166,35,0.05) 100%)",
+                                        ? "linear-gradient(135deg, rgba(35,128,204,0.10) 0%, rgba(92,214,245,0.06) 100%)"
+                                        : "linear-gradient(135deg, rgba(27,87,160,0.06) 0%, rgba(14,116,144,0.05) 100%)",
                                     border: theme === 'dark'
-                                        ? "1px solid rgba(245,166,35,0.25)"
-                                        : "1px solid rgba(245,166,35,0.15)",
+                                        ? "1px solid rgba(92,214,245,0.25)"
+                                        : "1px solid rgba(14,116,144,0.15)",
                                     animationDelay: `${100 + i * 70}ms`,
                                 }}
                             >
-                                <Sparkles size={18} className="text-amber-500 flex-shrink-0" />
+                                <Sparkles size={18} className="flex-shrink-0" style={{ color: accent }} />
                                 <p className={`font-body font-medium text-sm sm:text-base ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'
                                     }`}>
                                     {item}
@@ -350,18 +354,18 @@ const FeatureDetails = () => {
                     className="relative overflow-hidden rounded-2xl p-8 sm:p-10 text-center fd-anim transition-all duration-200"
                     style={{
                         background: theme === 'dark'
-                            ? "linear-gradient(135deg, rgba(0,201,177,0.08) 0%, rgba(245,166,35,0.06) 100%)"
-                            : "linear-gradient(135deg, rgba(26,138,138,0.07) 0%, rgba(245,166,35,0.06) 100%)",
+                            ? "linear-gradient(135deg, rgba(35,128,204,0.10) 0%, rgba(92,214,245,0.06) 100%)"
+                            : "linear-gradient(135deg, rgba(27,87,160,0.07) 0%, rgba(14,116,144,0.06) 100%)",
                         border: theme === 'dark'
-                            ? "1px solid rgba(0,201,177,0.25)"
-                            : "1px solid rgba(26,138,138,0.12)",
+                            ? "1px solid rgba(35,128,204,0.30)"
+                            : "1px solid rgba(27,87,160,0.12)",
                     }}
                 >
                     <div
                         className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4"
-                        style={{ background: theme === 'dark' ? "rgba(0,201,177,0.15)" : "rgba(26,138,138,0.1)" }}
+                        style={{ background: theme === 'dark' ? "rgba(35,128,204,0.15)" : "rgba(27,87,160,0.1)" }}
                     >
-                        <MessageCircle size={22} className={theme === 'dark' ? "text-[#00C9B1]" : "text-teal-dark"} />
+                        <MessageCircle size={22} className={theme === 'dark' ? "text-[#3AA6E8]" : "text-[#1B57A0]"} />
                     </div>
                     <h3 className={`font-heading text-xl sm:text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'
                         }`}>
@@ -369,14 +373,14 @@ const FeatureDetails = () => {
                     </h3>
                     <p className={`font-body text-sm sm:text-base max-w-sm mx-auto mb-6 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
                         }`}>
-                        See how SchoolSpine's {feature.title} module fits your school — no commitment required.
+                        Tell AVP Tech Group what you need for {feature.title}. We'll recommend the right solution, course or team.
                     </p>
                     <Link
                         to="/contact"
-                        className={`inline-flex items-center gap-2 px-7 py-3 rounded-full font-body font-semibold text-sm sm:text-base shadow-md transition-all duration-200 hover:-translate-y-0.5 ${theme === 'dark' ? 'bg-[#00C9B1] text-slate-950 hover:bg-[#00b09b]' : 'bg-teal-dark text-white hover:bg-teal'
+                        className={`inline-flex items-center gap-2 px-7 py-3 rounded-full font-body font-semibold text-sm sm:text-base shadow-md transition-all duration-200 hover:-translate-y-0.5 ${theme === 'dark' ? 'bg-[#2380CC] text-white hover:bg-[#3AA6E8]' : 'bg-[#0D3F7A] text-white hover:bg-[#2380CC]'
                             }`}
                     >
-                        Contact Support <ArrowRight size={16} />
+                        Talk to Our Experts <ArrowRight size={16} />
                     </Link>
                 </div>
             </div>

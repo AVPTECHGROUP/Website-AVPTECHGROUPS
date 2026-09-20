@@ -2,6 +2,19 @@ import React, { useState, useEffect, useContext } from 'react'
 import { Link } from 'react-router-dom'
 import { UserContext } from '../../../ContextAPI/UserContext'
 
+/* ─── Company details (single source of truth for this page) ────────────── */
+
+const COMPANY = {
+    name: 'AVP Tech Group',
+    address: 'Royal Plaza, Sushant Golf City, Lucknow, UP, India',
+    addressLine1: 'Royal Plaza, Sushant Golf City,',
+    addressLine2: 'Lucknow, UP, India',
+    website: 'avptechgroup.com',
+    email: 'info@avptechgroup.com',
+    phone: '+91 96995789998',
+    phoneHref: 'tel:+9196995789998',
+}
+
 const sections = [
     { id: 'introduction', label: 'Introduction', icon: '📋' },
     { id: 'company-info', label: 'Company Information', icon: '🏢' },
@@ -9,7 +22,9 @@ const sections = [
     { id: 'eligibility', label: 'Eligibility', icon: '✅' },
     { id: 'account-security', label: 'Account & Security', icon: '🔐' },
     { id: 'acceptable-use', label: 'Acceptable Use Policy', icon: '🚫' },
-    { id: 'school-data', label: 'School Data Responsibility', icon: '🏫' },
+    { id: 'client-data', label: 'Client Data Responsibility', icon: '🗂️' },
+    { id: 'training', label: 'Training & Certification', icon: '🎓' },
+    { id: 'fees', label: 'Fees & Payments', icon: '💳' },
     { id: 'ip-rights', label: 'Intellectual Property', icon: '©️' },
     { id: 'data-privacy', label: 'Data Privacy', icon: '🔏' },
     { id: 'service-availability', label: 'Service Availability', icon: '⏱️' },
@@ -161,14 +176,14 @@ const Terms_Of_Service = () => {
                 className="fixed top-0 left-0 z-50 h-[2px] transition-all duration-150"
                 style={{
                     width: `${scrollProgress}%`,
-                    background: 'linear-gradient(to right, #00C9B1, #F5A623)',
+                    background: 'linear-gradient(to right, #2380CC, #5CD6F5)',
                 }}
             />
 
             {/* ══════════════════ HERO ══════════════════ */}
             <div className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_10%_0%,rgba(0,201,177,0.07),transparent)]" />
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_90%_100%,rgba(245,166,35,0.05),transparent)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_10%_0%,rgba(35,128,204,0.07),transparent)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_90%_100%,rgba(92,214,245,0.05),transparent)]" />
                 <div className="absolute top-16 right-24 w-56 h-56 rounded-full bg-teal/[0.04] blur-3xl pointer-events-none" />
                 <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-teal/20 to-transparent" />
 
@@ -202,8 +217,9 @@ const Terms_Of_Service = () => {
                         className={`text-base md:text-lg max-w-2xl leading-relaxed mb-10 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}
                         style={{ animation: 'fadeUp 0.5s ease 0.22s both' }}
                     >
-                        These Terms govern your access to and use of SchoolSpine. Please read them
-                        carefully before registering for or using the platform.
+                        These Terms govern your access to and use of the {COMPANY.name} website and
+                        services, including IT solutions, training and staffing. Please read them
+                        carefully before enrolling in a course or engaging our services.
                     </p>
 
                     <div
@@ -211,8 +227,8 @@ const Terms_Of_Service = () => {
                         style={{ animation: 'fadeUp 0.5s ease 0.3s both' }}
                     >
                         {[
-                            { emoji: '📅', label: 'Last Updated', value: 'June 2026' },
-                            { emoji: '🏢', label: 'Operator', value: 'ComputeSoftTechnologies' },
+                            { emoji: '📅', label: 'Last Updated', value: 'September 2026' },
+                            { emoji: '🏢', label: 'Operator', value: COMPANY.name },
                             { emoji: '📍', label: 'Jurisdiction', value: 'Lucknow, India' },
                         ].map(({ emoji, label, value }) => (
                             <div
@@ -268,13 +284,13 @@ const Terms_Of_Service = () => {
                                 </ul>
                             </div>
                             
-                            <div className="bg-[linear-gradient(135deg,rgba(0,201,177,0.07),rgba(245,166,35,0.04))] border border-teal/[0.15] rounded-2xl p-4">
+                            <div className="bg-[linear-gradient(135deg,rgba(35,128,204,0.07),rgba(92,214,245,0.04))] border border-teal/[0.15] rounded-2xl p-4">
                                 <p className={`text-sm font-semibold mb-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>Questions?</p>
                                 <p className={`text-xs mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Reach out to our team</p>
                                 <a
-                                    href="mailto:info@computesofttech.com"
+                                    href={`mailto:${COMPANY.email}`}
                                     className="text-xs text-teal hover:text-teal-light transition-colors break-all">
-                                    info@computesofttech.com
+                                    {COMPANY.email}
                                 </a>
                             </div>
                         </div>
@@ -285,69 +301,70 @@ const Terms_Of_Service = () => {
                         {/* 01 */}
                         <Section id="introduction" number="01" title="Introduction" icon="📋" isDark={isDark}>
                             <p>
-                                Welcome to <strong className={isDark ? 'text-white' : 'text-slate-900'}>SchoolSpine</strong>, a School
-                                Management System owned and operated by <strong className={isDark ? 'text-white' : 'text-slate-900'}>ComputeSoftTechnologies</strong>.
-                                These Terms of Service ("Terms") govern your access to and use of the School
-                                Spine website, mobile applications, and related services.
+                                Welcome to <strong className={isDark ? 'text-white' : 'text-slate-900'}>{COMPANY.name}</strong>, an IT
+                                solutions, certification training and staffing company. These Terms of Service
+                                ("Terms") govern your access to and use of the {COMPANY.name} website and
+                                related services, including course enquiries and enrollment, corporate training,
+                                staffing and IT solutions.
                             </p>
                             <InfoBox type="info" isDark={isDark}>
-                                By accessing, registering for, or using SchoolSpine, you agree to be legally
-                                bound by these Terms. If you do not agree with any part of these Terms, you must
-                                discontinue use of the platform immediately.
+                                By accessing, enrolling in, or using {COMPANY.name} services, you agree to be
+                                legally bound by these Terms. If you do not agree with any part of these Terms,
+                                you must discontinue use of the website and services immediately.
                             </InfoBox>
                         </Section>
 
                         {/* 02 */}
                         <Section id="company-info" number="02" title="Company Information" icon="🏢" isDark={isDark}>
-                            <p>You may reach ComputeSoftTechnologies through:</p>
+                            <p>You may reach {COMPANY.name} through:</p>
                             <DataCard isDark={isDark} items={[
-                                { label: 'Company Name', value: 'ComputeSoftTechnologies' },
-                                { label: 'Brand Name', value: 'SchoolSpine' },
-                                { label: 'Address', value: 'Royal Plaza, Sushant Golf City, Lucknow, UP – 226030, India' },
-                                { label: 'Website', value: 'schoolspine.com' },
-                                { label: 'Email', value: 'info@computesofttech.com' },
-                                { label: 'Phone', value: '+91 9511117450' },
+                                { label: 'Company Name', value: COMPANY.name },
+                                { label: 'Services', value: 'IT Solutions, Certification Training, Corporate Training & Staffing' },
+                                { label: 'Address', value: COMPANY.address },
+                                { label: 'Website', value: COMPANY.website },
+                                { label: 'Email', value: COMPANY.email },
+                                { label: 'Phone', value: COMPANY.phone },
                             ]} />
                         </Section>
 
                         {/* 03 */}
                         <Section id="services" number="03" title="Description of Services" icon="🛠️" isDark={isDark}>
-                            <p>SchoolSpine is a cloud-based School Management Platform that enables educational institutions to manage and monitor:</p>
+                            <p>{COMPANY.name} provides technology solutions and professional training, including:</p>
                             <IconGrid isDark={isDark} items={[
-                                { icon: '🎓', text: 'Student records' },
-                                { icon: '👩‍🏫', text: 'Teacher records' },
-                                { icon: '✅', text: 'Attendance management' },
-                                { icon: '📝', text: 'Homework management' },
-                                { icon: '📊', text: 'Examination management' },
-                                { icon: '📈', text: 'Academic performance tracking' },
-                                { icon: '📢', text: 'School notices & announcements' },
-                                { icon: '💬', text: 'Parent-teacher communication' },
-                                { icon: '🗂️', text: 'Digital document management' },
-                                { icon: '📱', text: 'Mobile & web-based administration' },
+                                { icon: '🛠️', text: 'IT solutions & technical support' },
+                                { icon: '☁️', text: 'Cloud & infrastructure services' },
+                                { icon: '📱', text: 'Device management with Microsoft Intune' },
+                                { icon: '🛡️', text: 'Endpoint & threat protection with Microsoft Defender' },
+                                { icon: '🎓', text: 'Microsoft certification training' },
+                                { icon: '🏢', text: 'Corporate training programs' },
+                                { icon: '📚', text: 'Course materials & mock test questions' },
+                                { icon: '📜', text: 'Certificates of attendance' },
+                                { icon: '🧑‍💼', text: 'IT staffing services' },
+                                { icon: '💬', text: 'Enquiries, consultation & support' },
                             ]} />
                             <InfoBox type="info" isDark={isDark}>
-                                The platform is intended solely for legitimate educational and administrative
-                                purposes.
+                                Our website and services are intended solely for legitimate business, learning
+                                and professional purposes.
                             </InfoBox>
                         </Section>
 
                         {/* 04 */}
                         <Section id="eligibility" number="04" title="Eligibility" icon="✅" isDark={isDark}>
-                            <p>Users must be authorized by their educational institution to access and use SchoolSpine. Authorized users may include:</p>
+                            <p>Our services are intended for users who are 18 years of age or older and legally able to enter into a binding agreement. Users may include:</p>
                             <FeatureGrid isDark={isDark} items={[
-                                { icon: '🧑‍💼', title: 'School Administrators' },
-                                { icon: '🏫', title: 'Principals' },
-                                { icon: '👩‍🏫', title: 'Teachers' },
-                                { icon: '👥', title: 'Staff Members' },
-                                { icon: '👨‍👩‍👧', title: 'Parents or Guardians' },
-                                { icon: '🎓', title: 'Students', desc: 'Where permitted by the institution' },
+                                { icon: '🎓', title: 'Individual Learners', desc: 'Enrolling in our courses and certifications' },
+                                { icon: '👩‍💻', title: 'IT Professionals', desc: 'Upskilling or preparing for certification exams' },
+                                { icon: '🏢', title: 'Corporate Clients', desc: 'Organizations engaging our IT or training services' },
+                                { icon: '🧑‍💼', title: 'Authorized Representatives', desc: 'Acting on behalf of a company' },
+                                { icon: '👥', title: 'Client Employees', desc: 'Enrolled in training by their employer' },
+                                { icon: '📄', title: 'Staffing Candidates', desc: 'Seeking IT roles through our staffing services' },
                             ]} />
-                            <p>Users must provide accurate information and maintain updated account details.</p>
+                            <p>Users must provide accurate information and keep their details up to date.</p>
                         </Section>
 
                         {/* 05 */}
                         <Section id="account-security" number="05" title="Account Registration and Security" icon="🔐" isDark={isDark}>
-                            <p>Users are responsible for:</p>
+                            <p>Where the website or a learning platform provides login access, users are responsible for:</p>
                             <CheckList isDark={isDark} items={[
                                 'Maintaining the confidentiality of login credentials',
                                 'Restricting unauthorized access to their accounts',
@@ -355,7 +372,7 @@ const Terms_Of_Service = () => {
                                 'Reporting unauthorized account activity immediately',
                             ]} />
                             <InfoBox type="warning" isDark={isDark}>
-                                ComputeSoftTechnologies shall not be liable for losses resulting from unauthorized use
+                                {COMPANY.name} shall not be liable for losses resulting from unauthorized use
                                 of user accounts due to negligence or credential sharing.
                             </InfoBox>
                         </Section>
@@ -364,13 +381,15 @@ const Terms_Of_Service = () => {
                         <Section id="acceptable-use" number="06" title="Acceptable Use Policy" icon="🚫" isDark={isDark}>
                             <p>Users agree not to:</p>
                             <CheckList isDark={isDark} items={[
-                                'Use the platform for unlawful purposes',
+                                'Use the website or services for unlawful purposes',
                                 'Upload harmful, malicious, or fraudulent content',
                                 'Attempt unauthorized access to systems or data',
-                                'Interfere with platform operations',
+                                'Interfere with website, platform or training operations',
                                 'Distribute malware, viruses, or harmful code',
-                                'Violate the privacy rights of students, parents, teachers, or staff',
-                                'Misrepresent identity or authority',
+                                'Share, resell or publicly distribute course materials, recordings or login access',
+                                'Record or capture live training sessions without written permission',
+                                'Violate the privacy rights of other learners, clients, trainers, or staff',
+                                'Misrepresent identity, qualifications, or authority',
                             ]} />
                             <InfoBox type="warning" isDark={isDark}>
                                 Any violation may result in suspension or termination of access.
@@ -378,62 +397,102 @@ const Terms_Of_Service = () => {
                         </Section>
 
                         {/* 07 */}
-                        <Section id="school-data" number="07" title="School Data Responsibility" icon="🏫" isDark={isDark}>
-                            <p>Educational institutions remain the owners and controllers of the data they upload to SchoolSpine. Schools are responsible for:</p>
+                        <Section id="client-data" number="07" title="Client Data Responsibility" icon="🗂️" isDark={isDark}>
+                            <p>Clients remain the owners and controllers of the data, systems and accounts they entrust to {COMPANY.name}. Clients are responsible for:</p>
                             <CheckList isDark={isDark} items={[
-                                'Obtaining necessary permissions and consents',
-                                'Ensuring data accuracy',
+                                'Obtaining the permissions needed to grant us access to their systems and data',
+                                'Maintaining independent backups before any changes are made to their environment',
+                                'Ensuring the accuracy of the information and requirements they provide',
+                                'Managing user permissions and any credentials shared with us',
                                 'Maintaining compliance with applicable laws and regulations',
-                                'Managing user permissions within their institution',
                             ]} />
-                            <p>ComputeSoftTechnologies acts as a technology service provider and does not independently verify uploaded data.</p>
+                            <p>{COMPANY.name} acts as a technology service provider and does not independently verify data or information supplied by clients.</p>
                         </Section>
 
                         {/* 08 */}
-                        <Section id="ip-rights" number="08" title="Intellectual Property Rights" icon="©️" isDark={isDark}>
+                        <Section id="training" number="08" title="Training and Certification" icon="🎓" isDark={isDark}>
+                            <p>The following applies to all courses and training programs offered by {COMPANY.name}:</p>
+                            <CheckList isDark={isDark} items={[
+                                'A certificate of attendance issued by us confirms participation in a course; it is not a vendor certification',
+                                'Official certifications, such as Microsoft certifications, are awarded by the vendor after passing the relevant exam, under the vendor\'s own terms, fees and policies',
+                                'Mock tests and practice questions are learning aids and do not replace or reproduce the official exam',
+                                'Schedules, batches, trainers and delivery formats may be changed where necessary',
+                            ]} />
+                            <InfoBox type="warning" isDark={isDark}>
+                                We do not guarantee exam results, certification, employment, or career outcomes.
+                            </InfoBox>
+                            <InfoBox type="info" isDark={isDark}>
+                                Microsoft, Intune, Defender and other product names are trademarks of their
+                                respective owners. Mentioning them does not imply affiliation with or
+                                endorsement by those owners unless expressly stated.
+                            </InfoBox>
+                        </Section>
+
+                        {/* 09 */}
+                        <Section id="fees" number="09" title="Fees and Payments" icon="💳" isDark={isDark}>
                             <p>
-                                All software, source code, designs, interfaces, logos, trademarks, content, and
-                                platform features are the exclusive property of ComputeSoftTechnologies unless
+                                Fees, payment terms, and any rescheduling, cancellation or refund conditions
+                                apply in addition to these Terms:
+                            </p>
+                            <CheckList isDark={isDark} items={[
+                                'Course and service fees are quoted at enrollment or in the agreed proposal',
+                                'Applicable taxes are charged as per law',
+                                'Rescheduling, cancellation and refund conditions are communicated before payment',
+                            ]} />
+                            <InfoBox type="info" isDark={isDark}>
+                                Please confirm the applicable fee and refund terms with our team before enrolling
+                                or engaging our services.
+                            </InfoBox>
+                        </Section>
+
+                        {/* 10 */}
+                        <Section id="ip-rights" number="10" title="Intellectual Property Rights" icon="©️" isDark={isDark}>
+                            <p>
+                                All software, source code, designs, course content, presentations, course
+                                materials, mock test questions, recordings, logos, trademarks, and website
+                                features are the exclusive property of {COMPANY.name} or its licensors unless
                                 otherwise stated. Users may not:
                             </p>
                             <CheckList isDark={isDark} items={[
-                                'Copy any part of the platform',
-                                'Modify any part of the platform',
-                                'Reverse engineer any part of the platform',
-                                'Distribute any part of the platform',
-                                'Resell any part of the platform',
-                                'Reproduce any part of the platform',
+                                'Copy any part of our content or materials',
+                                'Modify any part of our content or materials',
+                                'Reverse engineer any part of our website or software',
+                                'Distribute any part of our content or materials',
+                                'Resell any part of our content or materials',
+                                'Reproduce any part of our content or materials',
                             ]} />
                             <p>...without prior written permission.</p>
                         </Section>
 
-                        {/* 09 */}
-                        <Section id="data-privacy" number="09" title="Data Privacy" icon="🔏" isDark={isDark}>
+                        {/* 11 */}
+                        <Section id="data-privacy" number="11" title="Data Privacy" icon="🔏" isDark={isDark}>
                             <p>
                                 The collection, processing, storage, and protection of personal information are
                                 governed by our <Link to="/privacy-policy" className="text-teal hover:text-teal-light transition-colors">Privacy Policy</Link>.
                             </p>
-                            <p>By using SchoolSpine, users consent to the collection and processing of information as described in the Privacy Policy.</p>
+                            <p>By using {COMPANY.name} services, users consent to the collection and processing of information as described in the Privacy Policy.</p>
                         </Section>
 
-                        {/* 10 */}
-                        <Section id="service-availability" number="10" title="Service Availability" icon="⏱️" isDark={isDark}>
-                            <p>While we strive to maintain uninterrupted services, we do not guarantee that the platform will always be available without interruption. Services may occasionally be unavailable due to:</p>
+                        {/* 12 */}
+                        <Section id="service-availability" number="12" title="Service Availability" icon="⏱️" isDark={isDark}>
+                            <p>While we strive to maintain uninterrupted services, we do not guarantee that the website or live training sessions will always be available without interruption. Services may occasionally be unavailable or rescheduled due to:</p>
                             <CheckList isDark={isDark} items={[
                                 'System maintenance',
                                 'Technical upgrades',
                                 'Internet connectivity issues',
+                                'Trainer unavailability or unforeseen circumstances',
                                 'Force majeure events',
-                                'Third-party service disruptions',
+                                'Third-party service disruptions, including video conferencing platforms',
                             ]} />
                             <InfoBox type="warning" isDark={isDark}>
-                                ComputeSoftTechnologies shall not be liable for temporary service interruptions.
+                                {COMPANY.name} shall not be liable for temporary service interruptions, but will
+                                make reasonable efforts to reschedule any affected sessions.
                             </InfoBox>
                         </Section>
 
-                        {/* 11 */}
-                        <Section id="third-party" number="11" title="Third-Party Services" icon="🔗" isDark={isDark}>
-                            <p>The platform may integrate with third-party technologies or services. We are not responsible for:</p>
+                        {/* 13 */}
+                        <Section id="third-party" number="13" title="Third-Party Services" icon="🔗" isDark={isDark}>
+                            <p>Our website and services may integrate with third-party technologies or services, such as video conferencing, payment or cloud platforms. We are not responsible for:</p>
                             <CheckList isDark={isDark} items={[
                                 'Third-party content',
                                 'External websites',
@@ -445,41 +504,43 @@ const Terms_Of_Service = () => {
                             </InfoBox>
                         </Section>
 
-                        {/* 12 */}
-                        <Section id="liability" number="12" title="Limitation of Liability" icon="⚖️" isDark={isDark}>
-                            <p>To the maximum extent permitted by applicable law, ComputeSoftTechnologies shall not be liable for:</p>
+                        {/* 14 */}
+                        <Section id="liability" number="14" title="Limitation of Liability" icon="⚖️" isDark={isDark}>
+                            <p>To the maximum extent permitted by applicable law, {COMPANY.name} shall not be liable for:</p>
                             <CheckList isDark={isDark} items={[
                                 'Indirect damages',
                                 'Consequential damages',
                                 'Data loss',
                                 'Business interruption',
                                 'Revenue loss',
-                                'Educational decisions based on platform data',
+                                'Exam results, certification outcomes, or career and employment decisions',
+                                'Business or technical decisions made on the basis of our recommendations',
                                 'Unauthorized access caused by user negligence',
                             ]} />
                             <InfoBox type="info" isDark={isDark}>
-                                The platform is provided on an "as available" and "as is" basis.
+                                The website and services are provided on an "as available" and "as is" basis.
                             </InfoBox>
                         </Section>
 
-                        {/* 13 */}
-                        <Section id="indemnification" number="13" title="Indemnification" icon="🛡️" isDark={isDark}>
-                            <p>Users and educational institutions agree to indemnify and hold harmless ComputeSoftTechnologies, its directors, employees, partners, and affiliates from claims, liabilities, damages, losses, and expenses arising from:</p>
+                        {/* 15 */}
+                        <Section id="indemnification" number="15" title="Indemnification" icon="🛡️" isDark={isDark}>
+                            <p>Users and clients agree to indemnify and hold harmless {COMPANY.name}, its directors, employees, partners, and affiliates from claims, liabilities, damages, losses, and expenses arising from:</p>
                             <CheckList isDark={isDark} items={[
-                                'Misuse of the platform',
+                                'Misuse of the website or services',
                                 'Violation of these Terms',
                                 'Violation of applicable laws',
                                 'Infringement of third-party rights',
                             ]} />
                         </Section>
 
-                        {/* 14 */}
-                        <Section id="termination" number="14" title="Suspension and Termination" icon="⛔" isDark={isDark}>
-                            <p>We reserve the right to suspend, restrict, or terminate access to SchoolSpine if:</p>
+                        {/* 16 */}
+                        <Section id="termination" number="16" title="Suspension and Termination" icon="⛔" isDark={isDark}>
+                            <p>We reserve the right to suspend, restrict, or terminate access to our website, learning resources or services if:</p>
                             <CheckList isDark={isDark} items={[
                                 'These Terms are violated',
                                 'Fraudulent activity is detected',
                                 'Unauthorized access is attempted',
+                                'Course materials or login access are shared or resold without permission',
                                 'Legal or regulatory requirements necessitate such action',
                             ]} />
                             <InfoBox type="warning" isDark={isDark}>
@@ -488,21 +549,21 @@ const Terms_Of_Service = () => {
                             </InfoBox>
                         </Section>
 
-                        {/* 15 */}
-                        <Section id="modifications" number="15" title="Modifications to Services" icon="🔄" isDark={isDark}>
-                            <p>ComputeSoftTechnologies reserves the right to:</p>
+                        {/* 17 */}
+                        <Section id="modifications" number="17" title="Modifications to Services" icon="🔄" isDark={isDark}>
+                            <p>{COMPANY.name} reserves the right to:</p>
                             <CheckList isDark={isDark} items={[
-                                'Add new features',
-                                'Modify existing functionality',
-                                'Discontinue features',
+                                'Add new courses and services',
+                                'Modify course content, schedules or delivery formats',
+                                'Discontinue courses or features',
                                 'Update pricing structures (if applicable)',
-                                'Improve system architecture',
+                                'Improve systems and infrastructure',
                             ]} />
                             <p>Such modifications may occur without prior notice.</p>
                         </Section>
 
-                        {/* 16 */}
-                        <Section id="governing-law" number="16" title="Governing Law" icon="🏛️" isDark={isDark}>
+                        {/* 18 */}
+                        <Section id="governing-law" number="18" title="Governing Law" icon="🏛️" isDark={isDark}>
                             <p>
                                 These Terms shall be governed by and interpreted in accordance with the laws of
                                 India.
@@ -513,40 +574,40 @@ const Terms_Of_Service = () => {
                             </InfoBox>
                         </Section>
 
-                        {/* 17 */}
-                        <Section id="changes" number="17" title="Changes to These Terms" icon="📝" isDark={isDark}>
-                            <p>We may revise these Terms periodically. Updated versions will be posted on the SchoolSpine website and applications with a revised effective date.</p>
-                            <p>Continued use of the platform after updates constitutes acceptance of the revised Terms.</p>
+                        {/* 19 */}
+                        <Section id="changes" number="19" title="Changes to These Terms" icon="📝" isDark={isDark}>
+                            <p>We may revise these Terms periodically. Updated versions will be posted on the {COMPANY.name} website with a revised effective date.</p>
+                            <p>Continued use of our website and services after updates constitutes acceptance of the revised Terms.</p>
                         </Section>
 
-                        {/* 18 */}
-                        <Section id="contact" number="18" title="Contact Information" icon="✉️" isDark={isDark}>
+                        {/* 20 */}
+                        <Section id="contact" number="20" title="Contact Information" icon="✉️" isDark={isDark}>
                             <p>For questions regarding these Terms of Service, please contact us:</p>
                             <div className={`mt-2 border rounded-2xl p-5 md:p-6 ${isDark ? 'bg-white/[0.02] border-white/[0.15]' : 'bg-black/[0.02] border-black/[0.15]'}`}>
-                                <p className={`font-heading font-bold text-lg mb-5 ${isDark ? 'text-white' : 'text-slate-900'}`}>ComputeSoftTechnologies</p>
+                                <p className={`font-heading font-bold text-lg mb-5 ${isDark ? 'text-white' : 'text-slate-900'}`}>{COMPANY.name}</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                                     <div>
                                         <p className={`text-[10px] uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Address</p>
                                         <p className={`text-sm leading-6 ${isDark ? 'text-white' : 'text-slate-700'}`}>
-                                            Royal Plaza, Sushant Golf City,<br />Lucknow, UP – 226030, India
+                                            {COMPANY.addressLine1}<br />{COMPANY.addressLine2}
                                         </p>
                                     </div>
                                     <div>
                                         <p className={`text-[10px] uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Email</p>
                                         <a
-                                            href="mailto:info@computesofttech.com"
-                                            className="text-sm text-teal hover:text-teal-light transition-colors"
+                                            href={`mailto:${COMPANY.email}`}
+                                            className="text-sm text-teal hover:text-teal-light transition-colors break-all"
                                         >
-                                            info@computesofttech.com
+                                            {COMPANY.email}
                                         </a>
                                     </div>
                                     <div>
                                         <p className={`text-[10px] uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Phone</p>
                                         <a
-                                            href="tel:9511117450"
+                                            href={COMPANY.phoneHref}
                                             className="text-sm text-teal hover:text-teal-light transition-colors"
                                         >
-                                            +91 9511117450
+                                            {COMPANY.phone}
                                         </a>
                                     </div>
                                 </div>

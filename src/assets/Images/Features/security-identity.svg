@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 900" role="img">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#030712"/><stop offset="1" stop-color="#0B2A5B"/></linearGradient>
+<linearGradient id="brand" gradientUnits="userSpaceOnUse" x1="300" y1="150" x2="1000" y2="750"><stop offset="0" stop-color="#0D3F7A"/><stop offset="0.5" stop-color="#2380CC"/><stop offset="1" stop-color="#5CD6F5"/></linearGradient>
+<linearGradient id="brandSoft" gradientUnits="userSpaceOnUse" x1="300" y1="150" x2="1000" y2="750"><stop offset="0" stop-color="#1B57A0"/><stop offset="1" stop-color="#3AA6E8"/></linearGradient>
+<pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0H0V50" fill="none" stroke="#fff" stroke-opacity="0.06" stroke-width="1"/></pattern>
+<filter id="blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="70"/></filter>
+</defs>
+<rect width="1300" height="900" fill="url(#bg)"/>
+<rect width="1300" height="900" fill="url(#grid)"/>
+<circle cx="150" cy="150" r="260" fill="#2380CC" opacity="0.28" filter="url(#blur)"/>
+<circle cx="1300" cy="770" r="240" fill="#5CD6F5" opacity="0.18" filter="url(#blur)"/>
+<g transform="translate(650 450) scale(1.15) translate(-650 -450)"><g transform="translate(650,450) scale(1.0)">
+<ellipse cx="0" cy="20" rx="330" ry="250" fill="none" stroke="#5CD6F5" stroke-opacity="0.18" stroke-width="2" stroke-dasharray="10 12"/>
+<path d="M-150,-40 H-300 V-150" fill="none" stroke="#5CD6F5" stroke-opacity="0.55" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="-300" cy="-150" r="11" fill="#030712" stroke="#5CD6F5" stroke-width="4"/><path d="M-150,60 H-330" fill="none" stroke="#5CD6F5" stroke-opacity="0.55" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="-330" cy="60" r="11" fill="#030712" stroke="#5CD6F5" stroke-width="4"/><path d="M150,-40 H300 V-150" fill="none" stroke="#5CD6F5" stroke-opacity="0.55" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="300" cy="-150" r="11" fill="#030712" stroke="#5CD6F5" stroke-width="4"/><path d="M150,70 H320 V170" fill="none" stroke="#5CD6F5" stroke-opacity="0.55" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="320" cy="170" r="11" fill="#030712" stroke="#5CD6F5" stroke-width="4"/>
+<path d="M0,-190 L150,-130 V20 C150,120 70,180 0,215 C-70,180 -150,120 -150,20 V-130 Z" fill="url(#brand)"/>
+<path d="M0,-150 L112,-104 V16 C112,92 52,138 0,166 C-52,138 -112,92 -112,16 V-104 Z" fill="#030712" fill-opacity="0.35" stroke="#fff" stroke-opacity="0.3" stroke-width="3"/>
+<path d="M-60,8 L-14,54 L66,-46" fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+</g></g>
+</svg>

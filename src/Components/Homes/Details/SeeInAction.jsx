@@ -3,29 +3,36 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { UserContext } from '../../../ContextAPI/UserContext'
 
-import {
-  attendance, dashboard, student_enrolment, teachers, transport,
-  holidays, login_page, parent_attendance, parent_dashboard, parent_transport,
-} from '../../../assets/Images/Mockups'
+import courseTrack1 from '../../../assets/Images/Mockups/course-track-1.png'
+import courseTrack2 from '../../../assets/Images/Mockups/course-track-2.png'
+import certification from '../../../assets/Images/Features/certification-training.svg'
+import corporateTraining from '../../../assets/Images/Features/corporate-training.svg'
+import microsoft365 from '../../../assets/Images/Features/microsoft-365.svg'
+import itSolutions from '../../../assets/Images/Features/it-solutions.svg'
+import endpoint from '../../../assets/Images/Features/endpoint-management.svg'
+import security from '../../../assets/Images/Features/security-identity.svg'
+import cloud from '../../../assets/Images/Features/cloud-azure.svg'
+import staffing from '../../../assets/Images/Features/staffing-services.svg'
 
 gsap.registerPlugin(ScrollTrigger)
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
-const LAPTOP_IMAGES = [
-  { src: dashboard, label: 'Dashboard' },
-  { src: attendance, label: 'Attendance' },
-  { src: student_enrolment, label: 'Enrolment' },
-  { src: teachers, label: 'Teachers' },
-  { src: transport, label: 'Transport' },
+// Each tab needs exactly 5 images (1 hero + 4 in the grid on desktop).
+const TRAINING_IMAGES = [
+  { src: courseTrack1, label: 'Courses 1–18' },
+  { src: courseTrack2, label: 'Courses 19–36' },
+  { src: certification, label: 'Certification' },
+  { src: corporateTraining, label: 'Corporate Training' },
+  { src: microsoft365, label: 'Microsoft 365' },
 ]
 
-const MOBILE_IMAGES = [
-  { src: login_page, label: 'Login' },
-  { src: parent_dashboard, label: 'Dashboard' },
-  { src: parent_attendance, label: 'Attendance' },
-  { src: parent_transport, label: 'Transport' },
-  { src: holidays, label: 'Holidays' },
+const SOLUTION_IMAGES = [
+  { src: itSolutions, label: 'IT Support' },
+  { src: endpoint, label: 'Endpoints' },
+  { src: security, label: 'Security' },
+  { src: cloud, label: 'Cloud' },
+  { src: staffing, label: 'Staffing' },
 ]
 
 // ─── useIsMobile ──────────────────────────────────────────────────────────────
@@ -80,12 +87,12 @@ function DeviceCard({ src, label, isPhone, big = false, index = 0, onHover, isDa
       style={{
         opacity: 1,
         borderRadius: 16,
-        background: isDark ? 'rgba(8,20,38,0.92)' : '#ffffff',
+        background: isDark ? 'rgba(6,13,28,0.92)' : '#ffffff',
         border: isHovered
-          ? '1px solid rgba(45,212,191,0.6)'
-          : isDark ? '1px solid rgba(45,212,191,0.14)' : '1px solid rgba(0,0,0,0.08)',
+          ? '1px solid rgba(35,128,204,0.65)'
+          : isDark ? '1px solid rgba(35,128,204,0.18)' : '1px solid rgba(0,0,0,0.08)',
         boxShadow: isHovered
-          ? `0 20px 50px ${isDark ? 'rgba(0,0,0,0.65)' : 'rgba(148,163,184,0.25)'}, 0 0 25px rgba(45,212,191,0.2), inset 0 1px 0 rgba(255,255,255,0.04)`
+          ? `0 20px 50px ${isDark ? 'rgba(0,0,0,0.65)' : 'rgba(148,163,184,0.25)'}, 0 0 25px rgba(35,128,204,0.25), inset 0 1px 0 rgba(255,255,255,0.04)`
           : `0 12px 48px ${isDark ? 'rgba(0,0,0,0.45)' : 'rgba(148,163,184,0.15)'}, inset 0 1px 0 rgba(255,255,255,0.04)`,
         overflow: 'hidden',
         display: 'flex',
@@ -105,7 +112,7 @@ function DeviceCard({ src, label, isPhone, big = false, index = 0, onHover, isDa
         width: '100%',
         borderRadius: isPhone ? 12 : 8,
         overflow: 'hidden',
-        background: isDark ? '#050f1e' : '#ffffff',
+        background: isDark ? '#030a17' : '#ffffff',
         border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.05)',
       }}>
         <img
@@ -121,7 +128,7 @@ function DeviceCard({ src, label, isPhone, big = false, index = 0, onHover, isDa
         fontWeight: 700,
         letterSpacing: '0.13em',
         textTransform: 'uppercase',
-        color: isHovered && !big ? '#2dd4bf' : isDark ? '#64748b' : '#475569',
+        color: isHovered && !big ? (isDark ? '#5CD6F5' : '#2380CC') : isDark ? '#64748b' : '#475569',
         transition: 'color 0.3s ease',
       }}>
         {label}
@@ -235,10 +242,10 @@ function MobileCarousel({ images, isPhone, isDark, active, setActive }) {
           {images.map((img, i) => (
             <div key={i} style={{ minWidth: '100%', padding: '0.5rem 1.25rem', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
               <div style={{
-                background: isDark ? 'rgba(8,20,38,0.92)' : '#ffffff',
-                border: `2px solid ${i === active ? 'rgba(45,212,191,0.7)' : isDark ? 'rgba(45,212,191,0.1)' : 'rgba(0,0,0,0.06)'}`,
+                background: isDark ? 'rgba(6,13,28,0.92)' : '#ffffff',
+                border: `2px solid ${i === active ? 'rgba(35,128,204,0.75)' : isDark ? 'rgba(35,128,204,0.15)' : 'rgba(0,0,0,0.06)'}`,
                 borderRadius: 16,
-                boxShadow: i === active ? '0 0 0 4px rgba(45,212,191,0.1), 0 20px 60px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.1)',
+                boxShadow: i === active ? '0 0 0 4px rgba(35,128,204,0.12), 0 20px 60px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.1)',
                 overflow: 'hidden',
                 padding: 8,
                 transition: 'border 0.3s, box-shadow 0.3s',
@@ -246,7 +253,7 @@ function MobileCarousel({ images, isPhone, isDark, active, setActive }) {
                 maxWidth: isPhone ? 240 : 450,
                 boxSizing: 'border-box',
               }}>
-                <div style={{ borderRadius: isPhone ? 12 : 8, overflow: 'hidden', background: isDark ? '#050f1e' : '#f1f5f9' }}>
+                <div style={{ borderRadius: isPhone ? 12 : 8, overflow: 'hidden', background: isDark ? '#030a17' : '#f1f5f9' }}>
                   <img src={img.src} alt={img.label} style={{ width: '100%', height: 'auto', display: 'block' }} draggable={false} />
                 </div>
               </div>
@@ -264,7 +271,7 @@ function MobileCarousel({ images, isPhone, isDark, active, setActive }) {
           <button key={i} onClick={() => setActive(i)} style={{
             height: 8, width: i === active ? 22 : 8,
             borderRadius: 999, border: 'none', padding: 0, cursor: 'pointer',
-            background: i === active ? 'linear-gradient(90deg,#2dd4bf,#34d399 50%,#fbbf24)' : 'rgba(148,163,184,0.3)',
+            background: i === active ? 'linear-gradient(90deg,#1B57A0,#2380CC 50%,#5CD6F5)' : 'rgba(148,163,184,0.3)',
             transition: 'width 0.28s, background 0.28s',
           }} />
         ))}
@@ -277,9 +284,9 @@ function MobileCarousel({ images, isPhone, isDark, active, setActive }) {
             width: 40,
             height: 40,
             borderRadius: '50%',
-            border: '1px solid rgba(45,212,191,0.4)',
-            background: 'rgba(45,212,191,0.07)',
-            color: '#2dd4bf',
+            border: '1px solid rgba(35,128,204,0.45)',
+            background: 'rgba(35,128,204,0.08)',
+            color: isDark ? '#5CD6F5' : '#2380CC',
             fontSize: '1.5rem',
             cursor: 'pointer',
             display: 'flex',
@@ -303,7 +310,7 @@ export default function SeeInAction() {
   const { theme } = useContext(UserContext)
   const isDark = theme === 'dark'
 
-  const [activeTab, setActiveTab] = useState('admin')
+  const [activeTab, setActiveTab] = useState('training')
   const [autoActiveIndex, setAutoActiveIndex] = useState(0)
 
   const sectionRef = useRef(null)
@@ -312,8 +319,8 @@ export default function SeeInAction() {
   const isUserHovering = useRef(false)
   const isMobile = useIsMobile()
 
-  const images = activeTab === 'admin' ? LAPTOP_IMAGES : MOBILE_IMAGES
-  const isPhone = activeTab === 'parent'
+  const images = activeTab === 'training' ? TRAINING_IMAGES : SOLUTION_IMAGES
+  const isPhone = false // AVP has no phone-format screens; the phone layout code is kept for later use
 
   // ─── 3 Seconds Interval Auto Carousel Slide Logic ───
   useEffect(() => {
@@ -351,7 +358,7 @@ export default function SeeInAction() {
       style={{
         ...S.section,
         background: isDark
-          ? 'linear-gradient(145deg,#020c18 0%,#041a2e 40%,#061e2e 65%,#051219 100%)'
+          ? 'linear-gradient(145deg,#030712 0%,#06132b 40%,#0a2147 65%,#050b1a 100%)'
           : 'linear-gradient(145deg,#f8fafc 0%,#f1f5f9 50%,#e2e8f0 100%)',
         transition: 'background 0.3s ease-in-out'
       }}
@@ -367,12 +374,12 @@ export default function SeeInAction() {
 
       {/* Heading */}
       <div ref={headRef} style={{ opacity: 0, textAlign: 'center', position: 'relative', zIndex: 1, padding: '0 1rem' }}>
-        <p style={S.eyebrow}>Live Preview</p>
+        <p style={{ ...S.eyebrow, color: isDark ? '#3AA6E8' : '#1B57A0' }}>Our Work</p>
         <h2 style={{ ...S.heading, color: isDark ? '#e2e8f0' : '#0f172a' }}>
-          See <span style={S.grad}>SchoolSpine</span> in action
+          See <span style={{ ...S.grad, background: isDark ? S.grad.background : 'linear-gradient(90deg,#0D3F7A 0%,#2380CC 60%,#3AA6E8 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text' }}>AVP Tech Group</span> in action
         </h2>
         <p style={{ ...S.sub, color: isDark ? '#94a3b8' : '#475569' }}>
-          Explore the interface that thousands of schools rely on every day.
+          Explore the courses we teach and the solutions we deliver for businesses and professionals.
         </p>
       </div>
 
@@ -383,17 +390,17 @@ export default function SeeInAction() {
           background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
           borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
         }}>
-          <div style={{ ...S.slider, left: activeTab === 'admin' ? 4 : 'calc(50%)' }} />
+          <div style={{ ...S.slider, left: activeTab === 'training' ? 4 : 'calc(50%)' }} />
           {[
-            { key: 'admin', e: '', t: 'Admin Dashboard' },
-            { key: 'parent', e: '', t: 'SchoolSpine App' },
+            { key: 'training', e: '', t: 'Training' },
+            { key: 'solutions', e: '', t: 'IT Solutions' },
           ].map(({ key, e, t }) => (
             <button
               key={key}
               onClick={() => setActiveTab(key)}
               style={{
                 ...S.pillBtn,
-                color: activeTab === key ? '#0f172a' : isDark ? '#94a3b8' : '#64748b',
+                color: activeTab === key ? '#ffffff' : isDark ? '#94a3b8' : '#64748b',
                 fontWeight: activeTab === key ? 700 : 600,
               }}
             >
@@ -432,8 +439,8 @@ export default function SeeInAction() {
       {/* Hint footer note */}
       <p style={{ ...S.hint, color: isDark ? '#94a3b8' : '#64748b' }}>
         {isMobile
-          ? 'Tap arrows to browse all screens'
-          : 'Hover over any screen to preview it up close'}
+          ? 'Tap arrows to browse everything'
+          : 'Hover over any card to preview it up close'}
       </p>
 
     </section>
@@ -459,31 +466,31 @@ const S = {
   glowA: {
     position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)',
     width: 'min(800px,110%)', height: 500,
-    background: 'radial-gradient(ellipse,rgba(45,212,191,0.07) 0%,transparent 68%)',
+    background: 'radial-gradient(ellipse,rgba(35,128,204,0.14) 0%,transparent 68%)',
     pointerEvents: 'none', zIndex: 0,
   },
   glowB: {
     position: 'absolute', top: '50%', left: '-5%',
     width: 'min(420px,50%)', height: 420,
-    background: 'radial-gradient(ellipse,rgba(20,184,166,0.05) 0%,transparent 70%)',
+    background: 'radial-gradient(ellipse,rgba(92,214,245,0.07) 0%,transparent 70%)',
     pointerEvents: 'none', zIndex: 0,
   },
   glowC: {
     position: 'absolute', bottom: '10%', right: '-5%',
     width: 'min(360px,45%)', height: 360,
-    background: 'radial-gradient(ellipse,rgba(245,158,11,0.05) 0%,transparent 70%)',
+    background: 'radial-gradient(ellipse,rgba(35,128,204,0.09) 0%,transparent 70%)',
     pointerEvents: 'none', zIndex: 0,
   },
   eyebrow: {
     fontSize: '0.72rem', letterSpacing: '0.22em', textTransform: 'uppercase',
-    color: '#2dd4bf', fontWeight: 600, margin: '0 0 0.55rem',
+    fontWeight: 600, margin: '0 0 0.55rem',
   },
   heading: {
     fontSize: 'clamp(2rem,5vw,3.4rem)', fontWeight: 800,
     lineHeight: 1.15, letterSpacing: '-0.02em', margin: 0,
   },
   grad: {
-    background: 'linear-gradient(90deg,#2dd4bf 0%,#34d399 30%,#fbbf24 70%,#f59e0b 100%)',
+    background: 'linear-gradient(90deg,#3AA6E8 0%,#5CD6F5 100%)',
     WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
   },
   sub: {
@@ -505,9 +512,9 @@ const S = {
     position: 'absolute', top: 4,
     width: 'calc(50% - 4px)', height: 'calc(100% - 8px)',
     borderRadius: 999,
-    background: 'linear-gradient(90deg,#2dd4bf,#34d399 50%,#fbbf24)',
+    background: 'linear-gradient(90deg,#1B57A0,#2380CC 60%,#3AA6E8)',
     transition: 'left 0.34s cubic-bezier(0.4,0,0.2,1)',
-    boxShadow: '0 0 20px rgba(45,212,191,0.35)', zIndex: 0,
+    boxShadow: '0 0 20px rgba(35,128,204,0.4)', zIndex: 0,
   },
   pillBtn: {
     flex: 1,

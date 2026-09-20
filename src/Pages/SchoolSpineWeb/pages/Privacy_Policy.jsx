@@ -2,6 +2,19 @@ import React, { useState, useEffect, useContext } from 'react'
 import { Link } from 'react-router-dom'
 import { UserContext } from '../../../ContextAPI/UserContext'
 
+/* ─── Company details (single source of truth for this page) ────────────── */
+
+const COMPANY = {
+    name: 'AVP Tech Group',
+    address: 'Royal Plaza, Sushant Golf City, Lucknow, UP, India',
+    addressLine1: 'Royal Plaza, Sushant Golf City,',
+    addressLine2: 'Lucknow, UP, India',
+    website: 'avptechgroup.com',
+    email: 'info@avptechgroup.com',
+    phone: '+91 96995789998',
+    phoneHref: 'tel:+9196995789998',
+}
+
 const sections = [
     { id: 'introduction', label: 'Introduction', icon: '📋' },
     { id: 'company-info', label: 'Company Information', icon: '🏢' },
@@ -123,7 +136,7 @@ const Privacy_Policy = () => {
                 className="fixed top-0 left-0 z-50 h-[2px] transition-all duration-150"
                 style={{
                     width: `${scrollProgress}%`,
-                    background: 'linear-gradient(to right, #00C9B1, #F5A623)',
+                    background: 'linear-gradient(to right, #2380CC, #5CD6F5)',
                 }}
             />
 
@@ -132,8 +145,8 @@ const Privacy_Policy = () => {
             ══════════════════════════════════════════════════════ */}
             <div className="relative overflow-hidden">
                 {/* Background glow blobs */}
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_10%_0%,rgba(0,201,177,0.07),transparent)]" />
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_90%_100%,rgba(245,166,35,0.05),transparent)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_10%_0%,rgba(35,128,204,0.07),transparent)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_90%_100%,rgba(92,214,245,0.05),transparent)]" />
                 <div className="absolute top-16 right-24 w-56 h-56 rounded-full bg-teal/[0.04] blur-3xl pointer-events-none" />
                 <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-teal/20 to-transparent" />
 
@@ -171,7 +184,7 @@ const Privacy_Policy = () => {
                         className={`text-base md:text-lg max-w-2xl leading-relaxed mb-10 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}
                         style={{ animation: 'fadeUp 0.5s ease 0.22s both' }}
                     >
-                        At SchoolSpine we take your privacy seriously. This document explains how we
+                        At {COMPANY.name} we take your privacy seriously. This document explains how we
                         collect, use, store, and protect your personal information across all our services.
                     </p>
 
@@ -181,8 +194,8 @@ const Privacy_Policy = () => {
                         style={{ animation: 'fadeUp 0.5s ease 0.3s both' }}
                     >
                         {[
-                            { emoji: '📅', label: 'Last Updated', value: 'June 2026' },
-                            { emoji: '🏢', label: 'Controller', value: 'ComputeSoftTechnologies' },
+                            { emoji: '📅', label: 'Last Updated', value: 'September 2026' },
+                            { emoji: '🏢', label: 'Controller', value: COMPANY.name },
                             { emoji: '📍', label: 'Jurisdiction', value: 'Lucknow, India' },
                         ].map(({ emoji, label, value }) => (
                             <div
@@ -242,14 +255,14 @@ const Privacy_Policy = () => {
                             </div>
 
                             {/* Quick contact */}
-                            <div className="bg-[linear-gradient(135deg,rgba(0,201,177,0.07),rgba(245,166,35,0.04))] border border-teal/[0.15] rounded-2xl p-4">
+                            <div className="bg-[linear-gradient(135deg,rgba(35,128,204,0.07),rgba(92,214,245,0.04))] border border-teal/[0.15] rounded-2xl p-4">
                                 <p className={`text-sm font-semibold mb-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>Questions?</p>
                                 <p className={`text-xs mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Reach out to our privacy team</p>
                                 <a
-                                    href="mailto:info@computesofttech.com"
+                                    href={`mailto:${COMPANY.email}`}
                                     className="text-xs text-teal hover:text-teal-light transition-colors break-all"
                                 >
-                                    info@computesofttech.com
+                                    {COMPANY.email}
                                 </a>
                             </div>
                         </div>
@@ -261,33 +274,31 @@ const Privacy_Policy = () => {
                         {/* 01 · Introduction */}
                         <Section id="introduction" number="01" title="Introduction" icon="📋" isDark={isDark}>
                             <p>
-                                Welcome to <strong className={isDark ? 'text-white' : 'text-slate-900'}>SchoolSpine</strong>, a comprehensive School
-                                Management System operated by <strong className={isDark ? 'text-white' : 'text-slate-900'}>ComputeSoftTechnologies</strong> ("Company",
-                                "we", "our", or "us"). SchoolSpine is designed to facilitate communication, academic
-                                management, attendance tracking, homework management, examinations, notifications, and
-                                document sharing between schools, teachers, parents, and authorized users.
+                                Welcome to <strong className={isDark ? 'text-white' : 'text-slate-900'}>{COMPANY.name}</strong> ("Company",
+                                "we", "our", or "us"). We provide IT solutions, Microsoft certification training,
+                                corporate training, and staffing services to individuals and organizations.
                             </p>
                             <p>
                                 This Privacy Policy explains how we collect, use, store, disclose, and protect personal
-                                information when you access or use the SchoolSpine website, mobile applications, and
-                                related services.
+                                information when you visit the {COMPANY.name} website, enquire about or enroll in our
+                                courses, engage our IT and staffing services, or otherwise interact with us.
                             </p>
                             <InfoBox type="info" isDark={isDark}>
-                                By accessing or using SchoolSpine, you acknowledge and agree to the practices described
-                                in this Privacy Policy.
+                                By accessing or using our website and services, you acknowledge and agree to the
+                                practices described in this Privacy Policy.
                             </InfoBox>
                         </Section>
 
                         {/* 02 · Company Information */}
                         <Section id="company-info" number="02" title="Company Information" icon="🏢" isDark={isDark}>
-                            <p>SchoolSpine is a product of ComputeSoftTechnologies. You may reach us through:</p>
+                            <p>You may reach {COMPANY.name} through:</p>
                             <DataCard isDark={isDark} items={[
-                                { label: 'Company Name', value: 'ComputeSoftTechnologies' },
-                                { label: 'Brand Name', value: 'SchoolSpine' },
-                                { label: 'Address', value: 'Royal Plaza, Sushant Golf City, Lucknow, UP – 226030, India' },
-                                { label: 'Website', value: 'www.schoolspine.com' },
-                                { label: 'Email', value: 'info@computesofttech.com' },
-                                { label: 'Phone', value: '+91 9511117450' },
+                                { label: 'Company Name', value: COMPANY.name },
+                                { label: 'Services', value: 'IT Solutions, Certification Training, Corporate Training & Staffing' },
+                                { label: 'Address', value: COMPANY.address },
+                                { label: 'Website', value: COMPANY.website },
+                                { label: 'Email', value: COMPANY.email },
+                                { label: 'Phone', value: COMPANY.phone },
                             ]} />
                         </Section>
 
@@ -297,33 +308,37 @@ const Privacy_Policy = () => {
                             <div className="grid grid-cols-1 gap-3 mt-1">
                                 {[
                                     {
-                                        category: 'Student Information', emoji: '🎓',
+                                        category: 'Learner Information', emoji: '🎓',
                                         items: [
-                                            'Student name & admission number',
-                                            'Class, section & date of birth',
-                                            'Academic & attendance records',
-                                            'Homework & examination results',
-                                            'Uploaded documents and certificates',
-                                            'Parent or guardian details',
+                                            'Name & contact details',
+                                            'Email address & phone number',
+                                            'Course enquiry & enrollment details',
+                                            'Location & timing preferences',
+                                            'Attendance & assessment records',
+                                            'Mock test performance',
+                                            'Certificates issued',
+                                            'Login credentials (where applicable)',
                                         ],
                                     },
                                     {
-                                        category: 'Parent Information', emoji: '👨‍👩‍👧',
+                                        category: 'Client & Corporate Information', emoji: '🏢',
                                         items: [
-                                            'Parent name & contact number',
-                                            'Email address',
-                                            'Relationship with student',
-                                            'Login credentials',
+                                            'Contact person name & designation',
+                                            'Company name & work email',
+                                            'Phone number',
+                                            'Service and training requirements',
+                                            'Support requests & project details',
+                                            'Access details shared for support work',
                                         ],
                                     },
                                     {
-                                        category: 'Teacher Information', emoji: '👩‍🏫',
+                                        category: 'Staffing Candidate Information', emoji: '🧑‍💼',
                                         items: [
                                             'Name & contact information',
-                                            'Employee details',
-                                            'Subject assignments',
-                                            'Attendance and academic records',
-                                            'Login credentials',
+                                            'Resume or CV',
+                                            'Skills, experience & qualifications',
+                                            'Employment preferences',
+                                            'Interview & placement records',
                                         ],
                                     },
                                     {
@@ -331,8 +346,8 @@ const Privacy_Policy = () => {
                                         items: [
                                             'IP address & device information',
                                             'Browser type & operating system',
-                                            'Application version',
-                                            'Login activity & usage logs',
+                                            'Pages visited & usage logs',
+                                            'Cookies & similar technologies',
                                         ],
                                     },
                                 ].map(({ category, emoji, items }) => (
@@ -359,16 +374,16 @@ const Privacy_Policy = () => {
                             <p>We use collected information to deliver, improve, and secure our services:</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-1">
                                 {[
-                                    { icon: '📚', text: 'Provide educational management services' },
-                                    { icon: '✅', text: 'Manage attendance records' },
-                                    { icon: '📝', text: 'Facilitate homework assignments' },
-                                    { icon: '📊', text: 'Generate examination reports' },
-                                    { icon: '🔔', text: 'Send notifications and announcements' },
-                                    { icon: '🏫', text: 'Maintain school administration records' },
-                                    { icon: '⚡', text: 'Improve platform functionality' },
+                                    { icon: '📩', text: 'Respond to enquiries and requests' },
+                                    { icon: '🎓', text: 'Enroll learners and deliver training' },
+                                    { icon: '📜', text: 'Issue certificates and maintain training records' },
+                                    { icon: '🛠️', text: 'Deliver IT solutions and technical support' },
+                                    { icon: '🧑‍💼', text: 'Match candidates with staffing opportunities' },
+                                    { icon: '🔔', text: 'Share course updates, schedules and notices' },
+                                    { icon: '⚡', text: 'Improve website functionality and service quality' },
                                     { icon: '🛡️', text: 'Ensure platform security' },
                                     { icon: '⚖️', text: 'Comply with legal obligations' },
-                                    { icon: '🔧', text: 'Provide technical support' },
+                                    { icon: '🔧', text: 'Provide customer support' },
                                 ].map(({ icon, text }) => (
                                     <div
                                         key={text}
@@ -397,12 +412,13 @@ const Privacy_Policy = () => {
                         {/* 06 · Data Retention */}
                         <Section id="data-retention" number="06" title="Data Retention" icon="🗄️" isDark={isDark}>
                             <p>
-                                Information is retained only as long as necessary for educational, operational, legal,
-                                and administrative purposes.
+                                Information is retained only as long as necessary for training, service delivery,
+                                staffing, operational, legal, and administrative purposes.
                             </p>
                             <p>
-                                Schools may request deletion of data subject to applicable legal and operational
-                                requirements. Contact us at the address below to initiate a deletion request.
+                                Learners, clients, and candidates may request deletion of their data, subject to
+                                applicable legal and operational requirements. Contact us at the address below to
+                                initiate a deletion request.
                             </p>
                         </Section>
 
@@ -414,9 +430,9 @@ const Privacy_Policy = () => {
                             <p className="mt-1">Information may be shared only in the following circumstances:</p>
                             <ul className="flex flex-col gap-2 mt-1">
                                 {[
-                                    'With authorized school administrators',
-                                    'With teachers and parents as required for educational purposes',
-                                    'With service providers assisting platform operations',
+                                    'With our trainers, engineers, and staff as needed to deliver services',
+                                    "With client companies or prospective employers as part of staffing services, with the candidate's knowledge",
+                                    'With service providers assisting operations, such as hosting, communication, and payment processing',
                                     'When required by law or government authorities',
                                     'To protect legal rights and platform security',
                                 ].map((item) => (
@@ -433,12 +449,14 @@ const Privacy_Policy = () => {
                         {/* 08 · Children's Privacy */}
                         <Section id="childrens-privacy" number="08" title="Children's Privacy" icon="👶" isDark={isDark}>
                             <p>
-                                SchoolSpine is intended for educational institutions and may process information
-                                relating to students under parental and school authorization.
+                                Our services, including training courses and certifications, are intended for
+                                professionals, students of legal age, and businesses. They are not directed at
+                                children under 18.
                             </p>
                             <InfoBox type="info" isDark={isDark}>
-                                Schools are responsible for obtaining any required parental consent before submitting
-                                student information to the platform.
+                                We do not knowingly collect personal information from children. If you believe a
+                                child has provided us with information, please contact us so we can take
+                                appropriate action.
                             </InfoBox>
                         </Section>
 
@@ -450,7 +468,7 @@ const Privacy_Policy = () => {
                                     { icon: '🔑', title: 'Account Confidentiality', desc: 'Keep your credentials secure at all times' },
                                     { icon: '🛡️', title: 'Credential Protection', desc: 'Never share login details with unauthorised parties' },
                                     { icon: '✅', title: 'Accurate Information', desc: 'Ensure all provided data is truthful and up to date' },
-                                    { icon: '⚖️', title: 'Lawful Use', desc: 'Use the platform in compliance with applicable laws' },
+                                    { icon: '⚖️', title: 'Lawful Use', desc: 'Use our website and services in compliance with applicable laws' },
                                 ].map(({ icon, title, desc }) => (
                                     <div key={title} className={`border rounded-xl p-4 ${isDark ? 'bg-white/[0.02] border-white/[0.07]' : 'bg-black/[0.02] border-black/[0.07]'}`}>
                                         <span className="text-2xl">{icon}</span>
@@ -464,12 +482,13 @@ const Privacy_Policy = () => {
                         {/* 10 · Third-Party Services */}
                         <Section id="third-party" number="10" title="Third-Party Services" icon="🔗" isDark={isDark}>
                             <p>
-                                The platform may integrate with third-party services necessary for platform operations.
-                                Such services may have independent privacy practices.
+                                Our website and services may integrate with third-party services necessary for
+                                operations, such as video conferencing, payment, and cloud platforms. Such services
+                                may have independent privacy practices.
                             </p>
                             <InfoBox type="warning" isDark={isDark}>
                                 Users are advised to review the privacy policies of any third-party services they
-                                interact with through SchoolSpine.
+                                interact with through {COMPANY.name}.
                             </InfoBox>
                         </Section>
 
@@ -477,11 +496,12 @@ const Privacy_Policy = () => {
                         <Section id="changes" number="11" title="Changes to this Policy" icon="🔄" isDark={isDark}>
                             <p>
                                 We reserve the right to update this Privacy Policy at any time. Updated versions will
-                                be posted on the platform with a revised effective date.
+                                be posted on our website with a revised effective date.
                             </p>
                             <p>
-                                Continued use of SchoolSpine following any modifications constitutes acceptance of the
-                                updated Privacy Policy. We encourage users to review this Policy periodically.
+                                Continued use of our website and services following any modifications constitutes
+                                acceptance of the updated Privacy Policy. We encourage users to review this Policy
+                                periodically.
                             </p>
                         </Section>
 
@@ -489,30 +509,30 @@ const Privacy_Policy = () => {
                         <Section id="contact" number="12" title="Contact Us" icon="✉️" isDark={isDark}>
                             <p>For questions regarding this Privacy Policy, please reach out to us:</p>
                             <div className={`mt-2 border rounded-2xl p-5 md:p-6 ${isDark ? 'bg-white/[0.02] border-white/[0.15]' : 'bg-black/[0.02] border-black/[0.15]'}`}>
-                                <p className={`font-heading font-bold text-lg mb-5 ${isDark ? 'text-white' : 'text-slate-900'}`}>ComputeSoftTechnologies</p>
+                                <p className={`font-heading font-bold text-lg mb-5 ${isDark ? 'text-white' : 'text-slate-900'}`}>{COMPANY.name}</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                                     <div>
                                         <p className={`text-[10px] uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Address</p>
                                         <p className={`text-sm leading-6 ${isDark ? 'text-white' : 'text-slate-700'}`}>
-                                            Royal Plaza, Sushant Golf City,<br />Lucknow, UP – 226030, India
+                                            {COMPANY.addressLine1}<br />{COMPANY.addressLine2}
                                         </p>
                                     </div>
                                     <div>
                                         <p className={`text-[10px] uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Email</p>
                                         <a
-                                            href="mailto:info@computesofttech.com"
-                                            className="text-sm text-teal hover:text-teal-light transition-colors"
+                                            href={`mailto:${COMPANY.email}`}
+                                            className="text-sm text-teal hover:text-teal-light transition-colors break-all"
                                         >
-                                            info@computesofttech.com
+                                            {COMPANY.email}
                                         </a>
                                     </div>
                                     <div>
                                         <p className={`text-[10px] uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Phone</p>
                                         <a
-                                            href="tel:9511117450"
+                                            href={COMPANY.phoneHref}
                                             className="text-sm text-teal hover:text-teal-light transition-colors"
                                         >
-                                            +91 9511117450
+                                            {COMPANY.phone}
                                         </a>
                                     </div>
                                 </div>

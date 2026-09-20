@@ -2,13 +2,26 @@ import React, { useState, useEffect, useContext } from 'react'
 import { Link } from 'react-router-dom'
 import { UserContext } from '../../../ContextAPI/UserContext'
 
+/* ─── Company details (single source of truth for this page) ────────────── */
+
+const COMPANY = {
+    name: 'AVP Tech Group',
+    address: 'Royal Plaza, Sushant Golf City, Lucknow, UP, India',
+    addressLine1: 'Royal Plaza, Sushant Golf City,',
+    addressLine2: 'Lucknow, UP, India',
+    website: 'avptechgroup.com',
+    email: 'info@avptechgroup.com',
+    phone: '+91 96995789998',
+    phoneHref: 'tel:+9196995789998',
+}
+
 const sections = [
     { id: 'introduction', label: 'Introduction', icon: '📋' },
     { id: 'company-info', label: 'Company Information', icon: '🏢' },
     { id: 'what-are-cookies', label: 'What Are Cookies?', icon: '🍪' },
     { id: 'why-we-use', label: 'Why We Use Cookies', icon: '🎯' },
     { id: 'types-of-cookies', label: 'Types of Cookies', icon: '🗂️' },
-    { id: 'mobile-app', label: 'Mobile App Technologies', icon: '📱' },
+    { id: 'similar-technologies', label: 'Similar Technologies', icon: '💾' },
     { id: 'third-party', label: 'Third-Party Services', icon: '🔗' },
     { id: 'managing-cookies', label: 'Managing Cookies', icon: '⚙️' },
     { id: 'data-protection', label: 'Data Protection', icon: '🔐' },
@@ -160,14 +173,14 @@ const Cookie_Policy = () => {
                 className="fixed top-0 left-0 z-50 h-[2px] transition-all duration-150"
                 style={{
                     width: `${scrollProgress}%`,
-                    background: 'linear-gradient(to right, #00C9B1, #F5A623)',
+                    background: 'linear-gradient(to right, #2380CC, #5CD6F5)',
                 }}
             />
 
             {/* ══════════════════ HERO ══════════════════ */}
             <div className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_10%_0%,rgba(0,201,177,0.07),transparent)]" />
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_90%_100%,rgba(245,166,35,0.05),transparent)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_10%_0%,rgba(35,128,204,0.07),transparent)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_90%_100%,rgba(92,214,245,0.05),transparent)]" />
                 <div className="absolute top-16 right-24 w-56 h-56 rounded-full bg-teal/[0.04] blur-3xl pointer-events-none" />
                 <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-teal/20 to-transparent" />
 
@@ -201,8 +214,9 @@ const Cookie_Policy = () => {
                         className={`text-base md:text-lg max-w-2xl leading-relaxed mb-10 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}
                         style={{ animation: 'fadeUp 0.5s ease 0.22s both' }}
                     >
-                        This Policy explains how SchoolSpine uses cookies and similar technologies
-                        across our website, mobile applications, and related services.
+                        This Policy explains how {COMPANY.name} uses cookies and similar technologies
+                        across our website and related services, including our courses, corporate
+                        training, staffing and IT solutions.
                     </p>
 
                     <div
@@ -210,8 +224,8 @@ const Cookie_Policy = () => {
                         style={{ animation: 'fadeUp 0.5s ease 0.3s both' }}
                     >
                         {[
-                            { emoji: '📅', label: 'Last Updated', value: 'June 2026' },
-                            { emoji: '🏢', label: 'Operator', value: 'ComputeSoftTechnologies' },
+                            { emoji: '📅', label: 'Last Updated', value: 'September 2026' },
+                            { emoji: '🏢', label: 'Operator', value: COMPANY.name },
                             { emoji: '📍', label: 'Jurisdiction', value: 'Lucknow, India' },
                         ].map(({ emoji, label, value }) => (
                             <div
@@ -269,14 +283,14 @@ const Cookie_Policy = () => {
                                 </ul>
                             </div>
 
-                            <div className="bg-[linear-gradient(135deg,rgba(0,201,177,0.07),rgba(245,166,35,0.04))] border border-teal/[0.15] rounded-2xl p-4">
+                            <div className="bg-[linear-gradient(135deg,rgba(35,128,204,0.07),rgba(92,214,245,0.04))] border border-teal/[0.15] rounded-2xl p-4">
                                 <p className={`text-sm font-semibold mb-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>Questions?</p>
                                 <p className={`text-xs mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Reach out to our team</p>
                                 <a
-                                    href="mailto:info@computesofttech.com"
+                                    href={`mailto:${COMPANY.email}`}
                                     className="text-xs text-teal hover:text-teal-light transition-colors break-all"
                                 >
-                                    info@computesofttech.com
+                                    {COMPANY.email}
                                 </a>
                             </div>
                         </div>
@@ -287,9 +301,9 @@ const Cookie_Policy = () => {
                         {/* 01 */}
                         <Section id="introduction" number="01" title="Introduction" icon="📋" isDark={isDark}>
                             <p>
-                                This Cookie Policy explains how <strong className={isDark ? 'text-white' : 'text-slate-900'}>SchoolSpine</strong>,
-                                a product of <strong className={isDark ? 'text-white' : 'text-slate-900'}>ComputeSoftTechnologies</strong>, uses cookies
-                                and similar technologies on its website, mobile applications, and related services.
+                                This Cookie Policy explains how <strong className={isDark ? 'text-white' : 'text-slate-900'}>{COMPANY.name}</strong>{' '}
+                                uses cookies and similar technologies on its website and related services,
+                                including course enquiries, corporate training, staffing and IT solutions.
                             </p>
                             <p>
                                 This Policy should be read together with our{' '}
@@ -298,21 +312,21 @@ const Cookie_Policy = () => {
                                 <Link to="/terms" className="text-teal hover:text-teal-light transition-colors">Terms of Service</Link>.
                             </p>
                             <InfoBox type="info" isDark={isDark}>
-                                By continuing to use SchoolSpine, you consent to the use of cookies and similar
-                                technologies as described in this Policy.
+                                By continuing to use the {COMPANY.name} website, you consent to the use of cookies
+                                and similar technologies as described in this Policy.
                             </InfoBox>
                         </Section>
 
                         {/* 02 */}
                         <Section id="company-info" number="02" title="Company Information" icon="🏢" isDark={isDark}>
-                            <p>You may reach ComputeSoftTechnologies through:</p>
+                            <p>You may reach {COMPANY.name} through:</p>
                             <DataCard isDark={isDark} items={[
-                                { label: 'Company Name', value: 'ComputeSoftTechnologies' },
-                                { label: 'Brand Name', value: 'SchoolSpine' },
-                                { label: 'Address', value: 'Royal Plaza, Sushant Golf City, Lucknow, UP – 226030, India' },
-                                { label: 'Website', value: 'schoolspine.com' },
-                                { label: 'Email', value: 'info@computesofttech.com' },
-                                { label: 'Phone', value: '+91 9511117450' },
+                                { label: 'Company Name', value: COMPANY.name },
+                                { label: 'Services', value: 'IT Solutions, Certification Training, Corporate Training & Staffing' },
+                                { label: 'Address', value: COMPANY.address },
+                                { label: 'Website', value: COMPANY.website },
+                                { label: 'Email', value: COMPANY.email },
+                                { label: 'Phone', value: COMPANY.phone },
                             ]} />
                         </Section>
 
@@ -325,22 +339,23 @@ const Cookie_Policy = () => {
                             </p>
                             <p>
                                 Cookies do not typically contain information that personally identifies users,
-                                but they may be linked to information stored in user accounts.
+                                but they may be linked to information you have provided to us, such as details
+                                submitted in an enquiry or registration form.
                             </p>
                         </Section>
 
                         {/* 04 */}
                         <Section id="why-we-use" number="04" title="Why We Use Cookies" icon="🎯" isDark={isDark}>
-                            <p>SchoolSpine uses cookies and similar technologies to:</p>
+                            <p>{COMPANY.name} uses cookies and similar technologies to:</p>
                             <IconGrid isDark={isDark} items={[
                                 { icon: '🔒', text: 'Maintain secure user sessions' },
-                                { icon: '🔑', text: 'Authenticate users during login' },
-                                { icon: '⚙️', text: 'Remember user preferences' },
+                                { icon: '🔑', text: 'Authenticate users where sign-in is offered' },
+                                { icon: '⚙️', text: 'Remember preferences such as theme (light or dark)' },
                                 { icon: '⚡', text: 'Improve website performance' },
-                                { icon: '📊', text: 'Analyze platform usage' },
-                                { icon: '✨', text: 'Enhance user experience' },
+                                { icon: '📊', text: 'Understand which courses and pages interest visitors' },
+                                { icon: '📝', text: 'Make enquiry and contact forms work reliably' },
                                 { icon: '🛡️', text: 'Detect security threats & unauthorized access' },
-                                { icon: '✅', text: 'Ensure proper platform functionality' },
+                                { icon: '✅', text: 'Ensure proper website functionality' },
                             ]} />
                         </Section>
 
@@ -355,33 +370,33 @@ const Cookie_Policy = () => {
                                         'User authentication',
                                         'Session management',
                                         'Security verification',
-                                        'Login maintenance',
+                                        'Form submission handling',
                                         'System access control',
                                     ]}
-                                    note="These cookies are necessary for the operation of the platform and cannot be disabled. Without them, certain features of SchoolSpine may not function properly."
+                                    note={`These cookies are necessary for the operation of the website and cannot be disabled. Without them, certain features of the ${COMPANY.name} website may not function properly.`}
                                 />
                                 <CategoryCard
                                     isDark={isDark}
                                     category="Performance & Analytics Cookies"
                                     emoji="📊"
                                     items={[
-                                        'Pages visited',
+                                        'Pages and courses viewed',
                                         'Time spent on pages',
                                         'Device information',
                                         'Browser information',
-                                        'Application performance metrics',
+                                        'Website performance metrics',
                                     ]}
-                                    note="This information helps us understand how users interact with our platform and improve performance and usability."
+                                    note="This information helps us understand how visitors interact with our website and improve its performance and usability."
                                 />
                                 <CategoryCard
                                     isDark={isDark}
                                     category="Functional Cookies"
                                     emoji="🎛️"
                                     items={[
+                                        'Theme preference (light or dark)',
                                         'Language preferences',
-                                        'User settings',
-                                        'Dashboard preferences',
-                                        'Notification settings',
+                                        'Course filter and search preferences',
+                                        'Form details you choose to keep',
                                     ]}
                                     note="These cookies enable enhanced functionality and personalization, improving the overall user experience."
                                 />
@@ -395,33 +410,33 @@ const Cookie_Policy = () => {
                                         'Protect user accounts',
                                         'Maintain system integrity',
                                     ]}
-                                    note="These cookies are critical to safeguarding school and student information."
+                                    note="These cookies are critical to safeguarding the information of our learners, clients and partners."
                                 />
                             </div>
                         </Section>
 
                         {/* 06 */}
-                        <Section id="mobile-app" number="06" title="Mobile Application Technologies" icon="📱" isDark={isDark}>
-                            <p>The SchoolSpine mobile application may use technologies similar to cookies, including:</p>
+                        <Section id="similar-technologies" number="06" title="Similar Technologies" icon="💾" isDark={isDark}>
+                            <p>In addition to cookies, our website may use similar technologies, including:</p>
                             <CheckList isDark={isDark} items={[
-                                'Device identifiers',
-                                'Application storage',
+                                'Local storage and session storage in your browser',
                                 'Session tokens',
                                 'Security authentication tokens',
+                                'Device and browser identifiers',
                             ]} />
-                            <p>These technologies are used to provide secure access and improve application performance.</p>
+                            <p>These technologies are used to provide secure access, remember your preferences and improve website performance.</p>
                         </Section>
 
                         {/* 07 */}
                         <Section id="third-party" number="07" title="Third-Party Services" icon="🔗" isDark={isDark}>
-                            <p>SchoolSpine may use trusted third-party services that may place cookies or collect limited technical information to support:</p>
+                            <p>{COMPANY.name} may use trusted third-party services that may place cookies or collect limited technical information to support:</p>
                             <CheckList isDark={isDark} items={[
-                                'Platform analytics',
+                                'Website analytics',
                                 'Performance monitoring',
                                 'Security services',
-                                'Cloud infrastructure',
+                                'Cloud hosting and infrastructure',
                             ]} />
-                            <p>Such third-party providers are contractually required to maintain appropriate safeguards for user information.</p>
+                            <p>Such third-party providers are required to maintain appropriate safeguards for user information.</p>
                             <InfoBox type="success" isDark={isDark}>
                                 We do not sell user data to advertisers or marketing companies.
                             </InfoBox>
@@ -438,7 +453,7 @@ const Cookie_Policy = () => {
                             ]} />
                             <InfoBox type="warning" isDark={isDark}>
                                 Please note that disabling certain cookies may affect the functionality, security,
-                                and performance of SchoolSpine.
+                                and performance of the {COMPANY.name} website.
                             </InfoBox>
                         </Section>
 
@@ -458,22 +473,23 @@ const Cookie_Policy = () => {
                         {/* 10 */}
                         <Section id="childrens-info" number="10" title="Children's Information" icon="👶" isDark={isDark}>
                             <p>
-                                SchoolSpine is designed for educational institutions and may process information
-                                relating to students through schools and authorized guardians.
+                                Our services, including training courses and certifications, are intended for
+                                professionals, students of legal age and businesses. They are not directed at
+                                children.
                             </p>
                             <InfoBox type="info" isDark={isDark}>
-                                Schools are responsible for obtaining any necessary permissions or consents
-                                required under applicable laws before providing student information to the
-                                platform.
+                                We do not knowingly collect personal information from children through cookies or
+                                similar technologies. If you believe a child has provided us with information,
+                                please contact us so we can take appropriate action.
                             </InfoBox>
                         </Section>
 
                         {/* 11 */}
                         <Section id="changes" number="11" title="Changes to This Cookie Policy" icon="🔄" isDark={isDark}>
                             <p>
-                                ComputeSoftTechnologies reserves the right to update this Cookie Policy at any time.
-                                Any changes will become effective immediately upon publication on the School
-                                Spine website or mobile application.
+                                {COMPANY.name} reserves the right to update this Cookie Policy at any time.
+                                Any changes will become effective immediately upon publication on the{' '}
+                                {COMPANY.name} website.
                             </p>
                             <p>Users are encouraged to review this Policy periodically to remain informed about how cookies are used.</p>
                         </Section>
@@ -482,30 +498,30 @@ const Cookie_Policy = () => {
                         <Section id="contact" number="12" title="Contact Us" icon="✉️" isDark={isDark}>
                             <p>If you have any questions regarding this Cookie Policy, please contact us:</p>
                             <div className={`mt-2 border rounded-2xl p-5 md:p-6 ${isDark ? 'bg-white/[0.02] border-white/[0.15]' : 'bg-black/[0.02] border-black/[0.15]'}`}>
-                                <p className={`font-heading font-bold text-lg mb-5 ${isDark ? 'text-white' : 'text-slate-900'}`}>ComputeSoftTechnologies</p>
+                                <p className={`font-heading font-bold text-lg mb-5 ${isDark ? 'text-white' : 'text-slate-900'}`}>{COMPANY.name}</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                                     <div>
                                         <p className={`text-[10px] uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Address</p>
                                         <p className={`text-sm leading-6 ${isDark ? 'text-white' : 'text-slate-700'}`}>
-                                            Royal Plaza, Sushant Golf City,<br />Lucknow, UP – 226030, India
+                                            {COMPANY.addressLine1}<br />{COMPANY.addressLine2}
                                         </p>
                                     </div>
                                     <div>
                                         <p className={`text-[10px] uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Email</p>
                                         <a
-                                            href="mailto:info@computesofttech.com"
-                                            className="text-sm text-teal hover:text-teal-light transition-colors"
+                                            href={`mailto:${COMPANY.email}`}
+                                            className="text-sm text-teal hover:text-teal-light transition-colors break-all"
                                         >
-                                            info@computesofttech.com
+                                            {COMPANY.email}
                                         </a>
                                     </div>
                                     <div>
                                         <p className={`text-[10px] uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Phone</p>
                                         <a
-                                            href="tel:9511117450"
+                                            href={COMPANY.phoneHref}
                                             className="text-sm text-teal hover:text-teal-light transition-colors"
                                         >
-                                            +91 9511117450
+                                            {COMPANY.phone}
                                         </a>
                                     </div>
                                 </div>

@@ -400,69 +400,7 @@ const Support = () => {
                         );
                     })}
 
-                    {/* Troubleshooting & FAQs */}
-                    <section>
-                        <div className="flex items-start sm:items-center gap-4 mb-6">
-                            <div
-                                className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center border flex-shrink-0"
-                                style={{ color: "#F5A623", backgroundColor: "rgba(245,166,35,0.08)", borderColor: "rgba(245,166,35,0.2)" }}
-                            >
-                                <Wrench size={22} />
-                            </div>
-                            <div>
-                                <h2 className={`text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>
-                                    Common Troubleshooting & FAQs
-                                </h2>
-                                <p className={`text-sm mt-1 ${isDark ? "text-slate-400" : "text-slate-600"}`}>
-                                    Quick fixes for the most frequently encountered technical snags.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col gap-6">
-                            {faqGroups.map((group, gi) => (
-                                <div key={gi}>
-                                    <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${isDark ? "text-slate-500" : "text-slate-500"}`}>
-                                        ❓ {group.heading}
-                                    </p>
-                                    <div className="flex flex-col gap-3">
-                                        {group.items.map((item, ii) => {
-                                            const key = `${gi}-${ii}`;
-                                            const isOpen = !!openFaq[key];
-                                            return (
-                                                <div key={key} className={`rounded-xl border backdrop-blur-md overflow-hidden ${cardClasses}`}>
-                                                    <button
-                                                        onClick={() => toggleFaq(key)}
-                                                        className="w-full flex items-center justify-between gap-4 text-left px-5 py-4 cursor-pointer"
-                                                    >
-                                                        <span className={`text-sm sm:text-base font-medium flex items-start gap-2 ${isDark ? "text-white" : "text-slate-900"}`}>
-                                                            <HelpCircle size={16} className="text-[#F5A623] mt-0.5 flex-shrink-0" />
-                                                            {item.q}
-                                                        </span>
-                                                        <ChevronDown
-                                                            size={18}
-                                                            className={`flex-shrink-0 transition-transform duration-300 ${isOpen ? "rotate-180" : ""} ${isDark ? "text-slate-400" : "text-slate-500"}`}
-                                                        />
-                                                    </button>
-                                                    <div
-                                                        className={`grid transition-all duration-300 ease-in-out ${
-                                                            isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-                                                        }`}
-                                                    >
-                                                        <div className="overflow-hidden">
-                                                            <p className={`text-sm leading-relaxed px-5 pb-4 pl-11 ${isDark ? "text-slate-400" : "text-slate-600"}`}>
-                                                                {item.a}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
+                    
                 </main>
             )}
 
