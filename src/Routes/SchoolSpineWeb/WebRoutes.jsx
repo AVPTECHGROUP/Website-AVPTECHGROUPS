@@ -8,7 +8,7 @@ const PrivacyPolicy = lazy(() => import('../../Pages/SchoolSpineWeb/pages/Privac
 const LandingLayout = lazy(() => import('../../Pages/SchoolSpineWeb/pages/LandingLayout'));
 const TermsOfService = lazy(() => import('../../Pages/SchoolSpineWeb/pages/Terms'));
 const CookiePolicy = lazy(() => import('../../Pages/SchoolSpineWeb/pages/CookiePolicy'));
-
+const Courses = lazy(() => import('../../Pages/SchoolSpineWeb/pages/Courses'));
 const FeatureDetails = lazy(() => import('../../Components/Homes/Details/Features/FeatureDetails'));
 const Blog = lazy(() => import('../../Pages/SchoolSpineWeb/pages/Blog'));
 const Support = lazy(() => import('../../Pages/SchoolSpineWeb/pages/Help_Support'));
@@ -26,7 +26,11 @@ export default function SchoolSpineWebRoutes() {
       <Route path="/privacy-policy" element={<WebsitePage><PrivacyPolicy /></WebsitePage>} />
       <Route path="/terms" element={<WebsitePage><TermsOfService /></WebsitePage>} />
       <Route path="/cookies" element={<WebsitePage><CookiePolicy /></WebsitePage>} />
-      
+
+      {/* Courses: one component handles both the list and each course page */}
+      <Route path="/courses" element={<WebsitePage><Courses /></WebsitePage>} />
+      <Route path="/courses/:slug" element={<WebsitePage><Courses /></WebsitePage>} />
+
       <Route path="/blog" element={<WebsitePage><Blog /></WebsitePage>} />
       <Route path="/features/:slug" element={<WebsitePage><FeatureDetails /></WebsitePage>} />
       <Route path="/support" element={<WebsitePage><Support /></WebsitePage>} />

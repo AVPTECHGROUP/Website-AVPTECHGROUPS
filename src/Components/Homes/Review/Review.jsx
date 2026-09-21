@@ -1,192 +1,193 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ReviewCard } from './ReviewCard';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useContext } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { ReviewCard } from "./ReviewCard";
+import { UserContext } from "../../../ContextAPI/UserContext";
+
+/* -------------------------------------------------------------------------- */
+/*  !! PLACEHOLDER REVIEWS !!                                                  */
+/*  The names and quotes below are sample text so you can see the design.      */
+/*  Replace them with real feedback from your clients (with their permission)  */
+/*  before publishing. Only the client's NAME is shown on the cards: no role,  */
+/*  company, school or country.                                                */
+/*                                                                             */
+/*  effect = the hover motion of that card: tilt | spotlight | lift | shine |  */
+/*           magnetic                                                          */
+/* -------------------------------------------------------------------------- */
 
 const reviews = [
-  {
-    quote: "SchoolSpine has completely transformed how we manage our school. The automation saves us hours every week, and parents love the real-time updates.",
-    name: "Kartikey Katiyar",
-    role: "Principal, Delhi Public International School",
-    rating: 5,
-  },
-  {
-    quote: "The fee collection module alone has improved our collection rate by 40%. The parent app makes it so easy for them to pay on time.",
-    name: "Rajesh Kumar",
-    role: "Administrator, Ryan International",
-    rating: 5,
-  },
-  {
-    quote: "As a teacher, I can focus more on teaching now. Attendance, grades, everything is just a few clicks away. Absolutely love it!",
-    name: "Shyam Singh",
-    role: "Principal, Shyam children public school",
-    rating: 5,
-  },
-  {
-    quote: "The analytics dashboard gives us incredible insight into student performance trends. We've been able to intervene early and improve outcomes significantly.",
-    name: "Sunita Mehta",
-    role: "Academic Head, Lotus Valley International",
-    rating: 5,
-  },
-  {
-    quote: "Onboarding was seamless and the support team is phenomenal. SchoolSpine feels like it was designed for schools like ours from day one.",
-    name: "Vikram Nair",
-    role: "Director, The Orchid School",
-    rating: 5,
-  },
-  {
-    quote: "The timetable and substitute management features alone are worth it. Our coordinators used to spend entire mornings on scheduling — now it's minutes.",
-    name: "Deepa Krishnamurthy",
-    role: "Vice Principal, Greenwood High",
-    rating: 5,
-  },
+    {
+        quote:
+            "The Intune course was hands-on from the very first session. I went from reading documentation to deploying policies and Autopilot profiles on my own.",
+        name: "Michael Turner",
+        effect: "tilt",
+        accent: "#14B8A6",
+        featured: true,
+        layout: "md:col-span-2 lg:col-span-3 lg:row-span-2",
+        from: { x: -70, y: 0 },
+    },
+    {
+        quote: "Small batches meant every question got answered, and the labs made the theory stick.",
+        name: "Priya Nair",
+        effect: "spotlight",
+        accent: "#2380CC",
+        layout: "lg:col-span-3",
+        from: { x: 70, y: -20 },
+    },
+    {
+        quote:
+            "AVP Tech Group fixed a device management problem our team had been fighting for weeks, and explained the fix as they went.",
+        name: "Daniel Brooks",
+        effect: "lift",
+        accent: "#2DD4BF",
+        layout: "lg:col-span-3",
+        from: { x: 70, y: 30 },
+    },
+    {
+        quote: "Clear trainers, real labs and course material I still refer back to at work.",
+        name: "Ananya Verma",
+        effect: "shine",
+        accent: "#3AA6E8",
+        layout: "lg:col-span-3",
+        from: { x: -50, y: 60 },
+    },
+    {
+        quote:
+            "Professional, responsive and practical. Exactly what our team needed to get up to speed on Defender.",
+        name: "Emily Carter",
+        effect: "magnetic",
+        accent: "#5CD6F5",
+        layout: "lg:col-span-3",
+        from: { x: 50, y: 60 },
+    },
+];
+
+// Drifting colour blobs behind the cards (teal / mint / azure, taken from the course cards)
+const orbs = [
+    { color: "#14B8A6", size: 520, top: "-8%", left: "-6%", dx: 60, dy: 40, duration: 18 },
+    { color: "#2380CC", size: 420, top: "55%", left: "78%", dx: -50, dy: -40, duration: 22 },
+    { color: "#2DD4BF", size: 380, top: "10%", left: "70%", dx: -40, dy: 50, duration: 20 },
 ];
 
 const Review = () => {
-  const [current, setCurrent] = useState(0);
-  const [perPage, setPerPage] = useState(3);
-  const isPausedRef = useRef(false);
-  const trackRef = useRef(null);
+    const { theme } = useContext(UserContext);
+    const isDark = theme === "dark";
+    const reduce = useReducedMotion();
 
-  useEffect(() => {
-    function update() {
-      if (window.innerWidth < 640) setPerPage(1);
-      else if (window.innerWidth < 1024) setPerPage(2);
-      else setPerPage(3);
-    }
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
+    return (
+        // id="reviews-section" is what the footer's "Reviews" link scrolls to
+        <section
+            id="reviews-section"
+            className="relative w-full overflow-hidden py-16 sm:py-20 transition-colors duration-300"
+            style={{
+                background: isDark
+                    ? "linear-gradient(135deg, #04201E 0%, #062B29 50%, #083634 100%)"
+                    : "linear-gradient(135deg, #ECFDF8 0%, #F0FDFA 50%, #E8F7FB 100%)",
+            }}
+        >
+            {/* Drifting colour blobs */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                {orbs.map((o, i) => (
+                    <motion.div
+                        key={i}
+                        className="absolute rounded-full blur-[110px]"
+                        style={{
+                            width: o.size,
+                            height: o.size,
+                            top: o.top,
+                            left: o.left,
+                            background: `radial-gradient(circle, ${o.color} 0%, transparent 70%)`,
+                            opacity: isDark ? 0.28 : 0.22,
+                        }}
+                        animate={reduce ? undefined : { x: [0, o.dx, 0], y: [0, o.dy, 0] }}
+                        transition={{ duration: o.duration, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                ))}
+                {/* dot grid */}
+                <div
+                    className="absolute inset-0"
+                    style={{
+                        backgroundImage: isDark
+                            ? "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)"
+                            : "radial-gradient(rgba(15,143,130,0.14) 1px, transparent 1px)",
+                        backgroundSize: "30px 30px",
+                    }}
+                />
+            </div>
 
-  const maxIndex = reviews.length - perPage;
+            <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
+                {/* Heading */}
+                <motion.div
+                    initial={reduce ? false : { opacity: 0, y: 28 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-60px" }}
+                    transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                    className="mb-12 flex flex-col items-center gap-4 text-center"
+                >
+                    <span
+                        className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold tracking-wide sm:text-sm"
+                        style={{
+                            color: isDark ? "#5EEAD4" : "#0F766E",
+                            borderColor: isDark ? "rgba(94,234,212,0.30)" : "rgba(15,118,110,0.25)",
+                            backgroundColor: isDark ? "rgba(94,234,212,0.08)" : "rgba(20,184,166,0.10)",
+                        }}
+                    >
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal-400" />
+                        Client Reviews
+                    </span>
 
-  function goTo(index) {
-    const clamped = Math.max(0, Math.min(index, maxIndex));
-    setCurrent(clamped);
-    if (trackRef.current) {
-      const cardWidth = trackRef.current.offsetWidth / perPage;
-      trackRef.current.style.transition = 'transform 0.5s cubic-bezier(0.4,0,0.2,1)';
-      trackRef.current.style.transform = `translateX(-${clamped * cardWidth}px)`;
-    }
-  }
+                    <h2
+                        className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl"
+                        style={{ color: isDark ? "#FFFFFF" : "#0F172A" }}
+                    >
+                        Loved by{" "}
+                        <span
+                            className={`bg-gradient-to-r bg-clip-text text-transparent ${
+                                isDark ? "from-[#2DD4BF] to-[#3AA6E8]" : "from-[#0F8F82] to-[#1B57A0]"
+                            }`}
+                        >
+                            learners &amp; teams
+                        </span>
+                    </h2>
 
-  function goNext() {
-    const next = current >= maxIndex ? 0 : current + 1;
-    if (current >= maxIndex) {
-      if (trackRef.current) {
-        trackRef.current.style.transition = 'none';
-        trackRef.current.style.transform = `translateX(0px)`;
-      }
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setCurrent(0);
-          if (trackRef.current) {
-            trackRef.current.style.transition = 'transform 0.5s cubic-bezier(0.4,0,0.2,1)';
-            trackRef.current.style.transform = `translateX(0px)`;
-          }
-        });
-      });
-    } else {
-      goTo(next);
-    }
-  }
+                    <p className="max-w-xl text-base sm:text-lg" style={{ color: isDark ? "#9FC5C1" : "#475569" }}>
+                        Hear from the professionals and businesses we&apos;ve trained and supported.
+                    </p>
+                </motion.div>
 
-  function goPrev() {
-    goTo(current <= 0 ? 0 : current - 1);
-  }
-
-  useEffect(() => {
-    if (trackRef.current) {
-      trackRef.current.style.transition = 'none';
-      const cardWidth = trackRef.current.offsetWidth / perPage;
-      trackRef.current.style.transform = `translateX(-${current * cardWidth}px)`;
-    }
-  }, [perPage]);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (!isPausedRef.current) goNext();
-    }, 4000);
-    return () => clearInterval(id);
-  }, [current, perPage]);
-
-  const dots = Array.from({ length: maxIndex + 1 }, (_, i) => i);
-  const cardWidthPct = 100 / perPage;
-
-  return (
-    // ─── ADDED: id="reviews-section" HERE ───
-    <div id="reviews-section" className="w-full bg-theme-bg text-theme-text relative py-12 overflow-hidden transition-colors duration-300">
-
-      {/* Heading */}
-      <div className="flex flex-col items-center justify-center gap-5 px-4 mb-10">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-medium tracking-wider text-theme-text text-center">
-          Built for educators, loved by schools
-        </h1>
-        <p className="text-base sm:text-lg font-accent font-light text-theme-subtext text-center">
-          See what school administrators and teachers are saying about SchoolSpine.
-        </p>
-      </div>
-
-      {/* Carousel */}
-      <div
-        className="relative max-w-5xl mx-auto px-10 sm:px-14"
-        onMouseEnter={() => { isPausedRef.current = true; }}
-        onMouseLeave={() => { isPausedRef.current = false; }}
-      >
-        {/* Overflow clip */}
-        <div className="overflow-hidden rounded-2xl">
-          <div
-            ref={trackRef}
-            className="flex"
-            style={{ transform: 'translateX(0px)' }}
-          >
-            {reviews.map((r, i) => (
-              <div
-                key={i}
-                className="shrink-0 px-3 py-4 box-border"
-                style={{ width: `${cardWidthPct}%` }}
-              >
-                <div className="transition-all duration-300 ease-out hover:scale-[1.03] hover:shadow-[0_8px_32px_rgba(0,201,177,0.18)] hover:z-10 relative rounded-2xl h-full">
-                  <ReviewCard {...r} />
+                {/* Bento grid of five cards */}
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-6 lg:gap-6">
+                    {reviews.map((r, i) => (
+                        // 1) entrance: each card slides in from a different direction
+                        <motion.div
+                            key={r.name}
+                            className={`${r.layout} h-full`}
+                            initial={reduce ? false : { opacity: 0, scale: 0.92, ...r.from }}
+                            whileInView={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+                            viewport={{ once: true, margin: "-60px" }}
+                            transition={{ type: "spring", stiffness: 90, damping: 16, delay: i * 0.1 }}
+                        >
+                            {/* 2) idle motion: slow, gentle floating (each card on its own rhythm) */}
+                            <motion.div
+                                className="h-full"
+                                animate={reduce ? undefined : { y: [0, -7, 0] }}
+                                transition={{ duration: 5 + (i % 3), repeat: Infinity, ease: "easeInOut", delay: i * 0.5 }}
+                            >
+                                {/* 3) hover motion: different for every card (see ReviewCard) */}
+                                <ReviewCard
+                                    quote={r.quote}
+                                    name={r.name}
+                                    effect={r.effect}
+                                    accent={r.accent}
+                                    featured={r.featured}
+                                    isDark={isDark}
+                                />
+                            </motion.div>
+                        </motion.div>
+                    ))}
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Prev */}
-        <button
-          onClick={goPrev}
-          aria-label="Previous"
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-theme-card border border-theme-border text-teal flex items-center justify-center shadow-sm hover:shadow-[0_4px_16px_rgba(0,201,177,0.2)] hover:scale-110 hover:border-teal transition-all duration-200 cursor-pointer z-10"
-        >
-          <ChevronLeft size={18} strokeWidth={2.5} />
-        </button>
-
-        {/* Next */}
-        <button
-          onClick={goNext}
-          aria-label="Next"
-          className="absolute right-0 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-theme-card border border-theme-border text-teal flex items-center justify-center shadow-sm hover:shadow-[0_4px_16px_rgba(0,201,177,0.2)] hover:scale-110 hover:border-teal transition-all duration-200 cursor-pointer z-10"
-        >
-          <ChevronRight size={18} strokeWidth={2.5} />
-        </button>
-      </div>
-
-      {/* Dots */}
-      <div className="flex justify-center items-center gap-2 mt-8">
-        {dots.map((i) => (
-          <button
-            key={i}
-            onClick={() => goTo(i)}
-            aria-label={'Slide ' + (i + 1)}
-            className={`h-2 rounded-full border-0 p-0 cursor-pointer transition-all duration-300 ${i === current ? 'w-6 bg-teal' : 'w-2 bg-teal/30 hover:bg-teal/60'
-              }`}
-          />
-        ))}
-      </div>
-    </div>
-  );
+            </div>
+        </section>
+    );
 };
 
 export default Review;
