@@ -42,7 +42,7 @@ import AboutImg from "../../../assets/Images/About_Us/About_Us.png";
 
 const COMPANY = {
     name: "AVP Tech Group",
-    address: "Royal Plaza, Sushant Golf City, Lucknow, UP, India",
+    address: "Royal Plaza,,Flat no. 1005 , Sushant Golf City, Lucknow, UP, India",
     phone: "+91 96995789998",
     phoneHref: "tel:+9196995789998",
     email: "info@avptechgroup.com",

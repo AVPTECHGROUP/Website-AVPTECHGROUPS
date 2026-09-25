@@ -10,16 +10,17 @@ import avpMark from '../../../assets/Images/login/avp_mark.png'
 /* -------------------------------------------------------------------------- */
 
 const NAV_LINKS = [
+    { label: "About Us", to: "/about" },
     { label: "Resources", to: "/blog" },
     { label: "Contact Us", to: "/contact" },
 ]
 
-const LOGIN = { label: "Login", to: "/login" } // set to null to hide the button
+const LOGIN = null // Login button hidden. Set back to { label: "Login", to: "/login" } to restore it.
 
 // Where a course click goes. The course name is passed as ?search=
 const courseLink = (name) => `/courses?search=${encodeURIComponent(name)}`
 
-// Grouped from your 1-36 course list (repeated entries removed)
+// Grouped from your course list (repeated entries removed)
 const CATEGORIES = [
     {
         name: "Endpoint & Device Management",
@@ -83,6 +84,34 @@ const CATEGORIES = [
     {
         name: "Google Workspace",
         courses: ["Google Workspace Administration"],
+    },
+    {
+        name: "AWS & Cloud",
+        courses: ["AWS Cloud Practitioner"],
+    },
+    {
+        name: "Cybersecurity",
+        courses: ["Cybersecurity Fundamentals"],
+    },
+    {
+        name: "Web Development",
+        courses: ["Frontend Development with React"],
+    },
+    {
+        name: "DevOps & Deployment",
+        courses: ["CI/CD with GitHub Actions"],
+    },
+    {
+        name: "Databases",
+        courses: [
+            "MySQL Database Administration",
+            "Oracle Database Administration",
+            "PostgreSQL Database Administration",
+        ],
+    },
+    {
+        name: "Programming Languages",
+        courses: ["Python Programming"],
     },
 ]
 

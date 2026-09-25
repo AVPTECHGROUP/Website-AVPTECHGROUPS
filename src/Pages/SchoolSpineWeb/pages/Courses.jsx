@@ -10,18 +10,24 @@ import {
     ChevronDown,
     Clock,
     Cloud,
+    CloudCog,
+    Code2,
+    Database,
     Globe,
     GraduationCap,
     KeyRound,
     Laptop,
     Layers,
     ListChecks,
+    Lock,
     MessageCircle,
     Search,
     Server,
     ShieldCheck,
     Smartphone,
     Sparkles,
+    Terminal,
+    Workflow,
     Wrench,
 } from "lucide-react";
 import { UserContext } from "../../../ContextAPI/UserContext";
@@ -85,6 +91,12 @@ const COURSE_CATEGORIES = [
     { name: 'Microsoft 365', icon: 'Layers', color: '#5CD6F5' },
     { name: 'Identity & Access', icon: 'KeyRound', color: '#6C8CFF' },
     { name: 'Google Workspace', icon: 'Globe', color: '#2DD4BF' },
+    { name: 'AWS & Cloud', icon: 'CloudCog', color: '#FF9900' },
+    { name: 'Cybersecurity', icon: 'Lock', color: '#EF4444' },
+    { name: 'Web Development', icon: 'Code2', color: '#8B5CF6' },
+    { name: 'DevOps & Deployment', icon: 'Workflow', color: '#F59E0B' },
+    { name: 'Databases', icon: 'Database', color: '#10B981' },
+    { name: 'Programming Languages', icon: 'Terminal', color: '#6366F1' },
 ]
 
 const INCLUDED_WITH_EVERY_COURSE = [
@@ -1020,6 +1032,226 @@ const courses = [
             M('Devices, Migration & Support', 'Mobile and endpoint management | Data migration | Reporting and audit | Troubleshooting'),
         ],
     }),
+
+    /* ================================ AWS & CLOUD ============================= */
+
+    C('AWS & Cloud', 'AWS Cloud Practitioner', {
+        heading: 'Build a solid foundation across AWS core services',
+        description:
+            'A foundational, hands-on introduction to Amazon Web Services covering core compute, storage, networking, security and billing concepts, preparing you for real-world AWS usage and the Cloud Practitioner certification.',
+        duration: '20–24 Hours',
+        prerequisites: ['Basic IT and networking concepts', 'Familiarity with any cloud or on-premises environment is helpful'],
+        highlights: [
+            'Core AWS services: EC2, S3, VPC, IAM and RDS',
+            'AWS global infrastructure and shared responsibility model',
+            'Billing, cost management and support plans',
+            'Hands-on labs in the AWS Management Console',
+        ],
+        modules: [
+            M('AWS Fundamentals', 'Cloud computing concepts | AWS global infrastructure (Regions, AZs, Edge Locations) | AWS Management Console and CLI | Shared responsibility model | Free Tier',
+                'Create an AWS account | Explore the Management Console | Set up billing alerts'),
+            M('Identity & Access Management (IAM)', 'Users, groups and roles | Policies and permissions | Multi-factor authentication | Root account best practices | IAM Identity Center overview',
+                'Create IAM users and groups | Attach policies | Enable MFA'),
+            M('Compute & Storage', 'EC2 instances and instance types | Amazon S3 buckets and storage classes | EBS volumes | Elastic Load Balancing basics | Auto Scaling overview',
+                'Launch an EC2 instance | Create and configure an S3 bucket | Attach an EBS volume'),
+            M('Networking & Databases', 'VPC basics (subnets, route tables, gateways) | Security groups vs NACLs | Amazon RDS overview | DynamoDB basics',
+                'Build a simple VPC | Launch an RDS database | Test connectivity'),
+            M('Billing, Support & Well-Architected Basics', 'AWS Pricing Calculator | Billing dashboard and cost alerts | Support plans | Well-Architected Framework pillars | Cloud Practitioner exam tips',
+                'Set a budget alert | Estimate costs with the Pricing Calculator'),
+        ],
+    }),
+
+    /* ================================ CYBERSECURITY =========================== */
+
+    C('Cybersecurity', 'Cybersecurity Fundamentals', {
+        heading: 'Understand and defend against real-world cyber threats',
+        description:
+            'A practical introduction to cybersecurity covering core concepts, common attack techniques, network and endpoint defence, and the fundamentals of security operations.',
+        duration: '24–28 Hours',
+        prerequisites: ['Basic networking and operating systems knowledge'],
+        highlights: [
+            'Core security concepts: CIA triad, threats and risk',
+            'Common attack techniques and how to defend against them',
+            'Network, endpoint and application security basics',
+            'Introduction to security operations and incident response',
+        ],
+        modules: [
+            M('Security Fundamentals', 'CIA triad | Threats, vulnerabilities and risk | Security policies and frameworks | Common terminology',
+                'Review a sample security policy | Identify assets and threats in a scenario'),
+            M('Network Security', 'Firewalls and segmentation | VPNs | Secure protocols (TLS, SSH) | Intrusion detection and prevention basics',
+                'Configure basic firewall rules | Inspect network traffic with a packet capture tool'),
+            M('Threats & Attack Techniques', 'Phishing and social engineering | Malware types | Password attacks | Web application attacks (SQL injection, XSS overview)',
+                'Analyse a phishing email | Test password strength'),
+            M('Endpoint & Application Security', 'Endpoint protection basics | Patch management | Secure coding principles | Vulnerability scanning overview',
+                'Run a vulnerability scan | Review a secure coding checklist'),
+            M('Security Operations & Incident Response', 'SOC roles and workflow | Logging and monitoring basics | Incident response lifecycle | Reporting and lessons learned',
+                'Walk through an incident response scenario | Review sample security logs'),
+        ],
+    }),
+
+    /* ================================ WEB DEVELOPMENT ========================== */
+
+    C('Web Development', 'Frontend Development with React', {
+        heading: 'Build modern, responsive user interfaces with React',
+        description:
+            'A hands-on programme covering React fundamentals, component design, state management, routing and API integration, taking you from core concepts to building complete frontend applications.',
+        duration: '30–35 Hours',
+        prerequisites: ['HTML, CSS and JavaScript fundamentals'],
+        highlights: [
+            'Components, props, state and hooks',
+            'Client-side routing with React Router',
+            'API integration and asynchronous data handling',
+            'Styling with Tailwind CSS and responsive design',
+        ],
+        modules: [
+            M('React Fundamentals', 'JSX and components | Props and state | Event handling | Rendering lists and conditional rendering',
+                'Build a static component library | Create a simple counter app'),
+            M('Hooks & State Management', 'useState and useEffect | Custom hooks | Context API | Introduction to external state libraries',
+                'Build a form with validation | Share state across components with Context'),
+            M('Routing & Project Structure', 'React Router basics | Nested and dynamic routes | Project folder structure | Code splitting basics',
+                'Build a multi-page app with React Router | Add a dynamic detail page'),
+            M('Working with APIs', 'Fetch and async/await | Handling loading and error states | REST API integration | Environment variables',
+                'Consume a public REST API | Build a search feature with live results'),
+            M('Styling, Testing & Deployment', 'Tailwind CSS basics | Responsive design patterns | Basic component testing | Building and deploying a React app',
+                'Style a complete page with Tailwind | Build and deploy a React app'),
+        ],
+    }),
+
+    /* ============================== DEVOPS & DEPLOYMENT ======================== */
+
+    C('DevOps & Deployment', 'CI/CD with GitHub Actions', {
+        heading: 'Automate builds, tests and deployments with GitHub Actions',
+        description:
+            'Learn to write YAML workflow files and build complete CI/CD pipelines with GitHub Actions, from automated testing to deploying applications to the cloud.',
+        duration: '16–20 Hours',
+        prerequisites: ['Basic Git and GitHub knowledge', 'Familiarity with any programming language'],
+        highlights: [
+            'Writing and structuring GitHub Actions YAML workflows',
+            'Automated build and test pipelines',
+            'Secrets, environments and approval gates',
+            'Deploying applications to cloud and hosting platforms',
+        ],
+        modules: [
+            M('GitHub Actions Fundamentals', 'Workflows, jobs and steps | YAML syntax basics | Triggers (push, pull_request, schedule) | Runners (hosted vs self-hosted)',
+                'Write a first "hello world" workflow | Trigger a workflow on push'),
+            M('Building & Testing', 'Build steps for common stacks | Caching dependencies | Running automated tests | Matrix builds',
+                'Build and test a sample application | Configure a matrix build across versions'),
+            M('Secrets, Variables & Environments', 'Repository and environment secrets | Environment protection rules | Approval gates | Reusable workflows and composite actions',
+                'Store and use a secret | Configure an environment with an approval gate'),
+            M('Deployment Pipelines', 'Deploying to cloud platforms | Container builds and registry pushes | Deployment strategies (rolling, blue-green overview) | Rollbacks',
+                'Deploy a sample app to a hosting platform | Build and push a container image'),
+            M('Monitoring & Best Practices', 'Workflow logs and debugging | Status badges and notifications | Security best practices for workflows | Organising workflows at scale',
+                'Debug a failing workflow | Add a status badge to a repository'),
+        ],
+    }),
+
+    /* ================================== DATABASES =============================== */
+
+    C('Databases', 'MySQL Database Administration', {
+        heading: 'Design, manage and tune MySQL databases',
+        description:
+            'A practical programme covering MySQL installation, schema design, querying, indexing, backup and performance tuning for real-world database administration.',
+        duration: '20–24 Hours',
+        prerequisites: ['Basic SQL knowledge helpful but not required'],
+        highlights: [
+            'Database and schema design',
+            'Writing and optimising SQL queries',
+            'Indexing, backup and recovery',
+            'User management and security',
+        ],
+        modules: [
+            M('MySQL Fundamentals', 'Installation and setup | MySQL Workbench and CLI | Databases, tables and data types | Basic SQL (SELECT, INSERT, UPDATE, DELETE)',
+                'Install MySQL | Create a sample database and tables'),
+            M('Schema Design', 'Normalisation basics | Primary and foreign keys | Relationships | Constraints',
+                'Design a normalised schema | Add relationships between tables'),
+            M('Querying & Joins', 'Joins (inner, left, right) | Aggregate functions and GROUP BY | Subqueries | Views',
+                'Write multi-table join queries | Create a view'),
+            M('Indexing & Performance', 'Index types | Query execution plans (EXPLAIN) | Query optimisation basics | Common performance pitfalls',
+                'Add indexes to a slow query | Analyse a query plan'),
+            M('Backup, Security & Administration', 'Backup and restore (mysqldump) | User accounts and privileges | Replication overview | Monitoring basics',
+                'Perform a backup and restore | Create a restricted database user'),
+        ],
+    }),
+
+    C('Databases', 'Oracle Database Administration', {
+        heading: 'Administer enterprise Oracle databases with confidence',
+        description:
+            'Learn core Oracle Database administration: instance architecture, schema management, SQL and PL/SQL basics, backup and recovery, and performance monitoring.',
+        duration: '24–30 Hours',
+        prerequisites: ['Basic SQL knowledge', 'Basic operating system administration'],
+        highlights: [
+            'Oracle architecture and instance management',
+            'Schema, tablespace and user administration',
+            'PL/SQL fundamentals',
+            'Backup, recovery and performance basics',
+        ],
+        modules: [
+            M('Oracle Architecture', 'Instance vs database | Memory structures | Background processes | SQL*Plus and Oracle Enterprise Manager',
+                'Connect via SQL*Plus | Explore instance memory structures'),
+            M('Schema & Storage Management', 'Tablespaces and datafiles | Users and schemas | Tables, indexes and constraints | Storage parameters',
+                'Create a tablespace | Create users and assign privileges'),
+            M('SQL & PL/SQL Basics', 'SQL fundamentals in Oracle | PL/SQL blocks | Stored procedures and functions | Triggers overview',
+                'Write a PL/SQL procedure | Create a simple trigger'),
+            M('Backup & Recovery', 'RMAN basics | Backup strategies | Recovery scenarios | Flashback overview',
+                'Perform an RMAN backup | Simulate a recovery scenario'),
+            M('Performance & Monitoring', 'AWR and ADDM overview | Common wait events | Indexing strategies | Monitoring tools',
+                'Review an AWR report | Identify a performance bottleneck'),
+        ],
+    }),
+
+    C('Databases', 'PostgreSQL Database Administration', {
+        heading: 'Manage and optimise PostgreSQL databases',
+        description:
+            'A hands-on programme covering PostgreSQL setup, schema design, querying, indexing, backup and administration for reliable, well-performing databases.',
+        duration: '20–24 Hours',
+        prerequisites: ['Basic SQL knowledge helpful but not required'],
+        highlights: [
+            'Database and schema design in PostgreSQL',
+            'Advanced querying and indexing',
+            'Backup, recovery and replication basics',
+            'Roles, privileges and security',
+        ],
+        modules: [
+            M('PostgreSQL Fundamentals', 'Installation and setup | psql CLI and pgAdmin | Databases and schemas | Data types',
+                'Install PostgreSQL | Create a database and schema'),
+            M('Querying & Joins', 'SELECT, joins and subqueries | Aggregate functions | Common table expressions | Views',
+                'Write join and CTE queries | Create a view'),
+            M('Indexing & Performance', 'Index types (B-tree, GIN, GiST) | EXPLAIN ANALYZE | Query tuning basics | Vacuum and autovacuum',
+                'Add and test indexes | Analyse a query plan'),
+            M('Backup & Recovery', 'pg_dump and pg_restore | Point-in-time recovery overview | Replication basics | Monitoring tools',
+                'Perform a backup and restore | Explore replication concepts'),
+            M('Roles, Security & Extensions', 'Roles and privileges | Row-level security overview | Popular extensions | Connection pooling basics',
+                'Create roles with scoped privileges | Enable a PostgreSQL extension'),
+        ],
+    }),
+
+    /* ============================ PROGRAMMING LANGUAGES ======================== */
+
+    C('Programming Languages', 'Python Programming', {
+        heading: 'Learn Python from fundamentals to practical application',
+        description:
+            'A complete, hands-on introduction to Python covering core syntax, data structures, functions, file handling and an introduction to working with APIs and libraries.',
+        duration: '24–30 Hours',
+        prerequisites: ['No prior programming experience required'],
+        highlights: [
+            'Core Python syntax and data structures',
+            'Functions, modules and error handling',
+            'File handling and working with APIs',
+            'Introduction to popular libraries',
+        ],
+        modules: [
+            M('Python Fundamentals', 'Variables and data types | Operators | Control flow (if/else, loops) | Input and output',
+                'Write basic scripts | Build a simple calculator'),
+            M('Data Structures', 'Lists, tuples and dictionaries | Sets | String manipulation | Comprehensions',
+                'Manipulate lists and dictionaries | Write a list comprehension'),
+            M('Functions & Modules', 'Defining functions | Arguments and return values | Modules and packages | Error handling (try/except)',
+                'Write reusable functions | Handle exceptions in a script'),
+            M('File Handling & Data', 'Reading and writing files | Working with CSV and JSON | Virtual environments | Installing packages with pip',
+                'Read and process a CSV file | Parse JSON data'),
+            M('Introduction to Libraries & APIs', 'Requests library basics | Consuming a REST API | Intro to data libraries (overview) | Writing a small end-to-end script',
+                'Call a public API with Python | Build a small script that processes API data'),
+        ],
+    }),
 ]
 
 /* ------------------------------ lookups ----------------------------------- */
@@ -1042,7 +1274,7 @@ const courseHref = (name) => {
 
 /* ========================= SHARED UI HELPERS ========================= */
 
-const ICONS = { Laptop, ShieldCheck, Cloud, Layers, KeyRound, Globe, Smartphone, Server };
+const ICONS = { Laptop, ShieldCheck, Cloud, Layers, KeyRound, Globe, Smartphone, Server, CloudCog, Lock, Code2, Workflow, Database, Terminal };
 const pad = (n) => String(n + 1).padStart(2, "0");
 const formatINR = (n) => `₹${new Intl.NumberFormat("en-IN").format(n)}`;
 const percentOff = (c) => Math.round((1 - c.price / c.originalPrice) * 100);

@@ -6,7 +6,7 @@ import { UserContext } from '../../../ContextAPI/UserContext'
 
 const COMPANY = {
     name: 'AVP Tech Group',
-    address: 'Royal Plaza, Sushant Golf City, Lucknow, UP, India',
+    address: 'Royal Plaza,,Flat no. 1005 , Sushant Golf City, Lucknow, UP, India',
     addressLine1: 'Royal Plaza, Sushant Golf City,',
     addressLine2: 'Lucknow, UP, India',
     website: 'avptechgroup.com',
