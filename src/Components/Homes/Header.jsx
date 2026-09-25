@@ -83,7 +83,8 @@ const slides = [
     }
 ]
 
-// Technologies from the course catalog, shown in the marquee under the hero
+// Technologies from the course catalog, shown in the marquee under the hero.
+// Each has an accent color (cycled) that colours its dot + label in the ticker.
 const microsoftExpertise = [
     { name: "Microsoft Intune" },
     { name: "Microsoft Defender XDR" },
@@ -95,6 +96,15 @@ const microsoftExpertise = [
     { name: "Microsoft SCCM (MECM)" },
     { name: "Microsoft Purview" },
     { name: "Azure Virtual Desktop" }
+]
+
+// Accent palette the expertise chips cycle through (AVP brand + a couple of accent pops)
+const EXPERTISE_ACCENTS = [
+    { text: '#3AA6E8', bg: 'rgba(58,166,232,0.12)', border: 'rgba(58,166,232,0.35)' },
+    { text: '#00C9B1', bg: 'rgba(0,201,177,0.12)', border: 'rgba(0,201,177,0.35)' },
+    { text: '#F5A623', bg: 'rgba(245,166,35,0.12)', border: 'rgba(245,166,35,0.35)' },
+    { text: '#7C6AF7', bg: 'rgba(124,106,247,0.12)', border: 'rgba(124,106,247,0.35)' },
+    { text: '#5CD6F5', bg: 'rgba(92,214,245,0.12)', border: 'rgba(92,214,245,0.35)' },
 ]
 
 export default function Header() {
@@ -170,7 +180,7 @@ export default function Header() {
                 .animate-marquee-premium {
                     display: flex;
                     width: max-content;
-                    animation: marqueeLeft 35s linear infinite;
+                    animation: marqueeLeft 42s linear infinite;
                 }
                 .animate-marquee-premium:hover {
                     animation-play-state: paused;
@@ -225,9 +235,30 @@ export default function Header() {
                 .hero-cue-dot { animation: heroCuePulse 1.8s ease-in-out infinite; }
                 .hero-cue-ripple { animation: heroCueRipple 2.2s ease-out infinite; }
 
+                /* Expertise strip: gentle rise-and-settle entrance, distinct from the hero's reveal */
+                @keyframes expertiseIn {
+                    0% { opacity: 0; transform: translate3d(0, 28px, 0) scale(0.97); }
+                    60% { opacity: 1; }
+                    100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+                }
+                .expertise-in {
+                    animation: expertiseIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+                    animation-delay: 150ms;
+                }
+
+                /* Each chip breathes very slightly so the strip feels alive even without hovering */
+                @keyframes chipFloat {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-3px); }
+                }
+                .chip-float {
+                    animation: chipFloat 3.6s ease-in-out infinite;
+                    animation-delay: var(--fd, 0ms);
+                }
+
                 @media (prefers-reduced-motion: reduce) {
                     .hero-reveal, .hero-image-in, .hero-glow-spin, .hero-progress,
-                    .hero-cue-dot, .hero-cue-ripple { animation: none !important; }
+                    .hero-cue-dot, .hero-cue-ripple, .expertise-in, .chip-float { animation: none !important; }
                     .animate-marquee-premium { animation-duration: 120s; }
                 }
             `}</style>
@@ -415,28 +446,44 @@ export default function Header() {
             </div>
 
             {/* MARQUEE EXPERTISE BANNER */}
-            <div id="expertise-section" className="w-full max-w-350 mx-auto px-6 sm:px-10 xl:px-16 mb-16 animate-[fadeUp_0.9s_0.2s_ease_both] flex flex-col items-center relative z-10">
+            <div id="expertise-section" className="expertise-in w-full max-w-350 mx-auto px-6 sm:px-10 xl:px-16 mb-16 flex flex-col items-center relative z-10">
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-theme-bg px-4 z-20 transition-colors duration-300">
                     <p className="text-center text-[10px] sm:text-[11px] tracking-[0.2em] uppercase font-bold text-theme-subtext/90 whitespace-nowrap select-none">
                         Our Microsoft expertise
                     </p>
                 </div>
 
-                <div className="w-full relative overflow-hidden bg-gradient-to-r from-theme-card/10 via-theme-card/40 to-theme-card/10 border border-theme-border/60 backdrop-blur-xl rounded-2xl py-6 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.25)] dark:shadow-[0_16px_48px_-16px_rgba(0,0,0,0.15)] hover:border-theme-border/90 transition-all duration-300">
+                <div className="w-full relative overflow-hidden bg-gradient-to-r from-theme-card/10 via-theme-card/40 to-theme-card/10 border border-theme-border/60 backdrop-blur-xl rounded-2xl py-7 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.25)] dark:shadow-[0_16px_48px_-16px_rgba(0,0,0,0.15)] hover:border-theme-border/90 transition-all duration-300">
                     <div className="absolute inset-y-0 left-0 w-16 sm:w-28 bg-gradient-to-r from-theme-bg via-theme-bg/40 to-transparent z-10 pointer-events-none transition-colors duration-300" />
                     <div className="absolute inset-y-0 right-0 w-16 sm:w-28 bg-gradient-to-l from-theme-bg via-theme-bg/40 to-transparent z-10 pointer-events-none transition-colors duration-300" />
 
-                    <div className="animate-marquee-premium flex items-center">
-                        {[...microsoftExpertise, ...microsoftExpertise].map((item, index) => (
-                            <div key={index} className="flex items-center shrink-0">
-                                <div className="flex items-center group transition-all duration-300 cursor-pointer px-8 sm:px-12">
-                                    <span className="text-[14px] sm:text-[16px] font-heading font-medium text-theme-text/75 tracking-wider leading-snug group-hover:text-[#00C9B1] group-hover:scale-[1.03] transition-all duration-300 whitespace-nowrap">
-                                        {item.name}
-                                    </span>
+                    <div className="animate-marquee-premium flex items-center gap-3 sm:gap-4">
+                        {[...microsoftExpertise, ...microsoftExpertise].map((item, index) => {
+                            const accent = EXPERTISE_ACCENTS[index % EXPERTISE_ACCENTS.length]
+                            return (
+                                <div
+                                    key={index}
+                                    className="chip-float shrink-0"
+                                    style={{ '--fd': `${(index % microsoftExpertise.length) * 180}ms` }}
+                                >
+                                    <div
+                                        className="group flex items-center gap-2.5 rounded-full border px-4 sm:px-5 py-2 sm:py-2.5 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
+                                        style={{ background: accent.bg, borderColor: accent.border }}
+                                    >
+                                        <span
+                                            className="h-2 w-2 rounded-full shrink-0 transition-transform duration-300 group-hover:scale-125"
+                                            style={{ background: accent.text, boxShadow: `0 0 8px ${accent.text}` }}
+                                        />
+                                        <span
+                                            className="text-[13px] sm:text-[15px] font-heading font-semibold tracking-wide leading-snug whitespace-nowrap transition-colors duration-300"
+                                            style={{ color: accent.text }}
+                                        >
+                                            {item.name}
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="h-5 w-[1px] bg-gradient-to-b from-transparent via-[#00C9B1]/45 to-transparent shadow-[0_0_4px_rgba(0,201,177,0.2)]" />
-                            </div>
-                        ))}
+                            )
+                        })}
                     </div>
                 </div>
             </div>

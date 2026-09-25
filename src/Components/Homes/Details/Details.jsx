@@ -88,9 +88,7 @@ const Details = () => {
                     </div>
 
                     <h2
-                        className={`mb-4 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl ${
-                            isDark ? "text-white" : "text-slate-900"
-                        }`}
+                        className="mb-4 text-4xl font-bold tracking-tight text-theme-text sm:text-5xl lg:text-6xl"
                     >
                         Everything Your IT{" "}
                         <span
